@@ -30,10 +30,6 @@ def build_delivery_router(
     dependency = Depends(guard or _deny)
     router = APIRouter(dependencies=[dependency])
 
-    @router.get("/v1/delivery/status")
-    def delivery_status() -> dict[str, Any]:
-        return _scrub(delivery.status())
-
     @router.post("/v1/delivery/replay-dead-letters")
     def replay_dead_letters(request: Request, principal: Any = dependency) -> dict[str, Any]:
         replay = getattr(delivery, "replay_dead_letters", None)
@@ -49,5 +45,20 @@ def build_delivery_router(
                 detail={key: value for key, value in body.items() if isinstance(value, int)},
             )
         return body
+
+    return router
+
+
+def build_inbox_router(delivery: Any, guard: Callable[..., Any] | None = None) -> APIRouter:
+    router = APIRouter(dependencies=[Depends(guard or _deny)])
+
+    @router.get("/v1/delivery/status")
+    def delivery_status() -> dict[str, Any]:
+        return _scrub(delivery.status())
+
+    @router.get("/v1/delivery/inbox")
+    def delivery_inbox() -> dict[str, Any]:
+        reader = getattr(delivery, "inboxes", None)
+        return {"inboxes": reader() if reader is not None else []}
 
     return router

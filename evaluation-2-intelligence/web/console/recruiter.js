@@ -47,7 +47,7 @@
   }
 
   C.views.recruiter = async function (root) {
-    var S = { rows: [], stats: null, tab: C.params && C.params.tab === "queue" ? "queue" : "overview", route: "ALL", query: "", sort: "score_asc", selected: null, opener: null, loaded: false };
+    var S = { rows: [], stats: null, dest: null, destError: "", destLoading: false, tab: C.params && (C.params.tab === "queue" || C.params.tab === "destinations") ? C.params.tab : "overview", route: "ALL", query: "", sort: "score_asc", selected: null, opener: null, loaded: false };
     C.status("Loading applications...");
 
     var head = h("div", { class: "page-head" },
@@ -58,36 +58,193 @@
     var panelOverview = h("section", { id: "panelOverview", role: "tabpanel", "aria-labelledby": "tabOverview" });
     var panelQueue = h("section", { id: "panelQueue", role: "tabpanel", "aria-labelledby": "tabQueue" });
 
+    var panelDest = h("section", { id: "panelDest", role: "tabpanel", "aria-labelledby": "tabDest" });
+
     var scrim = h("div", { class: "drawer-scrim", hidden: true });
     var drawer = h("aside", { class: "drawer", id: "detail", role: "dialog", "aria-modal": "true", "aria-labelledby": "detailTitle", tabindex: "-1", hidden: true });
-    root.append(head, tabBar, panelOverview, panelQueue, scrim, drawer);
+    root.append(head, tabBar, panelOverview, panelQueue, panelDest, scrim, drawer);
 
     function rowById(id) {
       return S.rows.find(function (row) { return row.application_id === id; });
     }
 
+    var TAB_DEFS = [["overview", "Overview", "tabOverview", "panelOverview"], ["queue", "Queue", "tabQueue", "panelQueue"], ["destinations", "Destinations", "tabDest", "panelDest"]];
+
     function drawMainTabs() {
       C.clear(tabBar);
-      [["overview", "Overview", "tabOverview", "panelOverview"], ["queue", "Queue", "tabQueue", "panelQueue"]].forEach(function (t) {
+      TAB_DEFS.forEach(function (t, i) {
         var button = h("button", { type: "button", role: "tab", id: t[2], "aria-controls": t[3], "aria-selected": S.tab === t[0] ? "true" : "false", tabindex: S.tab === t[0] ? "0" : "-1", text: t[1] });
         button.addEventListener("click", function () { setTab(t[0], false); });
         button.addEventListener("keydown", function (event) {
           if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
             event.preventDefault();
-            setTab(S.tab === "overview" ? "queue" : "overview", true);
+            var step = event.key === "ArrowRight" ? 1 : -1;
+            setTab(TAB_DEFS[(i + step + TAB_DEFS.length) % TAB_DEFS.length][0], true);
           }
         });
         tabBar.appendChild(button);
       });
       panelOverview.hidden = S.tab !== "overview";
       panelQueue.hidden = S.tab !== "queue";
+      panelDest.hidden = S.tab !== "destinations";
     }
 
     function setTab(name, focus) {
       S.tab = name;
       C.keys = name === "queue" ? queueKeys : globalKeys;
       drawMainTabs();
-      if (focus) C.$(name === "overview" ? "tabOverview" : "tabQueue").focus();
+      if (name === "destinations" && !S.dest && !S.destLoading) loadDest();
+      if (focus) {
+        var def = TAB_DEFS.filter(function (t) { return t[0] === name; })[0];
+        C.$(def[2]).focus();
+      }
+    }
+
+    var DEST_NAMES = { ats: "Mock ATS", mock_ats: "Mock ATS", verification_inbox: "Verification inbox", review_inbox: "Review inbox", slack: "Slack message", email: "Email message" };
+    function destName(name) {
+      if (DEST_NAMES[name]) return DEST_NAMES[name];
+      var text = String(name || "Unnamed place").replace(/[_-]+/g, " ");
+      return text.charAt(0).toUpperCase() + text.slice(1);
+    }
+    var DEST_SECTIONS = [["PASS_TO_ATS", "Passed to the ATS", "These applications were sent on to the hiring system."], ["ADDITIONAL_VERIFICATION", "Waiting for verification", "These applications wait until the candidate or a person confirms the details."], ["MANUAL_REVIEW", "Waiting for a person to review", "These applications wait for a recruiter to look at them."]];
+
+    async function loadDest() {
+      S.destLoading = true;
+      S.destError = "";
+      drawDest();
+      var results = await Promise.allSettled([C.api("GET", "/v1/delivery/inbox"), C.api("GET", "/v1/delivery/status")]);
+      S.destLoading = false;
+      var failed = results.filter(function (r) { return r.status === "rejected"; });
+      for (var i = 0; i < failed.length; i++) if (C.authError(failed[i].reason)) return;
+      var inbox = results[0].status === "fulfilled" ? results[0].value : null;
+      var status = results[1].status === "fulfilled" ? results[1].value : null;
+      if (!inbox && !status) {
+        var err = failed[0].reason;
+        S.destError = err.status === 403 ? "Your account does not have permission to see destinations." : err.status === 404 ? "Destinations are not available on this service yet." : C.friendly(err);
+        S.dest = null;
+      } else {
+        S.dest = { inbox: inbox, status: status, inboxMissing: !inbox };
+      }
+      drawDest();
+    }
+
+    function inboxItems(name) {
+      var list = S.dest && S.dest.inbox && Array.isArray(S.dest.inbox.inboxes) ? S.dest.inbox.inboxes : [];
+      var found = list.filter(function (b) { return b.name === name; })[0];
+      return found && Array.isArray(found.items) ? found.items : [];
+    }
+
+    function inboxNameFor(route) {
+      var routes = S.dest && S.dest.status && S.dest.status.routes ? S.dest.status.routes : {};
+      var names = routes[route] || [];
+      var list = S.dest && S.dest.inbox && Array.isArray(S.dest.inbox.inboxes) ? S.dest.inbox.inboxes : [];
+      var hit = names.filter(function (n) { return list.some(function (b) { return b.name === n; }); })[0];
+      if (hit) return hit;
+      return route === "ADDITIONAL_VERIFICATION" ? "verification_inbox" : route === "MANUAL_REVIEW" ? "review_inbox" : null;
+    }
+
+    function destItems(route) {
+      if (route === "PASS_TO_ATS") {
+        return S.rows.filter(function (r) { return routeOf(r) === "PASS_TO_ATS"; }).map(function (r) { return { application_id: r.application_id, job_id: r.job_id, candidate_name: r.candidate_name, at: r.submitted_at, score: scoreOf(r) }; });
+      }
+      return inboxItems(inboxNameFor(route)).map(function (item) {
+        var row = rowById(item.application_id);
+        return { application_id: item.application_id, job_id: item.job_id || (row && row.job_id), candidate_name: item.candidate_name || (row && row.candidate_name), at: row && row.submitted_at, score: row ? scoreOf(row) : null };
+      });
+    }
+
+    async function replayDead(button, message) {
+      button.disabled = true;
+      message.className = "small";
+      message.textContent = "Sending again...";
+      try {
+        var result = await C.api("POST", "/v1/delivery/replay-dead-letters");
+        var n = result && Number.isFinite(Number(result.replayed)) ? Number(result.replayed) : null;
+        S.replayNote = n === null ? "The failed deliveries were sent again." : n + (n === 1 ? " failed delivery was sent again." : " failed deliveries were sent again.");
+        C.status(S.replayNote);
+        await loadDest();
+      } catch (error) {
+        button.disabled = false;
+        if (C.authError(error)) return;
+        message.textContent = error.status === 403 ? "Only an admin can send failed deliveries again." : error.status === 404 ? "This service cannot send failed deliveries again yet." : C.friendly(error);
+        message.className = "small err";
+      }
+    }
+
+    function drawDest() {
+      C.clear(panelDest);
+      var refresh = h("button", { type: "button", class: "btn small", id: "destRefresh", text: "Refresh now", onclick: function () { loadDest(); } });
+      panelDest.append(h("div", { class: "row between dest-head" },
+        h("div", null, h("p", { class: "eyebrow", text: "One final place for every outcome" }), h("h3", { style: "margin:0", text: "Destinations" })),
+        refresh
+      ));
+      if (S.destLoading && !S.dest) {
+        panelDest.append(h("div", { class: "card" }, h("p", { class: "muted", text: "Loading destinations..." })));
+        return;
+      }
+      if (S.destError) {
+        panelDest.append(h("div", { class: "card" }, h("p", { class: "muted", text: S.destError }), h("button", { type: "button", class: "btn primary", text: "Try again", onclick: function () { loadDest(); } })));
+        return;
+      }
+      if (!S.dest) return;
+      var st = S.dest.status;
+      var pending = st && Number.isFinite(Number(st.pending)) ? Number(st.pending) : null;
+      var dead = st && Number.isFinite(Number(st.dead_letters)) ? Number(st.dead_letters) : null;
+      var isAdmin = C.state.me && C.state.me.role === "admin";
+      var line = h("div", { class: "card dest-status" });
+      if (st) {
+        line.append(h("p", { class: "row", style: "margin:0" },
+          h("span", { text: (pending === null ? "Waiting deliveries are not known." : pending + (pending === 1 ? " delivery is waiting to send." : " deliveries are waiting to send.")) }),
+          h("span", { text: (dead === null ? "" : dead + (dead === 1 ? " delivery has failed." : " deliveries have failed.")) }),
+          dead ? C.tag("Needs attention", "danger") : C.tag("All clear", "ok")
+        ));
+      } else {
+        line.append(h("p", { class: "muted", style: "margin:0", text: "Delivery status is not available for your account." }));
+      }
+      if (isAdmin && st) {
+        var message = h("p", { class: "small", role: "status", "aria-live": "polite", style: "margin:8px 0 0", text: S.replayNote || "" });
+        S.replayNote = "";
+        var replay = h("button", { type: "button", class: "btn", id: "replayBtn", text: "Send failed deliveries again" });
+        if (!dead) replay.disabled = true;
+        replay.addEventListener("click", function () { replayDead(replay, message); });
+        line.append(h("div", { class: "row", style: "margin-top:12px" }, replay), message);
+      }
+      panelDest.append(line);
+      if (S.dest.inboxMissing) panelDest.append(h("p", { class: "small muted", text: "The waiting lists could not be loaded, so only the passed applications are shown." }));
+
+      var cols = h("div", { class: "grid-3 dest-grid" });
+      DEST_SECTIONS.forEach(function (sec, index) {
+        var route = sec[0];
+        var items = destItems(route).sort(function (a, b) { return seconds(b.at) - seconds(a.at); });
+        var names = st && st.routes && st.routes[route] ? st.routes[route] : [];
+        var nameText = names.length ? names.map(destName).join(" and ") : (route === "PASS_TO_ATS" ? "Mock ATS" : destName(inboxNameFor(route)));
+        var failedHere = st && Array.isArray(st.destinations) ? st.destinations.filter(function (d) { return names.indexOf(d.name) >= 0; }).reduce(function (sum, d) { return sum + (Number(d.dead_letters) || 0); }, 0) : 0;
+        var body = items.length
+          ? h("ul", { class: "dest-list" }, items.map(function (item) {
+              var view = h("button", { type: "button", class: "detail-link", "data-dest-view": item.application_id, "aria-label": "View details for " + (item.candidate_name || item.application_id), text: "View" });
+              view.addEventListener("click", function () {
+                if (!rowById(item.application_id)) { C.status("The details for this application are not in the loaded list. Refresh the page and try again.", true); return; }
+                openDetail(item.application_id, view);
+              });
+              return h("li", { class: "dest-item" },
+                h("div", { class: "dest-who" },
+                  h("strong", { text: item.candidate_name || "Unknown candidate" }),
+                  h("small", { class: "muted", text: (item.job_id || "No job set") + (Number.isFinite(item.score) ? ", score " + item.score : "") }),
+                  h("small", { class: "muted", text: when(item.at) })
+                ),
+                view
+              );
+            }))
+          : h("p", { class: "empty", text: "Nothing is here right now." });
+        cols.append(h("section", { class: "card dest-card", "aria-labelledby": "destT" + index },
+          h("p", { class: "eyebrow", text: nameText }),
+          h("div", { class: "row between" }, h("h3", { id: "destT" + index, style: "margin:0", text: sec[1] }), h("strong", { class: "dest-count", text: String(items.length) })),
+          h("p", { class: "small muted", text: sec[2] }),
+          failedHere ? h("p", { class: "small err", text: failedHere + (failedHere === 1 ? " delivery to this place has failed." : " deliveries to this place have failed.") }) : null,
+          body
+        ));
+      });
+      panelDest.append(cols);
     }
 
     function counts() {
@@ -644,6 +801,7 @@
       S.loaded = true;
       drawMainTabs();
       redraw();
+      if (S.tab === "destinations") loadDest();
       C.status(S.rows.length + " applications loaded.");
       if (refresh && S.selected && rowById(S.selected)) drawDetail(rowById(S.selected));
       var want = C.params && C.params.select;

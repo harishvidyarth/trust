@@ -13,6 +13,7 @@ from firewall.enrichment.roles import formats
 from firewall.enrichment.roles.extract import extract_role_claims, patent_lookup_key
 from firewall.enrichment.roles.models import RoleClaims
 from firewall.enrichment.roles.profiles import PROFILES
+from firewall.enrichment.roles.live import LiveRegistry
 from firewall.enrichment.roles.registry import NullRegistry, RoleRegistry
 from firewall.enrichment.scholar import ScholarConnector
 from firewall.index_keys import normalize_email, normalize_name
@@ -38,12 +39,16 @@ ROLE_WEIGHTS = {
     "ARXIV_ID_INVALID_FORMAT": 6,
     "IEEE_DOI_INVALID_FORMAT": 6,
     "PORTFOLIO_UNREACHABLE": 6,
+    "ORCID_ID_INVALID_FORMAT": 6,
+    "ORCID_NOT_FOUND": 10,
+    "ORCID_NAME_MISMATCH": 14,
 }
 ROLE_POSITIVE_BONUSES = {
     "MEMBERSHIP_VERIFIED": 8,
     "DIRECTORSHIP_VERIFIED": 6,
     "REGULATOR_VERIFIED": 6,
     "PATENT_VERIFIED": 6,
+    "ORCID_VERIFIED": 6,
     "HARDWARE_REPO_CORROBORATED": 4,
     "PORTFOLIO_LIVE": 2,
     "PORTFOLIO_NAME_MATCH": 3,
@@ -138,7 +143,7 @@ def finance_checks(
     signals: list[EnrichmentSignal] = []
     for item in role_claims.memberships:
         claim = f"{item.body} {item.number}"
-        if not formats.valid_membership(item.body, item.number):
+        if formats.valid_membership(item.body, item.number) is False:
             signals.append(
                 _signal("MEMBERSHIP_ID_INVALID_FORMAT", "negative", "medium", 0.7, "roles.finance",
                         f'The {item.body} membership number "{item.number}" does not match the expected format (from "{item.quote}").', claim)
@@ -157,7 +162,7 @@ def finance_checks(
             signals.append(_signal("MEMBERSHIP_VERIFIED", "positive", "info", 0.85, "roles.finance",
                                    f"The {item.body} register lists number {item.number} under a matching name.", claim, record.url))
     for item in role_claims.dins:
-        if not formats.valid_din(item.value):
+        if formats.valid_din(item.value) is False:
             signals.append(_signal("DIN_INVALID_FORMAT", "negative", "low", 0.6, "roles.finance",
                                    f'The DIN "{item.value}" is not 8 digits (line {item.line + 1}).', item.value))
     for item in role_claims.directorships:
@@ -171,7 +176,7 @@ def finance_checks(
             signals.append(_signal("DIRECTORSHIP_NOT_FOUND", "negative", "medium", 0.75, "roles.finance",
                                    f'A company registry does not list the candidate as a director of "{item.company}" (from "{item.quote}").', item.company, record.url))
     for item in role_claims.regulator_ids:
-        if not formats.valid_regulator_id(item.value):
+        if formats.valid_regulator_id(item.value) is False:
             signals.append(_signal("REGULATOR_ID_INVALID_FORMAT", "negative", "medium", 0.65, "roles.finance",
                                    f'The regulator registration ID "{item.value}" does not match the expected format (line {item.line + 1}).', item.value))
             continue
@@ -184,6 +189,40 @@ def finance_checks(
         else:
             signals.append(_signal("REGULATOR_NOT_LISTED", "negative", "medium", 0.75, "roles.finance",
                                    f"The regulator register has no matching entry for {item.value}.", item.value, record.url))
+    return signals
+
+
+def orcid_checks(
+    role_claims: RoleClaims,
+    candidate: Candidate,
+    registry: RoleRegistry,
+    online: bool,
+) -> list[EnrichmentSignal]:
+    signals: list[EnrichmentSignal] = []
+    for item in role_claims.orcid_ids:
+        if not formats.valid_orcid(item.value):
+            signals.append(_signal("ORCID_ID_INVALID_FORMAT", "negative", "low", 0.7, "roles.orcid",
+                                   f'The ORCID iD "{item.value}" fails the published checksum (line {item.line + 1}).', item.value))
+            continue
+        lookup = getattr(registry, "orcid", None)
+        record = lookup(item.value) if online and lookup is not None else None
+        if record is None:
+            continue
+        url = record.url
+        if not record.found:
+            signals.append(_signal("ORCID_NOT_FOUND", "negative", "medium", 0.8, "roles.orcid",
+                                   f"The ORCID registry has no record for {item.value}.", item.value, url))
+            continue
+        names = [name for name in (record.name, *record.aliases) if name]
+        if not names:
+            continue
+        wanted = normalize_name(candidate.name)
+        if any(name_similarity(name, candidate.name) >= 0.8 or (wanted and wanted in normalize_name(name)) for name in names):
+            signals.append(_signal("ORCID_VERIFIED", "positive", "info", 0.8, "roles.orcid",
+                                   f"The ORCID record {item.value} exists under a matching name.", item.value, url))
+        else:
+            signals.append(_signal("ORCID_NAME_MISMATCH", "negative", "high", 0.8, "roles.orcid",
+                                   f"The ORCID record {item.value} is held under a different name.", item.value, url))
     return signals
 
 
@@ -213,7 +252,7 @@ def hardware_checks(
 ) -> list[EnrichmentSignal]:
     signals: list[EnrichmentSignal] = []
     for item in role_claims.patents:
-        if not formats.valid_patent(item.value):
+        if formats.valid_patent(item.value) is False:
             signals.append(_signal("PATENT_NUMBER_INVALID_FORMAT", "negative", "low", 0.6, "roles.hardware",
                                    f'The patent number "{item.value}" does not match a known jurisdiction format (line {item.line + 1}: "{item.quote}").', item.value))
             continue
@@ -308,8 +347,14 @@ def run_role_checks(
     active_claims = claims if claims is not None else extract_claims(text, candidate)
     role_claims = extract_role_claims(text, candidate)
     online = network_enabled(env)
-    active_registry = registry if registry is not None else NullRegistry()
+    if registry is not None:
+        active_registry = registry
+    elif online:
+        active_registry = LiveRegistry(transport=transport, env=env)
+    else:
+        active_registry = NullRegistry()
     signals = general_checks(active_claims, role_claims, candidate, transport, online)
+    signals.extend(orcid_checks(role_claims, candidate, active_registry, online))
     if profile == "finance":
         signals.extend(finance_checks(active_claims, role_claims, candidate, active_registry, online))
     elif profile == "hardware":

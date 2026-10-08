@@ -36,6 +36,7 @@ PATENT_RE = re.compile(
     r"patent(?:\s+(?:no\.?|number|#))?\s*[:#\-]?\s*(?P<num>(?-i:[A-Z]{2})[ \-]?[\dA-Z][\dA-Z,/ \-]{3,18}[\dA-Z])",
     re.IGNORECASE,
 )
+ORCID_CLAIM_RE = re.compile(r"(?<![\dA-Za-z-])(?P<id>\d{4}-\d{4}-\d{4}-\d{3}[\dX])(?![\dA-Za-z-])")
 ARXIV_CLAIM_RE = re.compile(r"arxiv\s*:\s*(?P<id>[^\s,;)]+)", re.IGNORECASE)
 AWARD_RE = re.compile(r"\b(?:award|winner|won|prize|champion|scholarship|recognition|finalist)\b", re.IGNORECASE)
 CASE_STUDY_RE = re.compile(r"\bcase[- ]stud(?:y|ies)\b", re.IGNORECASE)
@@ -89,6 +90,8 @@ def extract_role_claims(text: str, candidate: Candidate) -> RoleClaims:
             add(claims.patents, "patent", raw, line, index)
         for match in ARXIV_CLAIM_RE.finditer(line):
             add(claims.arxiv_ids, "arxiv", match.group("id").rstrip(".,;"), line, index)
+        for match in ORCID_CLAIM_RE.finditer(line):
+            add(claims.orcid_ids, "orcid", match.group("id"), line, index)
         for match in DOI_RE.finditer(line):
             doi = match.group("doi").rstrip(".,;:)]}")
             if doi.startswith("10.1109/"):

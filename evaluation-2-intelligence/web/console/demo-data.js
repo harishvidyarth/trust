@@ -229,8 +229,56 @@
       ]
     },
     intake: {},
+    mine: {},
+    deadLetters: 2,
     session: null
   };
+
+  var TITLES = {
+    RESUME_HIDDEN_TEXT: "Hidden text",
+    RESUME_PROMPT_INJECTION: "Instructions aimed at a screening tool",
+    RESUME_PARSE_DIVERGENCE: "Parser and person read different things",
+    RESUME_KEYWORD_STUFFING: "Repeated keywords",
+    QUAL_MISSING_MUST_HAVE: "A required skill is missing",
+    QUAL_UNDER_EXPERIENCE: "Less experience than the job asks for",
+    TIMELINE_INVALID: "Dates that do not make sense",
+    TIMELINE_OVERLAP: "Jobs that overlap",
+    DUP_EMAIL: "Email already used",
+    DUP_RESUME_NEAR: "Resume very close to another",
+    FAST_SUBMIT: "Form finished very quickly"
+  };
+  var PRESETS = [
+    { name: "Backend engineer", must_have: ["Python", "PostgreSQL", "Kubernetes"], nice_to_have: ["Terraform", "AWS"], min_years: 3 },
+    { name: "Data analyst", must_have: ["SQL", "Python", "Excel"], nice_to_have: ["Tableau", "Statistics"], min_years: 2 },
+    { name: "Frontend developer", must_have: ["JavaScript", "React", "CSS"], nice_to_have: ["TypeScript", "Testing"], min_years: 2 },
+    { name: "DevOps engineer", must_have: ["Linux", "Docker", "CI/CD"], nice_to_have: ["Kubernetes", "Terraform"], min_years: 3 },
+    { name: "Machine learning engineer", must_have: ["Python", "PyTorch", "SQL"], nice_to_have: ["MLOps", "Spark"], min_years: 3 }
+  ];
+
+  function mineFor(username) {
+    if (!state.mine[username]) state.mine[username] = [];
+    return state.mine[username];
+  }
+  function mineRecord(id, job, secondsAgo, scenario, replaces) {
+    var dec = scenario.decision;
+    return {
+      application_id: id,
+      job_id: job,
+      submitted_at: now - secondsAgo,
+      score: dec.score,
+      route: dec.route,
+      summary: dec.summary,
+      concern_count: dec.reasons.length,
+      fix_count: dec.fixes.length,
+      replaces: replaces || null,
+      decision: { application_id: id, score: dec.score, route: dec.route, reasons: dec.reasons, summary: dec.summary, candidate_fixes: dec.fixes }
+    };
+  }
+  state.mine.candidate = [
+    mineRecord("app-mine-3", "Data analyst", 86400 * 9, SCENARIOS.timeline),
+    mineRecord("app-mine-1", "Backend engineer", 86400 * 5, SCENARIOS.hidden),
+    mineRecord("app-mine-2", "Backend engineer", 86400 * 4, SCENARIOS.clean, "app-mine-1")
+  ];
 
   state.rows.forEach(function (r) {
     if (state.overrides[r.application_id]) r.override = state.overrides[r.application_id][0];
@@ -317,6 +365,12 @@
     if (path === "/v1/applications/upload" && method === "POST") {
       requireRole(["candidate", "recruiter", "admin"]);
       var t = scenarioFor(fileName(form));
+      var isPractice = form.get("dry_run") === "true";
+      if (!isPractice) {
+        var saveRec = mineRecord(form.get("application_id"), "Custom role", 0, t, form.get("replaces") || null);
+        saveRec.submitted_at = Math.floor(Date.now() / 1000);
+        mineFor(state.session.username).push(saveRec);
+      }
       return {
         application_id: form.get("application_id"),
         score: t.decision.score,
@@ -428,7 +482,35 @@
     }
     if (path === "/v1/delivery/status" && method === "GET") {
       requireRole(["recruiter", "admin"]);
-      return { routes: { PASS_TO_ATS: ["ats"], MANUAL_REVIEW: ["review"] }, destinations: [{ name: "ats", kind: "WebhookForwarder", target: "ats.example.test", dead_letters: 0 }, { name: "review", kind: "WebhookForwarder", target: "review.example.test", dead_letters: 0 }], pending: 0, dead_letters: 0 };
+      return {
+        routes: { PASS_TO_ATS: ["mock_ats"], ADDITIONAL_VERIFICATION: ["verification_inbox"], MANUAL_REVIEW: ["review_inbox", "slack"] },
+        destinations: [
+          { name: "mock_ats", kind: "WebhookForwarder", target: "mock-ats.example.test", dead_letters: 0 },
+          { name: "verification_inbox", kind: "InboxForwarder", target: "verification inbox", dead_letters: 0 },
+          { name: "review_inbox", kind: "InboxForwarder", target: "review inbox", dead_letters: 0 },
+          { name: "slack", kind: "WebhookForwarder", target: "hooks.slack.example.test", dead_letters: state.deadLetters }
+        ],
+        pending: 1,
+        dead_letters: state.deadLetters
+      };
+    }
+    if (path === "/v1/delivery/inbox" && method === "GET") {
+      requireRole(["recruiter", "admin"]);
+      var inboxFor = function (route) {
+        return state.rows.filter(function (r) { return (r.override ? (r.override.override_route || r.override.route) : r.decision.route) === route; }).map(function (r) {
+          return { application_id: r.application_id, job_id: r.job_id, candidate_name: r.candidate_name };
+        });
+      };
+      var verify = inboxFor("ADDITIONAL_VERIFICATION");
+      var review = inboxFor("MANUAL_REVIEW");
+      return { inboxes: [{ name: "verification_inbox", count: verify.length, items: verify }, { name: "review_inbox", count: review.length, items: review }] };
+    }
+    if (path === "/v1/delivery/replay-dead-letters" && method === "POST") {
+      requireRole(["admin"]);
+      var replayed = state.deadLetters;
+      state.deadLetters = 0;
+      addAudit("delivery.replay", "dead-letters", replayed + " sent again");
+      return { replayed: replayed, remaining: 0 };
     }
     if (path === "/healthz" && method === "GET") {
       return { status: "ok", version: "demo", uptime_seconds: 86400 };
@@ -446,6 +528,52 @@
         total_received: state.rows.length,
         counts_per_route: counts,
         top_reason_codes: Object.keys(codes).map(function (k) { return { code: k, count: codes[k] }; }).sort(function (a, b) { return b.count - a.count || (a.code < b.code ? -1 : 1); })
+      };
+    }
+    if (path === "/v1/job-presets" && method === "GET") {
+      requireRole(["candidate", "recruiter", "admin"]);
+      return PRESETS;
+    }
+    if (path === "/v1/me/summary" && method === "GET") {
+      requireRole(["candidate"]);
+      var own = mineFor(state.session.username);
+      var best = own.reduce(function (top, r) { return top === null || r.score > top ? r.score : top; }, null);
+      var latest = own.slice().sort(function (a, b) { return b.submitted_at - a.submitted_at; })[0];
+      return { applications: own.length, best_score: best, latest_route: latest ? latest.route : null };
+    }
+    if (path === "/v1/me/applications" && method === "GET") {
+      requireRole(["candidate"]);
+      return mineFor(state.session.username).slice().sort(function (a, b) { return b.submitted_at - a.submitted_at; }).map(function (r) {
+        return { application_id: r.application_id, job_id: r.job_id, submitted_at: r.submitted_at, score: r.score, route: r.route, summary: r.summary, concern_count: r.concern_count, fix_count: r.fix_count, replaces: r.replaces };
+      });
+    }
+    match = path.match(/^\/v1\/me\/applications\/([^/]+)(\/delta)?$/);
+    if (match && method === "GET") {
+      requireRole(["candidate"]);
+      var mineRows = mineFor(state.session.username);
+      var rec = mineRows.find(function (r) { return r.application_id === decodeURIComponent(match[1]); });
+      if (!rec) fail(404, "That application could not be found.");
+      if (!match[2]) return Object.assign({}, rec.decision, { submitted_at: rec.submitted_at, job_id: rec.job_id, replaces: rec.replaces });
+      var prev = rec.replaces ? mineRows.find(function (r) { return r.application_id === rec.replaces; }) : null;
+      if (!prev) fail(404, "This application did not replace an earlier one.");
+      var before = prev.decision.reasons.map(function (r) { return r.code; });
+      var after = rec.decision.reasons.map(function (r) { return r.code; });
+      function describe(code) {
+        return { title: TITLES[code] || code, explanation: REASONS[code] ? REASONS[code].explanation : "" };
+      }
+      var cleared = before.filter(function (c) { return after.indexOf(c) < 0; }).map(describe);
+      var fresh = after.filter(function (c) { return before.indexOf(c) < 0; }).map(describe);
+      var same = after.filter(function (c) { return before.indexOf(c) >= 0; }).length;
+      var change = rec.score - prev.score;
+      return {
+        previous_id: prev.application_id,
+        score_before: prev.score,
+        score_after: rec.score,
+        score_change: change,
+        cleared: cleared,
+        new: fresh,
+        unchanged_count: same,
+        message: change > 0 ? "Your changes helped. " + (cleared.length ? "You cleared " + cleared.length + (cleared.length === 1 ? " concern." : " concerns.") : "") : change < 0 ? "Your score went down this time. Look at the new concerns and try again." : "Your score stayed the same. Try the items under What you can fix."
       };
     }
     fail(404, "Demo API has no route for " + method + " " + path + ".");

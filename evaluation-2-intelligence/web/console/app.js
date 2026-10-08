@@ -247,7 +247,7 @@
   };
 
   var NAV = {
-    candidate: [["candidate", "My application"]],
+    candidate: [["candidate", "New application"], ["myapps", "My applications"]],
     recruiter: [["recruiter", "Applications"]],
     admin: [["admin", "Admin"], ["recruiter", "Applications"]]
   };
@@ -272,12 +272,33 @@
       });
       nav.appendChild(button);
     });
+    if (C.state.me.role === "candidate") who.append(h("span", { class: "summary-chip", id: "summaryChip", hidden: true }));
     who.append(
       h("span", { class: "who-name", text: "Signed in as " + C.state.me.username + " (" + C.state.me.role + ")" }),
       C.state.demo
         ? h("button", { type: "button", class: "btn small", id: "exitDemoTop", text: "Exit demo", onclick: C.exitDemo })
         : h("button", { type: "button", class: "btn small", id: "signOutBtn", text: "Sign out", onclick: C.logout })
     );
+  };
+
+  C.refreshSummary = async function () {
+    var chip = C.$("summaryChip");
+    if (!chip || !C.state.me || C.state.me.role !== "candidate") return;
+    try {
+      var data = await C.api("GET", "/v1/me/summary");
+      var node = C.$("summaryChip");
+      if (!node) return;
+      if (data && data.best_score !== null && data.best_score !== undefined && Number(data.applications) > 0) {
+        node.textContent = "Best score " + Math.round(Number(data.best_score));
+        node.title = Number(data.applications) + (Number(data.applications) === 1 ? " saved application" : " saved applications");
+        node.hidden = false;
+      } else {
+        node.hidden = true;
+      }
+    } catch (error) {
+      var gone = C.$("summaryChip");
+      if (gone) gone.hidden = true;
+    }
   };
 
   C.go = function (view) {
@@ -287,6 +308,7 @@
     C.clear(root);
     C.status("");
     C.renderShell();
+    C.refreshSummary();
     C.views[view](root);
     document.title = "TR∩ST";
   };

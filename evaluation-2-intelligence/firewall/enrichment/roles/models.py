@@ -44,6 +44,7 @@ class RoleClaims(BaseModel):
     patents: list[QuotedItem] = Field(default_factory=list)
     arxiv_ids: list[QuotedItem] = Field(default_factory=list)
     ieee_dois: list[QuotedItem] = Field(default_factory=list)
+    orcid_ids: list[QuotedItem] = Field(default_factory=list)
     awards: list[QuotedItem] = Field(default_factory=list)
     case_studies: list[QuotedItem] = Field(default_factory=list)
     references: list[PendingReference] = Field(default_factory=list)

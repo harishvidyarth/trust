@@ -21,6 +21,7 @@ from firewall.signals.duplicates import detect_duplicates
 from firewall.signals.identity_links import detect_identity_links
 from firewall.signals.qualification import evaluate_qualification
 from firewall.store import ApplicationStore
+from firewall.store_view import IgnoringStore
 
 
 HARD_ESCALATIONS = (
@@ -102,6 +103,7 @@ def evaluate(
     persist: bool = True,
     excluded_reason_codes: Collection[str] | None = None,
     resume_text: str | None = None,
+    ignore_application_ids: Collection[str] | None = None,
 ) -> Decision:
     existing = store.get_decision(application.application_id)
     if existing is not None:
@@ -109,11 +111,12 @@ def evaluate(
             return existing
         return existing.model_copy(update={"reasons": annotate_reasons(existing.reasons)})
 
-    reasons = detect_duplicates(application, store, config)
-    reasons.extend(detect_identity_links(application, store, config))
+    checks = IgnoringStore(store, ignore_application_ids) if ignore_application_ids else store
+    reasons = detect_duplicates(application, checks, config)
+    reasons.extend(detect_identity_links(application, checks, config))
     if extra_reasons:
         reasons.extend(extra_reasons)
-    reasons.extend(detect_automation(application, store, config))
+    reasons.extend(detect_automation(application, checks, config))
     _, qualification_reasons = evaluate_qualification(application, job, config)
     reasons.extend(qualification_reasons)
     consistency_application = application

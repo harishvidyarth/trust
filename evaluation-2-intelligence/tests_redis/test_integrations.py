@@ -306,3 +306,22 @@ def test_delivery_over_redis_queue_dead_letters_and_replays(fake_link):
         FlakyATS.fail = True
     assert [item.application_id for item in ats.applications()] == ["app-q"]
     assert delivery.dead_letters == ()
+
+
+def test_ownership_lists_applications_per_user_newest_first(fake_link):
+    from firewall.auth.records import InMemoryOwnershipRegistry
+
+    owners = RedisOwnershipRegistry(fake_link)
+    owners.bind("a1", "alice")
+    owners.bind("b1", "bob")
+    owners.bind("a2", "alice")
+    owners.bind("a2", "bob")
+    assert owners.owned_by("alice") == ["a2", "a1"]
+    assert owners.owned_by("bob") == ["b1"]
+    assert RedisOwnershipRegistry(fake_link).owned_by("alice") == ["a2", "a1"]
+    assert owners.owned_by("nobody") == []
+    memory = InMemoryOwnershipRegistry()
+    memory.bind("x1", "alice")
+    memory.bind("y1", "bob")
+    memory.bind("x2", "alice")
+    assert memory.owned_by("alice") == ["x2", "x1"]

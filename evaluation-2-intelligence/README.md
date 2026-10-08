@@ -24,7 +24,11 @@ The language model never decides a route and never changes a weight. Every model
 | Login and roles | Candidate, recruiter and admin. Argon2 passwords, cookie sessions with CSRF, lockout, audit log, overrides kept separate from the stored decision. | `firewall/auth/` |
 | Redis | Optional persistent store, counters, cache and queue. Falls back to memory when Redis is down. | `firewall/redis_layer/` |
 | Intake and intel | Candidate supplied links and a LinkedIn Save to PDF export, with consent and a dispute flow. No LinkedIn scraping. | `firewall/intake_routes.py`, `firewall/intel/` |
-| Console | One app for all three roles in the original warm theme. | `web/console/` |
+| Console | One app for all three roles in the original warm theme, with My applications and Fix and resubmit for candidates and a Destinations tab for recruiters. | `web/console/` |
+| Candidate self service | A list of your own applications, a progress card after you fix and resend, file checks before upload, job presets. A resubmit is not counted as a duplicate of itself. | `firewall/candidate_routes.py` |
+| Final destinations | Pass goes to the ATS, Additional verification to a verification inbox, Manual review to a review inbox, with an optional Slack message. | `firewall/delivery.py` |
+| Registries | ORCID lookup is live. Patent lookup needs a free key. Formats that could not be verified no longer penalise anyone. | `firewall/enrichment/roles/` |
+| LinkedIn export | Reads two column Save to PDF exports and says how much it could read. | `firewall/intel/linkedin.py` |
 
 ## Results
 
@@ -126,8 +130,10 @@ The launcher looks for Ollama on this machine. If it finds the model, it switche
 ## Known limits and open items
 
 - DAST has not been independently verified. A third party must run and accept it. One scan was run by us by mistake and is not counted.
-- The role profile formats for ICAI, ACCA, CFA, SEBI and patent numbers are our assumptions. No real registry lookups exist yet.
-- The LinkedIn export parser was tested only on synthetic layouts. Real exports use columns and wrapped lines.
+- ICAI, ACCA, CFA, SEBI and MCA have no free public lookup, so they give no signal. Their formats are unverified and cannot penalise anyone. The patent lookup is untested live because it needs a free key.
+- The LinkedIn export parser was built from the known layout and tested on synthetic two column files only. A real export may still break it.
+- The verification and review inboxes live in memory, so they empty when the API restarts. Decisions are kept.
+- Uploading with the model on takes 5 to 13 seconds.
 - Name search and corroboration have only been tested with fakes. They have not been run against the live services.
 - Passive name search needs a consent flag and is limited to scores 41 to 69.
 - Face, voice and video checks are not built.

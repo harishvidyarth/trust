@@ -17,6 +17,7 @@ from urllib.parse import urlsplit, urlunsplit
 import httpx
 
 from firewall.connectors.forwarders import (
+    _RetryingHTTPForwarder,
     ATSForwarder,
     GenericWebhookForwarder,
     GreenhouseHarvestForwarder,
@@ -48,6 +49,7 @@ _TYPE_KEYS = {
     "greenhouse": frozenset({"api_key_env", "on_behalf_of", "base_url", "candidate_path"}),
     "lever": frozenset({"api_key_env", "base_url", "opportunity_path"}),
     "webhook": frozenset({"url", "secret_env"}),
+    "slack": frozenset({"url_env"}),
 }
 
 
@@ -210,6 +212,8 @@ def validate_delivery_config(
             raise ValueError(f"destination {name!r} requires url")
         if kind in {"greenhouse", "lever"} and "api_key_env" not in spec:
             raise ValueError(f"destination {name!r} requires api_key_env")
+        if kind == "slack" and "url_env" not in spec:
+            raise ValueError(f"destination {name!r} requires url_env")
         if kind == "webhook" and "secret_env" not in spec:
             raise ValueError(f"destination {name!r} requires secret_env")
         if kind == "greenhouse":
@@ -219,7 +223,7 @@ def validate_delivery_config(
                 spec["candidate_path"] = _validate_path(spec["candidate_path"], "candidate_path")
         if kind == "lever" and "opportunity_path" in spec:
             spec["opportunity_path"] = _validate_path(spec["opportunity_path"], "opportunity_path")
-        for env_key in ("api_key_env", "secret_env"):
+        for env_key in ("api_key_env", "secret_env", "url_env"):
             if env_key in spec and (
                 not isinstance(spec[env_key], str) or _ENV_NAME.fullmatch(spec[env_key]) is None
             ):
@@ -240,11 +244,15 @@ def validate_delivery_config(
 
 def default_delivery_config() -> dict[str, Any]:
     return {
-        "destinations": {"mock_ats": {"type": "mock_ats"}},
+        "destinations": {
+            "mock_ats": {"type": "mock_ats"},
+            "verification_inbox": {"type": "queue"},
+            "review_inbox": {"type": "queue"},
+        },
         "routes": {
             Route.PASS_TO_ATS.value: ["mock_ats"],
-            Route.ADDITIONAL_VERIFICATION.value: [],
-            Route.MANUAL_REVIEW.value: [],
+            Route.ADDITIONAL_VERIFICATION.value: ["verification_inbox"],
+            Route.MANUAL_REVIEW.value: ["review_inbox"],
         },
     }
 
@@ -271,6 +279,20 @@ def load_delivery_config(
     return validate_delivery_config(config, allow_private=allow_private)
 
 
+class SlackForwarder(_RetryingHTTPForwarder):
+    def __init__(self, url: str, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.url = url
+
+    @property
+    def destination(self) -> str:
+        return self.url
+
+    def _request(self, application: Application) -> httpx.Response:
+        text = f"TR∩ST: application {application.application_id} for job {application.job_id} needs a person to look at it."
+        return self.client.post(self.url, json={"text": text}, timeout=self.timeout)
+
+
 def _build_forwarder(
     name: str,
     spec: Mapping[str, Any],
@@ -288,6 +310,11 @@ def _build_forwarder(
         options["client"] = client
     if kind in {"mock", "mock_ats"}:
         return _MockATSForwarder(ats)
+    if kind == "slack":
+        hook = validate_destination_url(_env_secret(spec, "url", environ), False)
+        if urlsplit(hook).hostname != "hooks.slack.com":
+            raise ValueError("slack destinations must use a hooks.slack.com address")
+        return SlackForwarder(hook, **options)
     if kind == "queue":
         secret = _env_secret(spec, "secret", environ) if "secret_env" in spec else None
         return QueueForwarder(name, url=spec.get("url"), secret=secret, **options)
@@ -466,6 +493,23 @@ class Delivery:
         with self._condition:
             self._pending += 1
         self._queue.put_nowait((destination, self.forwarders[destination], application))
+
+    def inboxes(self) -> list[dict[str, Any]]:
+        result = []
+        for name, forwarder in self.forwarders.items():
+            if isinstance(forwarder, QueueForwarder) and forwarder.url is None:
+                items = list(forwarder.items)[-200:][::-1]
+                result.append(
+                    {
+                        "name": name,
+                        "count": len(forwarder.items),
+                        "items": [
+                            {"application_id": item.application_id, "job_id": item.job_id, "candidate_name": item.candidate.name}
+                            for item in items
+                        ],
+                    }
+                )
+        return result
 
     def status(self) -> dict[str, Any]:
         with self._condition:

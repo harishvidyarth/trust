@@ -257,15 +257,29 @@ class RedisOwnershipRegistry:
     def _key(application_id: str) -> str:
         return f"{KEY_PREFIX}own:{application_id}"
 
+    @staticmethod
+    def _user_key(username: str) -> str:
+        return f"{KEY_PREFIX}ownu:{_token_hash(username)}"
+
     def bind(self, application_id: str, username: str) -> None:
-        self._link.call(
-            lambda client: client.set(self._key(application_id), username, ex=RECORD_TTL_S, nx=True),
-            lambda: self._fallback.bind(application_id, username),
-        )
+        def operation(client):
+            if client.set(self._key(application_id), username, ex=RECORD_TTL_S, nx=True):
+                pipe = client.pipeline(transaction=True)
+                pipe.lpush(self._user_key(username), application_id)
+                pipe.expire(self._user_key(username), RECORD_TTL_S)
+                pipe.execute()
+
+        self._link.call(operation, lambda: self._fallback.bind(application_id, username))
 
     def owner(self, application_id: str) -> str | None:
         remote = self._link.call(lambda client: client.get(self._key(application_id)), lambda: None)
         return remote if remote is not None else self._fallback.owner(application_id)
+
+    def owned_by(self, username: str) -> list[str]:
+        remote = self._link.call(lambda client: list(client.lrange(self._user_key(username), 0, -1)), lambda: [])
+        found = [item.decode() if isinstance(item, bytes) else str(item) for item in remote]
+        seen = set(found)
+        return found + [item for item in self._fallback.owned_by(username) if item not in seen]
 
 
 class RedisOverrideStore:

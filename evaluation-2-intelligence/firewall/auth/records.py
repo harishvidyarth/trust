@@ -34,6 +34,8 @@ class OwnershipRegistry(Protocol):
 
     def owner(self, application_id: str) -> str | None: ...
 
+    def owned_by(self, username: str) -> list[str]: ...
+
 
 class OverrideStore(Protocol):
     def add(self, record: OverrideRecord) -> None: ...
@@ -53,6 +55,10 @@ class InMemoryOwnershipRegistry:
     def owner(self, application_id: str) -> str | None:
         with self._lock:
             return self._owners.get(application_id)
+
+    def owned_by(self, username: str) -> list[str]:
+        with self._lock:
+            return [key for key, value in reversed(self._owners.items()) if value == username]
 
 
 class InMemoryOverrideStore:

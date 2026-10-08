@@ -81,12 +81,23 @@ def test_format_validators():
     assert not formats.valid_credential_id("123456")
     assert not formats.valid_credential_id("AAAAAA1")
     assert not formats.valid_credential_id("12")
-    assert formats.valid_membership("ICAI", "123456") and not formats.valid_membership("ICAI", "12345")
-    assert formats.valid_membership("ACCA", "1234567") and not formats.valid_membership("XYZ", "123456")
-    assert formats.valid_regulator_id("INA000012345") and not formats.valid_regulator_id("INA12")
-    assert formats.valid_patent("US 10,123,456 B2") and formats.valid_patent("EP1234567A1") and not formats.valid_patent("US12")
+    for body in ("ICAI", "ACCA", "CFA", "XYZ"):
+        assert formats.valid_membership(body, "123456") is None and formats.valid_membership(body, "1") is None
+    assert formats.valid_regulator_id("INA000012345") is True and formats.valid_regulator_id("INA12") is None
+    assert formats.valid_din("12345678") is True and formats.valid_din("12345") is None
+    assert formats.valid_patent("US 10,123,456 B2") is True and formats.valid_patent("US 2020/0123456 A1") is True
+    assert formats.valid_patent("US12") is False and formats.valid_patent("WO 2020/123456") is True
+    assert formats.valid_patent("WO 2020/12345") is False and formats.valid_patent("WO02/12345") is None
+    assert formats.valid_patent("EP1234567A1") is True and formats.valid_patent("EP12") is None
+    assert formats.valid_patent("IN 201841000123") is True and formats.valid_patent("IN123456") is None
+    assert formats.valid_patent("ZZ 99999") is None
     assert formats.valid_arxiv("2101.01234") and not formats.valid_arxiv("2113.01234") and not formats.valid_arxiv("2101.0123")
-    assert formats.valid_ieee_doi("10.1109/ACCESS.2020.3012345") and not formats.valid_ieee_doi("10.1110/abc")
+    assert formats.valid_arxiv("0706.0001") and not formats.valid_arxiv("0706.00001") and formats.valid_arxiv("hep-th/9901001")
+    assert formats.valid_arxiv("math.GT/0309136v2") and not formats.valid_arxiv("hep-th/0704001")
+    assert formats.valid_ieee_doi("10.1109/ACCESS.2020.3012345") and formats.valid_ieee_doi("10.1109/5.771073")
+    assert not formats.valid_ieee_doi("10.1110/abc") and not formats.valid_ieee_doi("10.1109/")
+    assert formats.valid_orcid("0000-0002-1825-0097") and formats.valid_orcid("0000-0002-1694-233X")
+    assert not formats.valid_orcid("0000-0002-1825-0098") and not formats.valid_orcid("0000000218250097")
 
 
 def test_extraction_is_verbatim():
@@ -156,8 +167,7 @@ def test_network_gated_by_env():
 
 
 def test_finance_membership_format_and_registry_results():
-    text = "ICAI Membership No: 12345\n"
-    assert codes(run_role_checks("finance", text, candidate(), env={})) == {"MEMBERSHIP_ID_INVALID_FORMAT"}
+    assert run_role_checks("finance", "ICAI Membership No: 12345\n", candidate(), env={}) == []
     text = "ICAI Membership No: 123456\n"
     assert run_role_checks("finance", text, candidate(), registry=NullRegistry(), env=ENV) == []
     missing = StaticRegistry(membership=RegistryRecord(found=False))
@@ -183,12 +193,11 @@ def test_finance_directorship_and_regulator():
     assert ("directorship", "Ada Synthetic", "Example Industries Ltd") in registry.calls
     unlisted = run_role_checks("finance", "SEBI INA000012345\n", candidate(), registry=StaticRegistry(regulator=RegistryRecord(found=False)), env=ENV)
     assert codes(unlisted) == {"REGULATOR_NOT_LISTED"}
-    badid = run_role_checks("finance", "Registration INA12345\n", candidate(), env={})
-    assert codes(badid) == {"REGULATOR_ID_INVALID_FORMAT"}
+    assert run_role_checks("finance", "Registration INA12345\n", candidate(), env={}) == []
 
 
 def test_finance_din_invalid():
-    assert codes(run_role_checks("finance", "DIN: 12345\n", candidate(), env={})) == {"DIN_INVALID_FORMAT"}
+    assert run_role_checks("finance", "DIN: 12345\n", candidate(), env={}) == []
 
 
 def test_hardware_patent_checks():
@@ -200,8 +209,10 @@ def test_hardware_patent_checks():
     absent = StaticRegistry(patent=PatentRecord(found=False))
     assert codes(run_role_checks("hardware", text, candidate(), registry=absent, env=ENV)) == {"PATENT_NOT_FOUND"}
     assert ok.calls == [("patent", "US10123456B2")]
-    assert codes(run_role_checks("hardware", "Patent No. US 12\n", candidate(), env={})) == set()
-    assert codes(run_role_checks("hardware", "Patent number: ZZ 99999\n", candidate(), env={})) == {"PATENT_NUMBER_INVALID_FORMAT"}
+    assert codes(run_role_checks("hardware", "Patent No. US 123456789\n", candidate(), env={})) == {"PATENT_NUMBER_INVALID_FORMAT"}
+    assert codes(run_role_checks("hardware", "Patent No. WO 2020/12345\n", candidate(), env={})) == {"PATENT_NUMBER_INVALID_FORMAT"}
+    assert run_role_checks("hardware", "Patent number: ZZ 99999\n", candidate(), env={}) == []
+    assert run_role_checks("hardware", "Patent number: EP 12345\n", candidate(), env={}) == []
 
 
 def test_hardware_arxiv_and_ieee_format():

@@ -19,11 +19,12 @@ from firewall.auth import bind_application, overrides_for
 from firewall.auth.deps import Principal
 from firewall.auth.service import get_service
 from firewall.auth_routes import build_auth_router
+from firewall.candidate_routes import build_candidate_router, build_replace_links
 from firewall.config import load_config
 from firewall.connectors.greenhouse import GreenhouseWebhook, adapt
 from firewall.connectors.mock_ats import MockATS
 from firewall.delivery import build_delivery_from_env
-from firewall.delivery_routes import build_delivery_router
+from firewall.delivery_routes import build_delivery_router, build_inbox_router
 from firewall.guards import application_access, auth_enforced, guard, session_cookie_present
 from firewall.intake_intel import RealIntelService
 from firewall.intake_routes import build_intake_router
@@ -69,6 +70,8 @@ if _SIGNAL_CACHE is not None:
     enrichment_runner._DEFAULT_CACHE = _SIGNAL_CACHE
 MAX_WEBHOOK_BYTES = 1_048_576
 MAX_UPLOAD_BYTES = 5_242_880
+UPLOAD_SUFFIXES = frozenset({".pdf", ".docx", ".txt"})
+REPLACE_LINKS = build_replace_links()
 OPEN_PATHS = frozenset({"/healthz"})
 UNKNOWN_IPS = frozenset({"", "0.0.0.0", "unknown"})
 
@@ -171,6 +174,7 @@ def _evaluate_and_forward(
     extra_reasons: list[Reason] | None = None,
     dry_run: bool = False,
     resume_text: str | None = None,
+    ignore_application_ids: tuple[str, ...] = (),
 ) -> Decision:
     already_decided = STORE.get_decision(application.application_id) is not None
     decision = evaluate(
@@ -182,6 +186,7 @@ def _evaluate_and_forward(
         persist=not dry_run,
         resume_text=resume_text,
         llm_client=_llm_client(),
+        ignore_application_ids=ignore_application_ids,
     )
     if dry_run:
         return decision
@@ -211,8 +216,34 @@ def evaluate_application(
 async def _read_upload(file: UploadFile) -> bytes:
     data = await file.read(MAX_UPLOAD_BYTES + 1)
     if len(data) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=413, detail="resume file too large")
+        raise HTTPException(status_code=413, detail="That file is larger than 5 MB. Please choose a smaller file.")
     return data
+
+
+def _check_upload(data: bytes, filename: str) -> None:
+    if not data:
+        raise HTTPException(status_code=400, detail="That file is empty. Please choose your resume and try again.")
+    if os.path.splitext(filename.lower())[1] not in UPLOAD_SUFFIXES:
+        raise HTTPException(
+            status_code=415,
+            detail="That file type is not supported. Please upload a PDF, a Word file or a plain text file.",
+        )
+
+
+def _check_replaces(principal: Principal, replaces: str | None, own_id: str | None) -> str | None:
+    if not replaces:
+        return None
+    problem = HTTPException(status_code=400, detail="We could not find the earlier application you want to replace.")
+    if replaces == own_id or STORE.get_decision(replaces) is None:
+        raise problem
+    if principal.role == "candidate" and get_service().ownership.owner(replaces) != principal.username:
+        raise problem
+    return replaces
+
+
+def _same_person(previous_id: str, application: Application) -> bool:
+    candidates = STORE.by_email(application.candidate.email) + STORE.by_phone(application.candidate.phone)
+    return any(item.application_id == previous_id for item in candidates)
 
 
 def _parse_job(job_json: str) -> JobRequirements:
@@ -233,11 +264,19 @@ async def upload_application(
     session_seconds: Annotated[float, Form(ge=0)] = 60.0,
     paste_char_ratio: Annotated[float, Form(ge=0, le=1)] = 0.0,
     dry_run: Annotated[bool, Form()] = False,
+    replaces: Annotated[str | None, Form(max_length=128)] = None,
     principal: Principal = Depends(guard("service", "candidate", "recruiter", "admin")),
 ) -> Decision:
     data = await _read_upload(file)
+    _check_upload(data, file.filename or "resume")
+    previous_id = _check_replaces(principal, replaces, application_id)
     job = _parse_job(job_json)
     analysis = analyze_resume(data, file.filename or "resume", job)
+    if not analysis.parsed_ok:
+        raise HTTPException(
+            status_code=400,
+            detail="We could not read that file. Please save it again as a normal PDF, Word file or text file and try again.",
+        )
     hidden_intent = classify_hidden_intents(analysis.hidden_spans, job)
     application = Application(
         application_id=application_id or uuid.uuid4().hex,
@@ -255,9 +294,18 @@ async def upload_application(
         Reason(code=str(item["code"]), severity=str(item["severity"]), detail=str(item["detail"]), weight=int(item["weight"]))
         for item in analysis.reasons
     ]
-    decision = _evaluate_and_forward(application, job, extra, dry_run=dry_run, resume_text=analysis.visible_text)
-    if principal.role == "candidate" and not dry_run:
+    decision = _evaluate_and_forward(
+        application,
+        job,
+        extra,
+        dry_run=dry_run,
+        resume_text=analysis.visible_text,
+        ignore_application_ids=(previous_id,) if previous_id and _same_person(previous_id, application) else (),
+    )
+    if (principal.role == "candidate" or principal.via == "open") and not dry_run:
         bind_application(application.application_id, principal.username)
+        if previous_id is not None:
+            REPLACE_LINKS.link(application.application_id, previous_id)
     return decision.model_copy(update={"hidden_intent": hidden_intent, "agreement": analysis.agreement})
 
 
@@ -411,4 +459,6 @@ app.include_router(
         audit=lambda: get_service().audit,
     )
 )
+app.include_router(build_candidate_router(STORE, REPLACE_LINKS, guard("candidate"), guard("candidate", "recruiter", "admin")))
 app.include_router(build_delivery_router(DELIVERY, guard=guard("admin"), audit=lambda: get_service().audit))
+app.include_router(build_inbox_router(DELIVERY, guard=guard("recruiter", "admin")))

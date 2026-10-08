@@ -8,11 +8,16 @@ from firewall.enrichment.roles.checks import (
     run_role_checks,
 )
 from firewall.enrichment.roles.extract import extract_role_claims
+from firewall.enrichment.roles.live import LiveRegistry, OrcidRegistry, SafeFetcher, UsptoOdpRegistry
 from firewall.enrichment.roles.models import PendingReference, RoleClaims
 from firewall.enrichment.roles.profiles import PROFILES, select_profile
 from firewall.enrichment.roles.registry import NullRegistry, PatentRecord, RegistryRecord, RoleRegistry
 
 __all__ = [
+    "LiveRegistry",
+    "OrcidRegistry",
+    "SafeFetcher",
+    "UsptoOdpRegistry",
     "NullRegistry",
     "PROFILES",
     "PatentRecord",

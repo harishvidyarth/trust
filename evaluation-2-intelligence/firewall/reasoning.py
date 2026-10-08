@@ -396,6 +396,21 @@ _TEMPLATES = {
         "Check the paper reference and correct any mistake.",
         "A journal paper reference in the resume is not written in the usual way. It may contain a typing mistake.",
     ),
+    "ORCID_ID_INVALID_FORMAT": (
+        "A researcher identifier is not written in the usual way.",
+        "Check the researcher identifier and correct any mistake.",
+        "A researcher identifier in the resume fails its built in check. It may contain a typing mistake.",
+    ),
+    "ORCID_NOT_FOUND": (
+        "A researcher identifier named in the resume has no public record.",
+        "Check the identifier or remove the claim you cannot support.",
+        "A researcher identifier named in the resume could not be found in the public researcher registry.",
+    ),
+    "ORCID_NAME_MISMATCH": (
+        "A researcher identifier belongs to a different name.",
+        "Use your own researcher identifier or explain the difference.",
+        "A researcher identifier named in the resume is held under a different name. The claim needs a closer look.",
+    ),
     "PORTFOLIO_UNREACHABLE": (
         "The portfolio website could not be opened.",
         "Check the portfolio link and make sure the site is online.",
@@ -420,6 +435,11 @@ _TEMPLATES = {
         "A patent named in the resume was confirmed.",
         "No change is needed for this claim.",
         "A patent named in the resume was confirmed in public records. This is a good sign.",
+    ),
+    "ORCID_VERIFIED": (
+        "A researcher identifier named in the resume was confirmed.",
+        "No change is needed for this claim.",
+        "A researcher identifier named in the resume was confirmed in the public registry under a matching name. This is a good sign.",
     ),
     "HARDWARE_REPO_CORROBORATED": (
         "A hardware project online supports a claim in the resume.",

@@ -25,8 +25,12 @@ Builds on: [Evaluation 1](../evaluation-1-foundation/PLAN.md). Everything there 
 | 15 | Intake routes with consent and dispute | `tests_intake` | Done in tests. Real browser upload not tested. |
 | 16 | Role profiles and passive name search | `tests_intel` | Built and tested with fakes. Not wired into the live flow, needs a consent flag. Registry formats are our assumptions. |
 | 17 | One console in the original theme | live Chrome | Done for the candidate flow. Recruiter and admin views checked in demo mode only. |
-| 18 | Face, voice and video verification | none | Not started. Parked by decision. |
-| 19 | Independent DAST | none | Not done. A third party must run and accept it. |
+| 18 | Candidate self service: My applications, Fix and resubmit, progress card | `tests_candidate`, live run | Done. Live: 19 to 100 after fixing, 7 concerns cleared, passed to the ATS. |
+| 19 | Final destinations: three inboxes, optional Slack, Destinations tab | `tests_ats`, live browser | Done. Inbox is in memory only. |
+| 20 | Registry formats verified, live ORCID lookup | `tests_registry` | Done. Unverifiable formats removed. Patent lookup needs a key. |
+| 21 | Hardened LinkedIn export parser | `tests_intel` | Done on synthetic layouts only. |
+| 22 | Face, voice and video verification | none | Not started. Stopped by decision. |
+| 23 | Independent DAST | none | Not done. A third party must run and accept it. |
 
 ## Verified in this round
 

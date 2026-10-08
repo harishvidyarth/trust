@@ -9,6 +9,7 @@ class RegistryRecord:
     found: bool
     name: str | None = None
     url: str | None = None
+    aliases: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,8 @@ class RoleRegistry(Protocol):
 
     def patent(self, number: str) -> PatentRecord | None: ...
 
+    def orcid(self, orcid_id: str) -> RegistryRecord | None: ...
+
 
 class NullRegistry:
     def membership(self, body: str, number: str) -> RegistryRecord | None:
@@ -40,4 +43,7 @@ class NullRegistry:
         return None
 
     def patent(self, number: str) -> PatentRecord | None:
+        return None
+
+    def orcid(self, orcid_id: str) -> RegistryRecord | None:
         return None

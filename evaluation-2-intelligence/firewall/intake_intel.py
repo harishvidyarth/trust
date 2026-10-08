@@ -17,13 +17,11 @@ from firewall.intel import (
     cross_check,
     dispute,
     extract_facts,
-    ground,
-    parse_text,
     render_findings,
     run_passive_intel,
     should_run,
 )
-from firewall.intel.linkedin import pdf_text
+from firewall.intel.linkedin import parse_linkedin_pdf as read_linkedin_export, pdf_text
 from firewall.models import Candidate
 from firewall.resume.extract import extract_resume
 
@@ -101,7 +99,7 @@ class RealIntelService:
 
     def parse_linkedin_pdf(self, data: bytes) -> dict[str, Any]:
         text = pdf_text(data)
-        profile = ground(parse_text(text), text)
+        profile = read_linkedin_export(data)
         extracted = extract_resume(data, "linkedin.pdf")
         github = GITHUB_RE.search(text)
         dois = [match.group("doi").rstrip(".,;:)]}") for match in DOI_RE.finditer(text)]
@@ -119,6 +117,9 @@ class RealIntelService:
             "pages": extracted.page_count,
             "hidden_span_count": len(extracted.hidden_spans),
             "dropped_count": len(profile.dropped),
+            "confidence": profile.confidence,
+            "confidence_message": profile.confidence_message,
+            "warnings": list(profile.warnings),
         }
 
     def build_findings(self, resume_text: str, profile: dict[str, Any]) -> list[dict[str, Any]]:

@@ -81,9 +81,12 @@ def test_cross_check_employer_missing_both_directions():
     reasons = cross_check(profile, resume, today=TODAY)
     codes = [item.code for item in reasons]
     assert codes == ["LINKEDIN_EMPLOYER_MISSING", "LINKEDIN_EMPLOYER_MISSING"]
-    assert any("Phantom Labs" in item.detail and "experience[1]" in item.detail for item in reasons)
-    assert any("Difference Works" in item.detail and "line" in item.detail for item in reasons)
-    assert all(item.weight == 6 for item in reasons)
+    assert any("Phantom Labs" in item.detail and "experience 2" in item.detail for item in reasons)
+    assert any("Difference Works" in item.detail and "line" in item.evidence for item in reasons)
+    by_text = {item.detail: item.weight for item in reasons}
+    assert [item.weight for item in reasons if "Phantom Labs" in item.detail] == [6]
+    assert [item.weight for item in reasons if "Difference Works" in item.detail] == [1]
+    assert len(by_text) == 2
 
 
 def test_cross_check_date_mismatch_over_three_months_only():
