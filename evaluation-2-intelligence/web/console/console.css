@@ -549,3 +549,14 @@ fieldset.form-section { padding: var(--space-4); }
 .drawer, .drawer-scroll, .drawer-scroll > *, .drawer-card, .gh-card { min-width: 0; }
 .drawer-scroll { overflow-x: hidden; }
 .gh-facts { min-width: 0; }
+
+.ask-slot { margin-top: var(--space-2); }
+.ask-note { margin: 0; color: var(--text-muted); }
+.ask-all-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin: var(--space-3) 0; }
+.ask-all-wrap p { margin: 0; }
+
+.notice-line { margin: var(--space-3) 0; padding: var(--space-3) var(--space-4); border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface-2); color: var(--text); }
+.link-btn { background: none; border: 0; padding: 0; margin-left: var(--space-2); font: inherit; color: var(--info); text-decoration: underline; cursor: pointer; }
+.link-btn:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+.rejected-line { margin: var(--space-3) 0; }
+.rejected-by { color: var(--text-muted); }

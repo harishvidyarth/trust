@@ -221,7 +221,121 @@
     return card;
   }
 
-  function checkRow(c) {
+  var sentLabels = {};
+
+  function wasSent(appId, label) {
+    return !!(sentLabels[appId] && sentLabels[appId][label]);
+  }
+
+  function markSent(appId, label) {
+    (sentLabels[appId] = sentLabels[appId] || {})[label] = true;
+  }
+
+  async function sendAsk(appId, label) {
+    var res = await call("POST", "/v1/applications/" + encodeURIComponent(appId) + "/requests", { label: label });
+    markSent(appId, label);
+    if (typeof document !== "undefined") {
+      document.dispatchEvent(new CustomEvent("claimcheck:request-sent", { detail: { application_id: appId, label: label } }));
+    }
+    return res;
+  }
+
+  function askError(error) {
+    if (error && (error.status === 409 || error.status === 400) && error.message) return error.message;
+    return C.friendly(error);
+  }
+
+  function sentNote() {
+    return h("p", { class: "small ask-note", text: "Request sent. The candidate will see it in their application." });
+  }
+
+  function askControl(c, ctx) {
+    var label = c.ask_label;
+    var slot = h("div", { class: "ask-slot" });
+    var entry = { label: label, slot: slot };
+    ctx.slots.push(entry);
+    function showSent() {
+      C.clear(slot);
+      slot.append(sentNote());
+    }
+    if (wasSent(ctx.appId, label)) {
+      showSent();
+      return slot;
+    }
+    var btn = h("button", { type: "button", class: "btn small ask-btn", text: "Ask the candidate for this" });
+    var err = h("p", { class: "field-error small", role: "alert", hidden: true });
+    btn.addEventListener("click", async function () {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      btn.setAttribute("aria-busy", "true");
+      err.hidden = true;
+      try {
+        await sendAsk(ctx.appId, label);
+        ctx.slots.forEach(function (e) {
+          if (e.label === label) {
+            C.clear(e.slot);
+            e.slot.append(sentNote());
+          }
+        });
+        C.status("The request was sent.");
+        if (ctx.refreshAll) ctx.refreshAll();
+      } catch (error) {
+        if (C.authError && C.authError(error)) return;
+        btn.disabled = false;
+        btn.removeAttribute("aria-busy");
+        err.textContent = askError(error);
+        err.hidden = false;
+      }
+    });
+    slot.append(btn, err);
+    return slot;
+  }
+
+  function askAllControl(list, ctx) {
+    var labels = [];
+    list.forEach(function (c) {
+      if (c.status === "not_checked" && typeof c.ask_label === "string" && c.ask_label && labels.indexOf(c.ask_label) < 0 && !wasSent(ctx.appId, c.ask_label)) labels.push(c.ask_label);
+    });
+    if (labels.length < 2) return null;
+    var btn = h("button", { type: "button", class: "btn small ask-all", text: "Ask for all missing items" });
+    var msg = h("p", { class: "small", role: "status", "aria-live": "polite" });
+    btn.addEventListener("click", async function () {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      btn.setAttribute("aria-busy", "true");
+      msg.className = "small";
+      msg.textContent = "";
+      var done = 0;
+      var todo = labels.filter(function (l) { return !wasSent(ctx.appId, l); });
+      for (var i = 0; i < todo.length; i += 1) {
+        var current = todo[i];
+        try {
+          await sendAsk(ctx.appId, current);
+          done += 1;
+          ctx.slots.forEach(function (e) {
+            if (e.label === current) {
+              C.clear(e.slot);
+              e.slot.append(sentNote());
+            }
+          });
+        } catch (error) {
+          if (C.authError && C.authError(error)) return;
+          msg.className = "small err";
+          msg.textContent = (done ? done + (done === 1 ? " request sent. " : " requests sent. ") : "") + askError(error);
+          btn.disabled = false;
+          btn.removeAttribute("aria-busy");
+          if (done && ctx.refreshAll) ctx.refreshAll();
+          return;
+        }
+      }
+      btn.removeAttribute("aria-busy");
+      msg.textContent = done + (done === 1 ? " request sent." : " requests sent.");
+      if (ctx.refreshAll) ctx.refreshAll();
+    });
+    return h("div", { class: "ask-all-wrap" }, btn, msg);
+  }
+
+  function checkRow(c, ctx) {
     var st = STATUS[c.status] || STATUS.not_checked;
     return h("li", { class: st.cls },
       h("span", { class: "claim-mark", "aria-hidden": "true", text: st.mark }),
@@ -232,12 +346,14 @@
         ),
         c.claim ? h("p", { class: "small muted", text: "Claim in your resume " + c.claim }) : null,
         c.explanation ? h("p", { class: "small", text: c.explanation }) : null,
-        httpsOnly(c.evidence_url) ? h("p", { class: "small" }, h("a", { href: c.evidence_url, target: "_blank", rel: "noopener noreferrer", text: "See the source" })) : null
+        httpsOnly(c.evidence_url) ? h("p", { class: "small" }, h("a", { href: c.evidence_url, target: "_blank", rel: "noopener noreferrer", text: "See the source" })) : null,
+        ctx && c.status === "not_checked" && typeof c.ask_label === "string" && c.ask_label ? askControl(c, ctx) : null
       )
     );
   }
 
-  function checkResult(r, who) {
+  function checkResult(r, who, appId) {
+    var ctx = { appId: appId, slots: [], refreshAll: null };
     var counts = r.counts || {};
     var list = Array.isArray(r.checks) ? r.checks : [];
     var groups = {};
@@ -261,9 +377,11 @@
       out.push(h("p", { class: "check-tip", text: "No GitHub link was found in this resume." }));
     }
     if (!list.length) out.push(h("p", { class: "muted", text: "There was nothing to check." }));
+    var askAll = askAllControl(list, ctx);
+    if (askAll) out.push(askAll);
     keys.forEach(function (k) {
       out.push(h("h4", { class: "check-group", text: k }));
-      out.push(h("ul", { class: "claim-reasons" }, groups[k].map(checkRow)));
+      out.push(h("ul", { class: "claim-reasons" }, groups[k].map(function (c) { return checkRow(c, ctx); })));
     });
     if (Array.isArray(r.slow_sources) && r.slow_sources.length) {
       out.push(h("p", { class: "small muted", text: "These sources were slow to answer and may be missing " + r.slow_sources.join(" and ") + "." }));
@@ -307,7 +425,7 @@
     function show(r) {
       hasResult = true;
       C.clear(resultBox);
-      C.append(resultBox, checkResult(r, who));
+      C.append(resultBox, checkResult(r, who, applicationId));
       if (button && !busy) button.textContent = "Run again";
     }
 

@@ -80,6 +80,7 @@ def build_auth_router(
     decision_lookup: DecisionLookup,
     service: AuthService | None = None,
     outcomes: OutcomeStore | None = None,
+    siblings_of: Callable[[str], list[str]] | None = None,
 ) -> APIRouter:
     service = service or AuthService.from_env()
     set_service(service)
@@ -285,6 +286,18 @@ def build_auth_router(
             client_ip(request),
             {"reason": entry["reason"], "score": score, "route": route},
         )
+        also: list[str] = []
+        if target == "rejected" and siblings_of is not None:
+            linked_reason = f"Closed together with application {application_id[:8]} for the same applicant and job. {body.reason}"[:500]
+            for other in siblings_of(application_id):
+                if outcomes.is_rejected(other) or decision_lookup(other) is None:
+                    continue
+                try:
+                    outcomes.change(other, "rejected", linked_reason, principal.username)
+                except OutcomeConflict:
+                    continue
+                audit.append("application_rejected", principal.username, other, client_ip(request), {"reason": linked_reason, "linked_to": application_id})
+                also.append(other)
         return {
             "application_id": application_id,
             "outcome": entry["outcome"],
@@ -292,6 +305,7 @@ def build_auth_router(
             "by": entry["by"],
             "at": entry["at"],
             "original": {"score": score, "route": route},
+            "also_rejected": also,
         }
 
     @router.post("/decisions/{application_id}/reject")

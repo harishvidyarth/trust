@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from firewall.auth.deps import Principal
-from firewall.enrichment.claims import extract_claims
+from firewall.enrichment.claims import URL_RE, extract_claims
 from firewall.enrichment.crossref import CrossrefConnector
 from firewall.enrichment.domain import DomainConnector
 from firewall.enrichment.github import GitHubConnector
@@ -22,6 +22,8 @@ from firewall.models import Candidate, Decision, Reason
 from firewall.reasoning import explain_reason
 
 MIN_SECONDS_BETWEEN_RUNS = 30
+FREE_MAIL = {"gmail.com", "googlemail.com", "yahoo.com", "yahoo.in", "outlook.com", "hotmail.com", "live.com", "icloud.com", "me.com", "proton.me", "protonmail.com", "aol.com", "rediffmail.com", "zoho.com"}
+SKIP_HOSTS = ("github.com", "linkedin.com", "doi.org", "gitlab.com")
 RECORD_TTL_SECONDS = 14 * 24 * 3600
 PROFILE_LABELS = {
     "general": "General role",
@@ -37,6 +39,15 @@ SOURCE_LABELS = (
     ("identity", "Name and email"),
     ("role", "Role specific checks"),
 )
+ASK_TEXT = {
+    "GitHub": "Please send the link to your GitHub profile.",
+    "Research papers": "Please send links or DOIs for any research papers you listed.",
+    "Employer website": "Please send your current employer's website or your work email address.",
+    "finance": "Please send your professional membership number and the name of the body that issued it.",
+    "hardware": "Please send a link to your patents, designs or hardware projects.",
+    "sales_ops_design": "Please send a link to your portfolio or case studies.",
+    "general": "Please send the name and email of someone who can confirm your last job.",
+}
 CANNOT_CHECK = {
     "finance": "Professional membership numbers such as ICAI, ACCA or CFA cannot be checked automatically yet. A person can ask for the certificate.",
     "hardware": "Patent numbers can be checked only when a patent lookup key is set up. A person can ask for the patent link.",
@@ -101,7 +112,13 @@ def build_check_router(
         if not claims.employer_domains:
             items.append(("Employer website", "No employer website was found in the resume, so the employer could not be looked up."))
         items.append(("Role specific checks", CANNOT_CHECK.get(profile, CANNOT_CHECK["general"])))
-        return [{"source": label, "status": "not_checked", "title": "Could not be checked", "explanation": text, "evidence_url": None, "checked_at": None} for label, text in items]
+        rows = []
+        for label, text in items:
+            ask = ASK_TEXT.get(profile if label == "Role specific checks" else label)
+            if label == "Role specific checks" and profile == "general":
+                ask = ASK_TEXT["general"]
+            rows.append({"source": label, "status": "not_checked", "title": "Could not be checked", "explanation": text, "evidence_url": None, "checked_at": None, "ask_label": ask})
+        return rows
 
     def shape(signals: list[Any]) -> list[dict[str, Any]]:
         checks = []
@@ -135,6 +152,16 @@ def build_check_router(
             raise HTTPException(status_code=404, detail="We could not find that application.")
         text = text_for(body.application_id) or ""
         claims = extract_claims(text, candidate)
+        domain = candidate.email.rsplit("@", 1)[-1].lower() if "@" in candidate.email else ""
+        if domain and domain not in FREE_MAIL and not claims.employer_domains:
+            claims.employer_domains.append(domain)
+        if not claims.portfolio_url:
+            for match in URL_RE.finditer(text):
+                link = match.group(0).rstrip(".,;:)")
+                host = link.split("//", 1)[-1].split("/")[0].lower()
+                if not any(host == skip or host.endswith("." + skip) for skip in SKIP_HOSTS):
+                    claims.portfolio_url = link
+                    break
         detected = analyze_application(text or ". ".join(candidate.skills))["role"]
         profile = select_profile("" if detected == "Unknown" else detected, candidate.skills, [])
         factory = connector_factory or default_connectors

@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import math
 import os
+import re
 import time
 import uuid
 from collections import Counter
@@ -199,6 +200,47 @@ def _authorize_application(principal: Principal | None, application_id: str) -> 
         raise HTTPException(status_code=404, detail="application not found")
 
 
+def _person_key(name: str) -> str:
+    return " ".join(re.sub(r"[^a-z0-9 ]+", " ", name.casefold()).split())
+
+
+def _same_applicant(first: Application, second: Application) -> bool:
+    if first.application_id == second.application_id or first.job_id != second.job_id:
+        return False
+    name = _person_key(first.candidate.name)
+    if name and name == _person_key(second.candidate.name):
+        return True
+    same_email = first.candidate.email.casefold() == second.candidate.email.casefold()
+    same_phone = re.sub(r"\D", "", first.candidate.phone) == re.sub(r"\D", "", second.candidate.phone)
+    return bool(first.candidate.email and same_email) or bool(re.sub(r"\D", "", first.candidate.phone) and same_phone)
+
+
+def _application_by_id(application_id: str) -> Application | None:
+    return next((item for item in STORE.applications() if item.application_id == application_id), None)
+
+
+def _same_person_ids(application_id: str) -> list[str]:
+    application = _application_by_id(application_id)
+    if application is None:
+        return []
+    return [item.application_id for item in STORE.by_job(application.job_id) if _same_applicant(application, item)]
+
+
+def _close_if_person_rejected(application: Application) -> None:
+    for item in STORE.by_job(application.job_id):
+        if _same_applicant(application, item) and OUTCOMES.is_rejected(item.application_id):
+            try:
+                OUTCOMES.change(
+                    application.application_id,
+                    "rejected",
+                    f"Closed together with application {item.application_id[:8]} for the same applicant and job.",
+                    "linked to an earlier rejection",
+                )
+            except Exception:
+                pass
+            return
+
+
 def _evaluate_and_forward(
     application: Application,
     job: JobRequirements,
@@ -224,10 +266,12 @@ def _evaluate_and_forward(
         return decision
     _remember(application, context_text if context_text is not None else resume_text)
     if not already_decided:
-        try:
-            DELIVERY.deliver(decision.route, application)
-        except Exception:
-            pass
+        _close_if_person_rejected(application)
+        if not OUTCOMES.is_rejected(application.application_id):
+            try:
+                DELIVERY.deliver(decision.route, application)
+            except Exception:
+                pass
     return decision
 
 
@@ -576,7 +620,7 @@ def healthcheck() -> dict[str, str]:
 
 
 app.include_router(build_router(_evaluate_and_forward, _sanitize))
-app.include_router(build_auth_router(STORE.get_decision, outcomes=OUTCOMES))
+app.include_router(build_auth_router(STORE.get_decision, outcomes=OUTCOMES, siblings_of=_same_person_ids))
 app.include_router(
     build_intake_router(
         intel=RealIntelService(_candidate_for, _score_for, CONFIG),

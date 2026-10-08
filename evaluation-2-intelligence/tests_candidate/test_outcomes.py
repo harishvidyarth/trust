@@ -24,7 +24,7 @@ def email() -> str:
 
 
 def submit(session: Session, make_pdf, hidden: bool = False) -> str:
-    response = session.upload(make_pdf("Maya Raman", email(), hidden))
+    response = session.upload(make_pdf(f"Maya {uuid.uuid4().hex[:8]}", email(), hidden))
     assert response.status_code == 200, response.text
     return response.json()["application_id"]
 
@@ -48,7 +48,7 @@ def test_reject_happy_path_and_shape(alice, recruiter, make_pdf):
     response = reject(recruiter, application_id)
     assert response.status_code == 200, response.text
     body = response.json()
-    assert set(body) == {"application_id", "outcome", "reason", "by", "at", "original"}
+    assert set(body) == {"application_id", "outcome", "reason", "by", "at", "original", "also_rejected"}
     assert body["outcome"] == "REJECTED"
     assert body["by"] == recruiter.username
     assert body["reason"] == REASON

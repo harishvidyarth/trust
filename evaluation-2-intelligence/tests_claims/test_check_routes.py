@@ -126,3 +126,51 @@ def test_lookup_failure_still_returns_not_checked_list():
     )
     body = TestClient(app).post("/v1/checks/run", json={"application_id": "a-1"}).json()
     assert body["counts"]["confirmed"] == 0 and body["checks"]
+
+
+def run_with(text, email):
+    decision = Decision(application_id="a-1", score=60, route=Route.ADDITIONAL_VERIFICATION, reasons=[], summary="s")
+    seen = {}
+
+    def fake_enrich(claims, connectors=None, per_connector_timeout=8.0):
+        seen["claims"] = claims
+        return [], EnrichmentSummary()
+
+    person = Candidate(name="Test Person", email=email, phone="+91 90000 00000", skills=["Python"], experience=[], projects=[])
+    user = Principal(username="rita", role="recruiter", via="session")
+    app = FastAPI()
+    app.include_router(
+        build_check_router(
+            runner_guard=lambda: user,
+            reader_guard=lambda: user,
+            decision_for=lambda application_id: decision,
+            text_for=lambda application_id: text,
+            candidate_for=lambda application_id: person,
+            owner_of=lambda application_id: "alice",
+            cache=JsonCache(),
+            enrich_function=fake_enrich,
+            connector_factory=lambda profile, body, who: [],
+        )
+    )
+    return TestClient(app).post("/v1/checks/run", json={"application_id": "a-1"}).json(), seen["claims"]
+
+
+def test_every_gap_offers_a_plain_request_the_recruiter_can_send():
+    body, _ = run_with("Backend developer. Python.", "t@gmail.com")
+    rows = [item for item in body["checks"] if item["status"] == "not_checked"]
+    assert len(rows) >= 3
+    for item in rows:
+        assert item["ask_label"] and 3 <= len(item["ask_label"]) <= 200
+        assert not FORBIDDEN.search(item["ask_label"]), item["ask_label"]
+
+
+def test_work_email_domain_is_used_as_the_employer_website_but_free_mail_is_not():
+    _, work = run_with("Backend developer. Python.", "t@acme-labs.com")
+    assert "acme-labs.com" in work.employer_domains
+    _, free = run_with("Backend developer. Python.", "t@gmail.com")
+    assert free.employer_domains == []
+
+
+def test_any_other_website_in_the_resume_is_treated_as_a_portfolio_link():
+    _, claims = run_with("My work: https://maya-rao.example/work and github.com/octocat and linkedin.com/in/maya", "t@gmail.com")
+    assert claims.portfolio_url == "https://maya-rao.example/work"

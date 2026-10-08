@@ -13,10 +13,15 @@
     );
   };
 
+  function isLinked(row) {
+    return String(row.outcome_by || "").toLowerCase().indexOf("linked") === 0;
+  }
+
   function badgesFor(row) {
     var open = Number(row.follow_up_open) || 0;
     var list = [];
     if (row.outcome === "rejected") list.push(C.tag("Rejected", "dark", true));
+    if (row.outcome === "rejected" && isLinked(row)) list.push(C.tag("Linked to an earlier rejection", "", true));
     if (row.applicant_form_present) list.push(C.tag("Form", "info", true));
     if (open > 0) list.push(C.tag(open + (open === 1 ? " open request" : " open requests"), "", true));
     return list;
@@ -74,7 +79,7 @@
   }
 
   C.views.recruiter = async function (root) {
-    var S = { outcomes: {}, rows: [], stats: null, dest: null, destError: "", destLoading: false, tab: C.params && (C.params.tab === "queue" || C.params.tab === "destinations") ? C.params.tab : "overview", route: "ALL", query: "", sort: "score_asc", selected: null, opener: null, loaded: false };
+    var S = { outcomes: {}, rows: [], stats: null, dest: null, destError: "", destLoading: false, tab: C.params && (C.params.tab === "queue" || C.params.tab === "destinations") ? C.params.tab : "overview", route: "ALL", query: "", sort: "score_asc", selected: null, opener: null, nextId: null, loaded: false };
     C.status("Loading applications...");
 
     var head = h("div", { class: "page-head" },
@@ -87,9 +92,40 @@
 
     var panelDest = h("section", { id: "panelDest", role: "tabpanel", "aria-labelledby": "tabDest" });
 
+    var notice = h("div", { class: "notice-line", id: "outcomeNotice", role: "status", "aria-live": "polite", hidden: true });
     var scrim = h("div", { class: "drawer-scrim", hidden: true });
     var drawer = h("aside", { class: "drawer", id: "detail", role: "dialog", "aria-modal": "true", "aria-labelledby": "detailTitle", tabindex: "-1", hidden: true });
-    root.append(head, tabBar, panelOverview, panelQueue, panelDest, scrim, drawer);
+    root.append(head, notice, tabBar, panelOverview, panelQueue, panelDest, scrim, drawer);
+
+    function isRej(row) {
+      return row.outcome === "rejected";
+    }
+    function activeRows() {
+      return S.rows.filter(function (row) { return !isRej(row); });
+    }
+    function showNotice(text, linkLabel, onLink) {
+      C.clear(notice);
+      if (!text) { notice.hidden = true; return; }
+      notice.append(h("span", { text: text }));
+      if (linkLabel) {
+        notice.append(" ", h("button", { type: "button", class: "link-btn", id: "noticeLink", text: linkLabel, onclick: onLink }));
+      }
+      notice.append(" ", h("button", { type: "button", class: "link-btn", "aria-label": "Dismiss this message", text: "Dismiss", onclick: function () { showNotice(""); } }));
+      notice.hidden = false;
+    }
+    function showRejectedTab() {
+      showNotice("");
+      setTab("queue", false);
+      S.route = "REJECTED";
+      drawRouteTabs();
+      drawList();
+    }
+    function sameApplicantElsewhere(row) {
+      var name = String(row.candidate_name || "").trim().toLowerCase();
+      return S.rows.some(function (other) {
+        return other.application_id !== row.application_id && isRej(other) && String(other.candidate_name || "").trim().toLowerCase() === name && other.job_id === row.job_id;
+      });
+    }
 
     function rowById(id) {
       return S.rows.find(function (row) { return row.application_id === id; });
@@ -172,7 +208,7 @@
 
     function destItems(route) {
       if (route === "PASS_TO_ATS") {
-        return S.rows.filter(function (r) { return routeOf(r) === "PASS_TO_ATS"; }).map(function (r) { return { application_id: r.application_id, job_id: r.job_id, candidate_name: r.candidate_name, at: r.submitted_at, score: scoreOf(r), rejected: r.outcome === "rejected" }; });
+        return activeRows().filter(function (r) { return routeOf(r) === "PASS_TO_ATS"; }).map(function (r) { return { application_id: r.application_id, job_id: r.job_id, candidate_name: r.candidate_name, at: r.submitted_at, score: scoreOf(r) }; });
       }
       return inboxItems(inboxNameFor(route)).filter(function (item) {
         var known = rowById(item.application_id);
@@ -260,8 +296,7 @@
                 h("div", { class: "dest-who" },
                   h("strong", { text: item.candidate_name || "Unknown candidate" }),
                   h("small", { class: "muted", text: (item.job_id || "No job set") + (Number.isFinite(item.score) ? ", score " + item.score : "") }),
-                  h("small", { class: "muted", text: when(item.at) }),
-                  item.rejected ? h("span", { class: "badge-line" }, C.tag("Rejected", "dark", true)) : null
+                  h("small", { class: "muted", text: when(item.at) })
                 ),
                 view
               );
@@ -283,23 +318,26 @@
       var out = { PASS_TO_ATS: 0, ADDITIONAL_VERIFICATION: 0, MANUAL_REVIEW: 0 };
       if (s && typeof s === "object") {
         ROUTE_LIST.forEach(function (r) { out[r] = Number(s[r]) || 0; });
-        out.total = Number(S.stats.total_received);
-        if (!Number.isFinite(out.total)) out.total = out.PASS_TO_ATS + out.ADDITIONAL_VERIFICATION + out.MANUAL_REVIEW;
+        S.rows.forEach(function (row) {
+          var rr = routeOf(row);
+          if (isRej(row) && out[rr] !== undefined) out[rr] = Math.max(0, out[rr] - 1);
+        });
+        out.total = out.PASS_TO_ATS + out.ADDITIONAL_VERIFICATION + out.MANUAL_REVIEW;
         return out;
       }
-      S.rows.forEach(function (row) {
+      activeRows().forEach(function (row) {
         var r = row.decision && row.decision.route;
         if (out[r] !== undefined) out[r] += 1;
       });
-      out.total = S.rows.length;
+      out.total = activeRows().length;
       return out;
     }
 
     function reasonMix() {
-      var list = S.stats && Array.isArray(S.stats.top_reason_codes) ? S.stats.top_reason_codes.map(function (x) { return [x.code, Number(x.count) || 0]; }) : null;
+      var list = S.stats && Array.isArray(S.stats.top_reason_codes) && !S.rows.some(isRej) ? S.stats.top_reason_codes.map(function (x) { return [x.code, Number(x.count) || 0]; }) : null;
       if (!list) {
         var map = {};
-        S.rows.forEach(function (row) {
+        activeRows().forEach(function (row) {
           ((row.decision && row.decision.reasons) || []).forEach(function (reason) { map[reason.code] = (map[reason.code] || 0) + 1; });
         });
         list = Object.keys(map).map(function (k) { return [k, map[k]]; });
@@ -312,8 +350,7 @@
       C.clear(panelOverview);
       var c = counts();
       var cards = [["Received", c.total, "received"], ["Passed to ATS", c.PASS_TO_ATS, "pass"], ["Needs verification", c.ADDITIONAL_VERIFICATION, "verify"], ["Manual review", c.MANUAL_REVIEW, "review"]];
-      var rejectedCount = S.stats && S.stats.rejected !== undefined && S.stats.rejected !== null ? Number(S.stats.rejected) : NaN;
-      if (Number.isFinite(rejectedCount)) cards.push(["Rejected", rejectedCount, "rejected"]);
+      var rejectedCount = S.rows.filter(isRej).length;
       var funnel = h("div", { class: "funnel", "aria-label": "Routing funnel" }, cards.map(function (card) {
         return h("article", { class: "funnel-card " + card[2] }, h("span", { class: "funnel-label", text: card[0] }), h("strong", { text: String(card[1]) }), h("span", { class: "funnel-share", text: pct(card[1], c.total) + "% of received" }));
       }));
@@ -339,7 +376,7 @@
         h("p", { class: "small muted", style: "margin:12px 0 0", text: "Some combined signals go straight to manual review. Routes help with triage and never make hiring decisions." })
       );
 
-      var rows = S.rows.slice().sort(function (a, b) { return seconds(b.submitted_at) - seconds(a.submitted_at); });
+      var rows = activeRows().sort(function (a, b) { return seconds(b.submitted_at) - seconds(a.submitted_at); });
       var tbody = h("tbody", null, rows.map(function (row) {
         var view = h("button", { type: "button", class: "detail-link", "data-view-id": row.application_id, "aria-label": "View details for " + (row.candidate_name || row.application_id), text: "View" });
         view.addEventListener("click", function () { openDetail(row.application_id, view); });
@@ -368,6 +405,7 @@
 
       panelOverview.append(
         funnel,
+        rejectedCount ? h("p", { class: "small muted rejected-line" }, rejectedCount + " rejected ", h("button", { type: "button", class: "link-btn", id: "overviewRejected", text: "Show rejected", onclick: showRejectedTab })) : null,
         h("div", { class: "grid-2 overview-grid" },
           h("div", { class: "card" }, h("p", { class: "eyebrow", text: "Signal mix" }), h("h3", { text: "Top reason codes" }), mixBody),
           policyCard
@@ -396,8 +434,8 @@
     function filtered() {
       var q = S.query.trim().toLowerCase();
       var rows = S.rows.filter(function (row) {
-        if (S.route === "REJECTED") { if (row.outcome !== "rejected") return false; }
-        else if (S.route !== "ALL" && routeOf(row) !== S.route) return false;
+        if (S.route === "REJECTED") { if (!isRej(row)) return false; }
+        else if (isRej(row) || (S.route !== "ALL" && routeOf(row) !== S.route)) return false;
         if (!q) return true;
         return [row.candidate_name, row.job_id, row.application_id].join(" ").toLowerCase().indexOf(q) >= 0;
       });
@@ -412,7 +450,7 @@
     function drawRouteTabs() {
       C.clear(routeTabs);
       TABS.forEach(function (tab) {
-        var count = S.rows.filter(function (row) { return tab[0] === "ALL" || (tab[0] === "REJECTED" ? row.outcome === "rejected" : routeOf(row) === tab[0]); }).length;
+        var count = S.rows.filter(function (row) { return tab[0] === "REJECTED" ? isRej(row) : !isRej(row) && (tab[0] === "ALL" || routeOf(row) === tab[0]); }).length;
         var button = h("button", { type: "button", "aria-pressed": S.route === tab[0] ? "true" : "false", "data-route": tab[0] }, tab[1], h("span", { class: "count", text: String(count) }));
         button.addEventListener("click", function () { S.route = tab[0]; drawRouteTabs(); drawList(); });
         routeTabs.appendChild(button);
@@ -423,7 +461,7 @@
       C.clear(list);
       var rows = filtered();
       if (!rows.length) {
-        list.appendChild(h("li", { class: "empty", text: S.rows.length ? "No applications match this filter." : "The queue is empty." }));
+        list.appendChild(h("li", { class: "empty", text: S.route === "REJECTED" ? "No applications are rejected." : S.rows.length ? "No applications match this filter." : "The queue is empty." }));
         return;
       }
       rows.forEach(function (row) {
@@ -431,7 +469,7 @@
         var button = h("button", { type: "button", class: "queue-item", "data-id": row.application_id, "aria-current": S.selected === row.application_id ? "true" : false },
           h("span", { class: "name", text: row.candidate_name || row.application_id }),
           h("span", { class: "score", "aria-label": "Trust score " + scoreOf(row), text: String(scoreOf(row)) }),
-          h("span", { class: "meta" }, C.tag(C.ROUTES[route] || route, C.ROUTE_TONE[route] || ""), h("span", { text: row.job_id }), h("span", { text: when(row.submitted_at) }), badgesFor(row))
+          h("span", { class: "meta" }, C.tag(C.ROUTES[route] || route, C.ROUTE_TONE[route] || ""), h("span", { text: row.job_id }), h("span", { text: when(row.submitted_at) }), badgesFor(row), isRej(row) ? h("span", { class: "rejected-by", text: "Rejected by " + (isLinked(row) ? "a linked rejection" : (row.outcome_by || "a reviewer")) + (row.outcome_at ? " on " + when(row.outcome_at) : "") }) : null)
         );
         button.addEventListener("click", function () { openDetail(row.application_id, button); });
         list.appendChild(h("li", null, button));
@@ -476,6 +514,11 @@
       var back = null;
       if (id) back = root.querySelector('[data-view-id="' + id + '"]') || root.querySelector('.queue-item[data-id="' + id + '"]');
       if (S.opener && document.contains(S.opener)) back = S.opener;
+      if (S.nextId) {
+        var nb = root.querySelector('.queue-item[data-id="' + S.nextId + '"]');
+        if (nb) back = nb;
+        S.nextId = null;
+      }
       if (back) back.focus();
       S.opener = null;
       C.status("");
@@ -637,7 +680,7 @@
       var at = row.outcome_at || info.at;
       box.append(h("section", { class: "outcome-banner", id: "rejectedBanner", "aria-labelledby": "rejectedTitle" },
         h("h3", { id: "rejectedTitle", text: "Rejected" }),
-        h("p", { class: "small", style: "margin:0", text: "Rejected by " + (by || "a reviewer") + " on " + (at ? when(at) : "an unknown date") }),
+        h("p", { class: "small", style: "margin:0", text: (isLinked(row) ? "Closed because of an earlier rejection of the same applicant for the same job" : "Rejected by " + (by || "a reviewer")) + " on " + (at ? when(at) : "an unknown date") }),
         info.reason ? h("blockquote", { class: "evidence", text: info.reason }) : null
       ));
     }
@@ -681,6 +724,7 @@
         title: rejecting ? "Reject this application" : "Reopen this application",
         body: h("div", null,
           h("p", { class: "muted", text: rejecting ? "The candidate will see a polite closed message. They will not see your reason. You can reopen this later." : "The application goes back to your review list and the candidate sees their usual status again. Your reason is kept in the record." }),
+          rejecting ? h("p", { class: "small muted", text: "Other applications from the same applicant for the same job will be closed too." }) : null,
           h("label", { class: "field", for: "outReason" }, "Reason", reason, hint)
         ),
         actions: [
@@ -712,29 +756,79 @@
       var at = result && result.at ? result.at : Math.floor(Date.now() / 1000);
       var by = (result && result.by) || (C.state.me && C.state.me.username);
       var delta = 0;
+      var nextId = null;
       if (rejecting) {
+        var visible = filtered();
+        var at0 = visible.findIndex(function (r) { return r.application_id === id; });
+        var near = at0 >= 0 ? (visible[at0 + 1] || visible[at0 - 1]) : null;
+        nextId = near ? near.application_id : null;
         row.outcome = "rejected";
         row.outcome_by = by;
         row.outcome_at = at;
         S.outcomes[id] = { reason: (result && result.reason) || reason.value.trim(), by: by, at: at };
         delta = 1;
+        var also = result && Array.isArray(result.also_rejected) ? result.also_rejected : [];
+        also.forEach(function (otherId) {
+          var other = rowById(otherId);
+          if (other && !isRej(other)) {
+            other.outcome = "rejected";
+            other.outcome_by = "linked to an earlier rejection";
+            other.outcome_at = at;
+            delta += 1;
+          }
+        });
+        if (also.length) {
+          var message = "Rejected. " + also.length + (also.length === 1 ? " other application" : " other applications") + " from the same applicant for the same job " + (also.length === 1 ? "was" : "were") + " closed too.";
+          showNotice(message, "Show them", showRejectedTab);
+          C.status(message);
+        } else {
+          showNotice("");
+          C.status((row.candidate_name || id) + " was rejected.");
+        }
       } else {
         row.outcome = null;
         row.outcome_by = null;
         row.outcome_at = null;
         delete S.outcomes[id];
         delta = -1;
+        if (sameApplicantElsewhere(row)) {
+          var again = "Reopened. Other applications from the same applicant stay closed until you reopen them.";
+          showNotice(again);
+          C.status(again);
+        } else {
+          showNotice("");
+          C.status((row.candidate_name || id) + " was reopened.");
+        }
       }
       if (S.stats && Number.isFinite(Number(S.stats.rejected))) S.stats.rejected = Math.max(0, Number(S.stats.rejected) + delta);
-      C.status(rejecting ? (row.candidate_name || id) + " was rejected." : (row.candidate_name || id) + " was reopened.");
+      S.nextId = nextId;
+      S.opener = null;
       redraw();
       if (S.selected === id && !drawer.hidden) {
         drawDetail(row);
         var title = C.$("detailTitle");
         if (title) title.focus();
-      } else if (opener && document.contains(opener)) {
-        var again = list.querySelector('.queue-item[data-id="' + id + '"]');
-        if (again) again.focus();
+      } else if (nextId) {
+        var nextButton = list.querySelector('.queue-item[data-id="' + nextId + '"]');
+        if (nextButton) nextButton.focus();
+        S.nextId = null;
+      }
+      refreshQuiet();
+    }
+
+    async function refreshQuiet() {
+      try {
+        var results = await Promise.all([C.api("GET", "/v1/stats"), C.api("GET", "/v1/decisions?limit=200")]);
+        S.stats = results[0];
+        S.rows = listOf(results[1]);
+        redraw();
+        if (S.selected && !drawer.hidden && rowById(S.selected)) {
+          var focusedId = document.activeElement && document.activeElement.id;
+          drawDetail(rowById(S.selected));
+          if (focusedId && C.$(focusedId)) C.$(focusedId).focus();
+        }
+      } catch (error) {
+        if (C.authError(error)) return;
       }
     }
 
@@ -1034,7 +1128,7 @@
         var pick = index >= 0 ? rowById(all[index].dataset.id) : rowById(S.selected);
         if (pick) {
           event.preventDefault();
-          if (pick.outcome === "rejected") { C.status("This application is already rejected.", true); return; }
+          if (isRej(pick)) { C.status("This application is already rejected.", true); return; }
           promptOutcome(pick, "reject", index >= 0 ? all[index] : null);
         }
       } else if (event.key === "/") {

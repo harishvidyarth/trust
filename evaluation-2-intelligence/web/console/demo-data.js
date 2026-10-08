@@ -131,6 +131,7 @@
   }
 
   var PEOPLE = [
+    ["app-demo-1053", "Nila Shah", "n***@example.org", "DATA-ML-02", ["DUP_RESUME_NEAR"], 24, "MANUAL_REVIEW", 5],
     ["app-demo-1052", "Priya Nair", "p***@example.test", "SWE-PLATFORM-04", ["clean"], 96, "PASS_TO_ATS", 3],
     ["app-demo-1051", "Jordan Reyes", "j***@mail.test", "SWE-PLATFORM-04", ["RESUME_HIDDEN_TEXT", "RESUME_PROMPT_INJECTION", "RESUME_PARSE_DIVERGENCE"], 14, "MANUAL_REVIEW", 9, 1],
     ["app-demo-1050", "Rhea Kapoor", "r***@example.org", "DATA-ML-02", ["TIMELINE_INVALID", "TIMELINE_OVERLAP"], 52, "ADDITIONAL_VERIFICATION", 17, 1],
@@ -410,9 +411,9 @@
       { source: "GitHub", status: "confirmed", title: "GitHub profile found", explanation: "The profile named in the resume exists and shows recent work in the languages listed.", evidence_url: "https://github.com/octocat", checked_at: "just now", claim: null },
       { source: "GitHub", status: "confirmed", title: "Project repository found", explanation: "The repository named in the resume exists and matches the stated stack.", evidence_url: "https://github.com/octocat/Hello-World", checked_at: "just now", claim: "Built a queue service in Python" },
       { source: "Research papers", status: "problem", title: "Paper reference could not be matched", explanation: "We could not find a paper with this title and these authors in public research indexes. It may be a preprint or a typing slip.", evidence_url: null, checked_at: "just now", claim: "Published a paper on anomaly detection" },
-      { source: "Employer website", status: "not_checked", title: "Employer site did not answer", explanation: "The employer website was slow to answer, so this was not checked. This is not held against the candidate.", evidence_url: null, checked_at: null, claim: null },
-      { source: "Name and email", status: "not_checked", title: "Name and email not compared", explanation: "There was not enough public information to compare the name with the email address.", evidence_url: null, checked_at: null, claim: null },
-      { source: "Role specific checks", status: "not_checked", title: "Role check skipped", explanation: "No certificate or licence number was listed, so there was nothing to look up.", evidence_url: null, checked_at: null, claim: null }
+      { source: "Employer website", status: "not_checked", title: "Employer site did not answer", explanation: "The employer website was slow to answer, so this was not checked. This is not held against the candidate.", evidence_url: null, checked_at: null, claim: null, ask_label: "Please send the link to your employer website." },
+      { source: "Name and email", status: "not_checked", title: "Name and email not compared", explanation: "There was not enough public information to compare the name with the email address.", evidence_url: null, checked_at: null, claim: null, ask_label: "Please add a public profile that shows your full name." },
+      { source: "Role specific checks", status: "not_checked", title: "Role check skipped", explanation: "No certificate or licence number was listed, so there was nothing to look up.", evidence_url: null, checked_at: null, claim: null, ask_label: "Please send your certificate or licence number." }
     ];
     var github = {
       username: "octocat",
@@ -696,7 +697,19 @@
       var oat = Math.floor(Date.now() / 1000);
       pushOutcome(oid, rejecting ? "REJECTED" : "REOPENED", oreason, state.session.username, oat);
       addAudit(rejecting ? "decision.reject" : "decision.reopen", oid, oreason);
-      return { application_id: oid, outcome: rejecting ? "REJECTED" : "REOPENED", reason: oreason, by: state.session.username, at: oat, original: { score: orow.decision.score, route: orow.decision.route } };
+      var linked = [];
+      if (rejecting) {
+        state.rows.forEach(function (other) {
+          if (other.application_id === oid || isRejected(other.application_id)) return;
+          if (String(other.candidate_name || "").trim().toLowerCase() !== String(orow.candidate_name || "").trim().toLowerCase() || other.job_id !== orow.job_id) return;
+          pushOutcome(other.application_id, "REJECTED", oreason, "linked to an earlier rejection", oat);
+          addAudit("decision.reject", other.application_id, "Linked to " + oid);
+          linked.push(other.application_id);
+        });
+      }
+      var out = { application_id: oid, outcome: rejecting ? "REJECTED" : "REOPENED", reason: oreason, by: state.session.username, at: oat, original: { score: orow.decision.score, route: orow.decision.route } };
+      if (rejecting) out.also_rejected = linked;
+      return out;
     }
     if ((match = path.match(/^\/v1\/decisions\/([^/]+)\/outcome$/)) && method === "GET") {
       requireRole(["recruiter", "admin"]);
@@ -882,13 +895,14 @@
     if (match && method === "POST") {
       requireRole(["recruiter", "admin"]);
       var reqId = decodeURIComponent(match[1]);
-      if (!state.forms[reqId]) fail(404, "This applicant did not use the form.");
+      if (!state.forms[reqId] && !claimTarget(reqId)) fail(404, "This applicant did not use the form.");
       var label = String(json.label || "").trim();
       if (label.length < 3 || label.length > 200) fail(400, "The request needs 3 to 200 characters.");
+      if ((state.followups[reqId] || []).some(function (it) { return it.kind === "request" && it.label === label; })) fail(409, "You already asked the candidate for this.");
       var made = item("request", label, "", true, false, "", 3);
       state.followups[reqId] = (state.followups[reqId] || []).concat([made]);
       addAudit("request.create", reqId, label);
-      return { id: made.id, label: label, status: "waiting", message: "The request was sent to the candidate." };
+      return { id: made.id, label: label, asked_by: state.session ? state.session.username : "recruiter", asked_at: Math.floor(Date.now() / 1000), answer: null, answered_at: null, status: "waiting", message: "The request was sent to the candidate." };
     }
     if (state.session && state.session.role === "candidate" && /^\/v1\/(checks|claims|resume|intake)\//.test(path)) fail(403, "Your account does not have permission to do that.");
     match = path.match(/^\/v1\/checks\/(run|application)(?:\/([^/]+))?$/);

@@ -32,7 +32,8 @@ Builds on: [Evaluation 1](../evaluation-1-foundation/PLAN.md). Everything there 
 | 22 | Typed applicant form with no scores for candidates, follow up questions, recruiter requests | `tests_candidate` | Done. Candidates see only a status. Checked live. |
 | 23 | GitHub evidence: repositories, commits, languages, fake link and missing account checks | `tests_enrichment`, live GitHub | Done. Checked live against a real account. |
 | 24 | Recruiter reject and reopen, with a polite closed message for the candidate | `tests_candidate`, live | Done. A person decides. Stored decision never changes. |
-| 25 | Face, voice and video verification | none | Not started. Stopped by decision. |
+| 25 | Same person and job rule: rejecting one applicant also closes their other applications, and rejected ones leave the queue | `tests_candidate`, live | Done. Checked live with real accounts. |
+| 25b | Face, voice and video verification | none | Not started. Stopped by decision. |
 | 26 | Independent DAST | none | Not done. A third party must run and accept it. |
 
 ## Verified in this round
