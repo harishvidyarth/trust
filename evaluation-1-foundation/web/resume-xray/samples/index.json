@@ -1,0 +1,124 @@
+[
+  {
+    "group": "Writing style",
+    "samples": [
+      {
+        "file": "style_high_generic.pdf",
+        "note": "Writing-style estimate: High. Stock opener, buzzwords, round metrics. The decision is unaffected."
+      },
+      {
+        "file": "style_high_tailored.docx",
+        "note": "Writing-style estimate: High. Every bullet is verb, task and round metric."
+      },
+      {
+        "file": "style_medium_polished.pdf",
+        "note": "Writing-style estimate: Medium. A polished mix of specifics and generic phrasing."
+      },
+      {
+        "file": "style_medium_formula.docx",
+        "note": "Writing-style estimate: Medium. Every bullet carries a metric, but with real detail."
+      },
+      {
+        "file": "style_low_casual.pdf",
+        "note": "Writing-style estimate: Low. Specific, uneven and personal."
+      },
+      {
+        "file": "style_low_formal_nonnative.pdf",
+        "note": "Writing-style estimate: Low. Formal non-native English is not penalized."
+      },
+      {
+        "file": "style_low_fresher.docx",
+        "note": "Writing-style estimate: Low. A plain fresher resume."
+      },
+      {
+        "file": "clean_senior_strong.pdf",
+        "note": "Clean and specific. Passes with no flags."
+      },
+      {
+        "file": "clean_plain_text.txt",
+        "note": "A plain-text resume. Passes with no flags."
+      }
+    ]
+  },
+  {
+    "group": "Hidden content",
+    "samples": [
+      {
+        "file": "attack_white_keywords.pdf",
+        "note": "White keyword block. A parser reads it, a person does not."
+      },
+      {
+        "file": "attack_tiny_font.pdf",
+        "note": "Keywords in a 1 point font."
+      },
+      {
+        "file": "attack_hidden_injection.pdf",
+        "note": "A hidden instruction aimed at an AI screener."
+      },
+      {
+        "file": "attack_visible_injection.docx",
+        "note": "A visible instruction aimed at an AI screener."
+      },
+      {
+        "file": "attack_visible_stuffing.pdf",
+        "note": "Keywords repeated in plain sight."
+      }
+    ]
+  },
+  {
+    "group": "Consistency",
+    "samples": [
+      {
+        "file": "timeline_overlapping_jobs.pdf",
+        "note": "Two full-time roles overlap for years."
+      },
+      {
+        "file": "timeline_end_before_start.pdf",
+        "note": "A role ends before it starts."
+      },
+      {
+        "file": "timeline_future_start.docx",
+        "note": "A role starts in the future."
+      }
+    ]
+  },
+  {
+    "group": "Fit",
+    "samples": [
+      {
+        "file": "fit_other_stack.pdf",
+        "note": "Honest but a different stack. A fit note, never fraud."
+      },
+      {
+        "file": "fit_junior_under_experience.pdf",
+        "note": "Below the minimum experience. A fit note, never fraud."
+      }
+    ]
+  },
+  {
+    "group": "Duplicates",
+    "samples": [
+      {
+        "file": "dup_original.pdf",
+        "note": "Store this first with Test mode off."
+      },
+      {
+        "file": "dup_same_person_again.pdf",
+        "note": "Same person again. With Test mode off, same job, email and phone are flagged."
+      },
+      {
+        "file": "dup_copied_by_other_person.pdf",
+        "note": "A different person with near-identical text. Flagged as a near copy once the original is stored."
+      }
+    ]
+  },
+  {
+    "group": "Combined",
+    "samples": [
+      {
+        "file": "combo_formulaic_and_hidden.pdf",
+        "note": "Formulaic writing plus hidden keywords and an instruction. The hidden content drives the decision."
+      }
+    ]
+  }
+]

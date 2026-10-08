@@ -40,7 +40,6 @@ class Config:
     overlap_months: int = 2
     max_future_end_months: int = 12
     claimed_experience_tolerance_years: float = 1.0
-    qual_pass_coverage: float = 0.6
     weights: Mapping[str, int] = field(default_factory=lambda: dict(DEFAULT_WEIGHTS))
 
     def __post_init__(self) -> None:
@@ -54,8 +53,6 @@ class Config:
             raise ValueError("minimum shingles must be positive")
         if self.max_future_end_months < 0:
             raise ValueError("maximum future end months must be non-negative")
-        if not 0 <= self.qual_pass_coverage <= 1:
-            raise ValueError("qualification pass coverage must be between 0 and 1")
         copied_weights = dict(self.weights)
         if any(isinstance(value, bool) or not isinstance(value, int) or value < 0 for value in copied_weights.values()):
             raise ValueError("weights must be non-negative integers")

@@ -1,4 +1,4 @@
-# TrustGate · Evaluation 2: Intelligence
+# TR∩ST · Evaluation 2: Intelligence
 
 Round 1 built a working pre-ATS firewall. Round 2 measures it, attacks it, closes the gaps the measurements exposed, and adds the building blocks for corroborating claims and for learning from recruiter feedback.
 

@@ -1,4 +1,4 @@
-# TrustGate · Evaluation 3: Network
+# TR∩ST · Evaluation 3: Network
 
 Rounds 1 and 2 protect a single employer. Round 3 adds cross-employer memory: a bot caught at one employer can be recognized by others, without any employer sharing a candidate's personal data.
 

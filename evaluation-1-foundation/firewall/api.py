@@ -29,6 +29,7 @@ from firewall.models import (
     SubmissionSignals,
 )
 from firewall.resume.service import analyze_resume, naive_ats_rank
+from firewall.resume.style import analyze_style
 from firewall.store import InMemoryApplicationStore
 
 
@@ -93,9 +94,12 @@ def _evaluate_and_forward(
     application: Application,
     job: JobRequirements,
     extra_reasons: list[Reason] | None = None,
+    dry_run: bool = False,
 ) -> Decision:
     already_decided = STORE.get_decision(application.application_id) is not None
-    decision = evaluate(application, job, STORE, CONFIG, extra_reasons=extra_reasons)
+    decision = evaluate(application, job, STORE, CONFIG, extra_reasons=extra_reasons, persist=not dry_run)
+    if dry_run:
+        return decision
     if decision.route == Route.PASS_TO_ATS and not already_decided:
         MOCK_ATS.receive(application)
     return decision
@@ -135,6 +139,7 @@ async def upload_application(
     job_id: Annotated[str, Form(max_length=128)] = "job",
     session_seconds: Annotated[float, Form(ge=0)] = 60.0,
     paste_char_ratio: Annotated[float, Form(ge=0, le=1)] = 0.0,
+    dry_run: Annotated[bool, Form()] = False,
 ) -> Decision:
     data = await _read_upload(file)
     job = _parse_job(job_json)
@@ -155,7 +160,7 @@ async def upload_application(
         Reason(code=str(item["code"]), severity=str(item["severity"]), detail=str(item["detail"]), weight=int(item["weight"]))
         for item in analysis.reasons
     ]
-    return _evaluate_and_forward(application, job, extra)
+    return _evaluate_and_forward(application, job, extra, dry_run=dry_run)
 
 
 @app.post("/v1/resume/inspect")
@@ -175,6 +180,7 @@ async def inspect_resume(
         "reasons": analysis.reasons,
         "naive_ats_score": naive_ats_rank(analysis.ats_view_text, job),
         "human_view_ats_score": naive_ats_rank(analysis.visible_text, job),
+        "ai_writing": analyze_style(analysis.visible_text),
     }
 
 

@@ -1,8 +1,10 @@
-# TrustGate · Evaluation 1: Foundation
+# TR∩ST · Evaluation 1: Foundation
 
 A pre-ATS application firewall. It sits in front of Workday, SuccessFactors, Greenhouse, iCIMS or Oracle, inspects every application before a recruiter sees it, and routes it to **Pass to ATS**, **Additional Verification** or **Manual Review**, with a reason for every decision.
 
-The hard constraint of the problem: candidates who use AI to polish a resume are legitimate. TrustGate never scores writing style. It judges submission behavior, identity and duplicate patterns, qualification, timeline consistency, and whether a resume hides anything from people that a parser can still read.
+The hard constraint of the problem: candidates who use AI to polish a resume are legitimate. TR∩ST never decides on writing style. It judges submission behavior, identity and duplicate patterns, qualification, timeline consistency, and whether a resume hides anything from people that a parser can still read. An informational writing-style estimate is shown for recruiter context, with a weight of zero.
+
+The name: **TR** is the text a parser reads, **ST** is the text a person sees, and the inverted U is the intersection. Trust is the part both agree on. Anything in TR but not in ST is hidden content.
 
 Team QUARTET: Harish Vidyarth N, Keerthisri D, Madhumitha N, Nakshatra PA. Problem SW-05, KERNEL PRIME'26.
 
@@ -10,12 +12,13 @@ Team QUARTET: Harish Vidyarth N, Keerthisri D, Madhumitha N, Nakshatra PA. Probl
 
 | Capability | Where | Status |
 |---|---|---|
-| Deterministic decision engine with reason codes and configurable routing | `firewall/engine.py`, `firewall/signals/` | Verified, 68 tests |
+| Deterministic decision engine with reason codes and configurable routing | `firewall/engine.py`, `firewall/signals/` | Verified, 80 core tests |
 | Duplicate, velocity, qualification and timeline signals | `firewall/signals/` | Verified |
 | Indexed store: 5,000 applications in 1.75 s on one laptop | `firewall/store.py`, `scripts/benchmark.py` | Measured |
 | Resume integrity: hidden text, prompt injection, keyword stuffing, parser-versus-human divergence | `firewall/resume/` | Verified, 24 tests |
 | ATS integration: Greenhouse and Lever job boards, Greenhouse-style forwarder, signed webhooks, retries, dead-letter list, sandbox ATS with a naive keyword ranker | `firewall/connectors/`, `ats/` | Verified, 13 tests |
-| Recruiter dashboard, career page with behavioral SDK, Resume X-ray (light theme) | `web/` | Screenshots reviewed; no automated browser test yet |
+| Resume X-ray: step-by-step flow, 23 sample resumes, test mode, writing-style context with weight zero | `web/resume-xray/`, `firewall/resume/style.py` | Run end to end in a browser; 12 tests for test mode and style |
+| Recruiter dashboard and career page with behavioral SDK (light theme) | `web/` | Screenshots reviewed; no automated browser test yet |
 | Security: Semgrep and OWASP ZAP | `docs/security/` | ZAP: 118 rules passed, 0 failed |
 
 ## How an application flows
@@ -95,7 +98,7 @@ Optional sandbox ATS: `ATS_SANDBOX_API_KEY=sandbox-key .venv/bin/python -m ats.s
 
 | Check | Result |
 |---|---|
-| Core tests, resume tests, ATS tests | 68, 24 and 13 passed |
+| Core tests, resume tests, ATS tests | 80, 24 and 13 passed (117 in total) |
 | Benchmark, 5,000 synthetic applications | 1.75 s, about 2,860 per second, engine only, one machine |
 | OWASP ZAP API scan, 56 URLs | 118 rules passed, 0 failed, 0 warnings |
 | Semgrep | 2 warnings, both `urllib` calls with the URL scheme validated |

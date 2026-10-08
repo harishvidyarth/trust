@@ -19,13 +19,8 @@ HARD_ESCALATIONS = (
 )
 
 
-QUALIFICATION_CODES = frozenset({"QUAL_MISSING_MUST_HAVE", "QUAL_UNDER_EXPERIENCE"})
-
-
-def _route(score: int, reasons: list[Reason], qualification_coverage: float, config: Config) -> Route:
+def _route(score: int, reasons: list[Reason], config: Config) -> Route:
     codes = {item.code for item in reasons}
-    if codes and codes <= QUALIFICATION_CODES:
-        return Route.PASS_TO_ATS if qualification_coverage >= config.qual_pass_coverage else Route.MANUAL_REVIEW
     if "VELOCITY_HIGH" in codes:
         return Route.MANUAL_REVIEW
     if any(rule <= codes for rule in HARD_ESCALATIONS):
@@ -51,6 +46,7 @@ def evaluate(
     config: Config,
     llm_client: OllamaClient | None = None,
     extra_reasons: list[Reason] | None = None,
+    persist: bool = True,
 ) -> Decision:
     existing = store.get_decision(application.application_id)
     if existing is not None:
@@ -60,13 +56,13 @@ def evaluate(
     if extra_reasons:
         reasons.extend(extra_reasons)
     reasons.extend(detect_automation(application, store, config))
-    qualification_coverage, qualification_reasons = evaluate_qualification(application, job, config)
+    _, qualification_reasons = evaluate_qualification(application, job, config)
     reasons.extend(qualification_reasons)
     reasons.extend(detect_consistency(application, config))
     reasons.sort(key=lambda item: (-item.weight, item.code, item.detail))
 
     score = max(0, min(100, 100 - sum(item.weight for item in reasons)))
-    route = _route(score, reasons, qualification_coverage, config)
+    route = _route(score, reasons, config)
     summary = _summary(score, route, reasons)
     llm_used = False
     if os.getenv("FIREWALL_LLM") == "1":
@@ -90,5 +86,6 @@ def evaluate(
         summary=summary,
         llm_used=llm_used,
     )
-    store.save(application, decision)
+    if persist:
+        store.save(application, decision)
     return decision
