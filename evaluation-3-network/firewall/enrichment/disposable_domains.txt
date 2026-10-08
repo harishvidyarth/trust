@@ -1,0 +1,11 @@
+# Deliberately small, bundled deny-list. Absence from this list is not evidence.
+10minutemail.com
+dispostable.com
+emailondeck.com
+guerrillamail.com
+maildrop.cc
+mailinator.com
+sharklasers.com
+temp-mail.org
+tempmail.com
+throwawaymail.com

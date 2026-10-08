@@ -1,0 +1,135 @@
+[
+  {
+    "application_id": "app-demo-1048",
+    "job_id": "SWE-PLATFORM-04",
+    "candidate_name": "Maya Iyer",
+    "candidate_email_masked": "m***@example.com",
+    "submitted_at": 1791440400.0,
+    "decision": {
+      "application_id": "app-demo-1048",
+      "score": 100,
+      "route": "PASS_TO_ATS",
+      "reasons": [],
+      "summary": "Trust score 100: no configured risk or qualification concerns; route is PASS_TO_ATS."
+    }
+  },
+  {
+    "application_id": "app-demo-1047",
+    "job_id": "SWE-PLATFORM-04",
+    "candidate_name": "Arjun Mehta",
+    "candidate_email_masked": "a***@mail.test",
+    "submitted_at": 1791439860.0,
+    "decision": {
+      "application_id": "app-demo-1047",
+      "score": 53,
+      "route": "ADDITIONAL_VERIFICATION",
+      "reasons": [
+        { "code": "QUAL_MISSING_MUST_HAVE", "severity": "high", "detail": "Missing must-have skill: PostgreSQL.", "weight": 35 },
+        { "code": "FAST_SUBMIT", "severity": "medium", "detail": "Application was submitted in 18.4 seconds.", "weight": 12 }
+      ],
+      "summary": "Trust score 53: 2 concerns found; route is ADDITIONAL_VERIFICATION."
+    }
+  },
+  {
+    "application_id": "app-demo-1046",
+    "job_id": "DATA-ML-02",
+    "candidate_name": "Nila Shah",
+    "candidate_email_masked": "n***@example.org",
+    "submitted_at": 1791439080.0,
+    "decision": {
+      "application_id": "app-demo-1046",
+      "score": 18,
+      "route": "MANUAL_REVIEW",
+      "reasons": [
+        { "code": "DUP_RESUME_NEAR", "severity": "high", "detail": "Project text similarity is 91% against a prior application.", "weight": 32 },
+        { "code": "TEMPLATE_REUSE", "severity": "high", "detail": "Matching project wording appears in 4 prior applications.", "weight": 20 },
+        { "code": "PASTE_BULK", "severity": "medium", "detail": "Paste character ratio was 96%.", "weight": 18 },
+        { "code": "FAST_SUBMIT", "severity": "medium", "detail": "Application was submitted in 11.7 seconds.", "weight": 12 }
+      ],
+      "summary": "Trust score 18: 4 concerns found; route is MANUAL_REVIEW."
+    }
+  },
+  {
+    "application_id": "app-demo-1045",
+    "job_id": "SWE-PLATFORM-04",
+    "candidate_name": "Dev Kapoor",
+    "candidate_email_masked": "d***@mail.test",
+    "submitted_at": 1791437940.0,
+    "decision": {
+      "application_id": "app-demo-1045",
+      "score": 80,
+      "route": "PASS_TO_ATS",
+      "reasons": [
+        { "code": "QUAL_UNDER_EXPERIENCE", "severity": "medium", "detail": "Claimed experience is 0.5 years below the configured minimum.", "weight": 20 }
+      ],
+      "summary": "Trust score 80: 1 concern found; route is PASS_TO_ATS."
+    }
+  },
+  {
+    "application_id": "app-demo-1044",
+    "job_id": "SEC-ANALYST-07",
+    "candidate_name": "Zoya Khan",
+    "candidate_email_masked": "z***@example.net",
+    "submitted_at": 1791436680.0,
+    "decision": {
+      "application_id": "app-demo-1044",
+      "score": 38,
+      "route": "MANUAL_REVIEW",
+      "reasons": [
+        { "code": "VELOCITY_HIGH", "severity": "high", "detail": "11 applications were observed from this device within 60 seconds.", "weight": 30 },
+        { "code": "DUP_PHONE", "severity": "medium", "detail": "Phone number matches a previous application.", "weight": 20 },
+        { "code": "FAST_SUBMIT", "severity": "medium", "detail": "Application was submitted in 7.9 seconds.", "weight": 12 }
+      ],
+      "summary": "Trust score 38: 3 concerns found; route is MANUAL_REVIEW."
+    }
+  },
+  {
+    "application_id": "app-demo-1043",
+    "job_id": "DATA-ML-02",
+    "candidate_name": "Rohan Das",
+    "candidate_email_masked": "r***@mail.test",
+    "submitted_at": 1791435540.0,
+    "decision": {
+      "application_id": "app-demo-1043",
+      "score": 65,
+      "route": "ADDITIONAL_VERIFICATION",
+      "reasons": [
+        { "code": "TIMELINE_INVALID", "severity": "high", "detail": "An employment end date precedes its start date.", "weight": 35 }
+      ],
+      "summary": "Trust score 65: 1 concern found; route is ADDITIONAL_VERIFICATION."
+    }
+  },
+  {
+    "application_id": "app-demo-1042",
+    "job_id": "SEC-ANALYST-07",
+    "candidate_name": "Kavya Rao",
+    "candidate_email_masked": "k***@example.com",
+    "submitted_at": 1791434040.0,
+    "decision": {
+      "application_id": "app-demo-1042",
+      "score": 58,
+      "route": "ADDITIONAL_VERIFICATION",
+      "reasons": [
+        { "code": "DUP_EMAIL", "severity": "medium", "detail": "Email matches a previous application for another role.", "weight": 22 },
+        { "code": "TIMELINE_OVERLAP", "severity": "medium", "detail": "Two employment periods overlap by 5 months.", "weight": 20 }
+      ],
+      "summary": "Trust score 58: 2 concerns found; route is ADDITIONAL_VERIFICATION."
+    }
+  },
+  {
+    "application_id": "app-demo-1041",
+    "job_id": "SWE-PLATFORM-04",
+    "candidate_name": "Ishaan Bose",
+    "candidate_email_masked": "i***@mail.test",
+    "submitted_at": 1791432180.0,
+    "decision": {
+      "application_id": "app-demo-1041",
+      "score": 60,
+      "route": "MANUAL_REVIEW",
+      "reasons": [
+        { "code": "DUP_SAME_JOB", "severity": "high", "detail": "A prior application exists for this candidate and job.", "weight": 40 }
+      ],
+      "summary": "Trust score 60: 1 concern found; route is MANUAL_REVIEW."
+    }
+  }
+]
