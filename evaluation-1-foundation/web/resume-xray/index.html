@@ -8,105 +8,234 @@
 <style>
 :root {
   color-scheme: light;
-  --bg: #f3f5f0; --surface: #ffffff; --ink: #17231c; --muted: #56635b; --line: #ccd4ce;
-  --accent: #145c3d; --accent-strong: #0b452d; --accent-soft: #dcece3;
-  --pass: #176b43; --pass-soft: #d7eee1; --verify: #855100; --verify-soft: #f8e9bd;
-  --review: #9c2f28; --review-soft: #f6dbd8; --shadow: 0 12px 36px rgba(22, 40, 30, 0.08);
+  --bg: #f4f6f1; --surface: #ffffff; --ink: #14201a; --muted: #5a675f; --line: #d7ded8;
+  --accent: #145c3d; --accent-strong: #0b452d; --accent-soft: #e3f0e8;
+  --pass: #176b43; --pass-soft: #dcf0e5; --verify: #8a5400; --verify-soft: #fbeec6;
+  --review: #a3302a; --review-soft: #f9dfdc; --info: #245b94; --info-soft: #e1ecf8;
+  --shadow: 0 1px 2px rgba(20, 32, 26, 0.04), 0 14px 38px rgba(20, 32, 26, 0.07);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.5; }
-header { background: var(--surface); border-bottom: 1px solid var(--line); padding: 18px 24px; display: flex; gap: 16px; align-items: center; justify-content: space-between; }
-header h1 { margin: 0; font-size: 1.1rem; }
-header a { color: var(--accent); font-weight: 600; }
-main { max-width: 1180px; margin: 0 auto; padding: 32px 24px 64px; }
-h2 { font-size: 1.9rem; margin: 0 0 6px; letter-spacing: -0.01em; }
-.lede { color: var(--muted); margin: 0 0 24px; max-width: 70ch; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 22px; margin-bottom: 20px; }
-.grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; }
-input[type=text], input[type=number], input[type=file] { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; font: inherit; background: #fff; color: var(--ink); }
-input:focus-visible, button:focus-visible { outline: 3px solid #7fc4a0; outline-offset: 2px; }
-.actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
-button { font: inherit; font-weight: 700; padding: 11px 18px; border-radius: 10px; border: 1px solid var(--accent); cursor: pointer; background: #fff; color: var(--accent); }
+body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.55; }
+a { color: var(--accent); font-weight: 600; }
+:focus-visible { outline: 3px solid #6fbf97; outline-offset: 2px; }
+header.top { background: var(--surface); border-bottom: 1px solid var(--line); }
+.top-inner { max-width: 1120px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo { width: 36px; height: 36px; border-radius: 10px; background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 0.85rem; }
+.brand small { display: block; color: var(--muted); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.brand strong { font-size: 1rem; }
+main { max-width: 1120px; margin: 0 auto; padding: 36px 24px 72px; }
+.hero h1 { font-size: clamp(1.9rem, 4vw, 2.9rem); line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 12px; max-width: 18ch; }
+.hero p { color: var(--muted); font-size: 1.05rem; margin: 0; max-width: 62ch; }
+.steps { display: flex; gap: 10px; flex-wrap: wrap; margin: 28px 0 24px; padding: 0; list-style: none; }
+.steps li { display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted); font-weight: 600; font-size: 0.9rem; }
+.steps li span { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: #e9eee9; font-size: 0.8rem; }
+.steps li.active { color: var(--ink); border-color: var(--accent); }
+.steps li.active span { background: var(--accent); color: #fff; }
+.steps li.done span { background: var(--pass); color: #fff; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px; }
+.card h2 { margin: 0 0 4px; font-size: 1.15rem; }
+.card .sub { margin: 0 0 18px; color: var(--muted); font-size: 0.92rem; }
+.upload-grid { display: grid; gap: 24px; grid-template-columns: 1.25fr 1fr; align-items: stretch; }
+.left { display: flex; flex-direction: column; gap: 18px; }
+.panel { background: #fafcf9; border: 1px solid var(--line); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.panel h3 { margin: 0; font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+@media (max-width: 860px) { .upload-grid { grid-template-columns: 1fr; } }
+.drop { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; flex: 1; min-height: 200px; border: 2px dashed #b4c2b8; border-radius: 16px; background: #fafcf9; padding: 28px 20px; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop .icon { font-size: 1.8rem; line-height: 1; }
+.drop strong { display: block; margin-top: 8px; }
+.drop .hint { color: var(--muted); font-size: 0.88rem; }
+.drop .file { margin-top: 10px; display: inline-block; background: var(--accent-soft); color: var(--accent-strong); border-radius: 999px; padding: 4px 12px; font-weight: 700; font-size: 0.85rem; }
+.drop input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.try { margin-top: 0; }
+.try h3 { margin: 0 0 8px; font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-btn { font: inherit; font-weight: 700; font-size: 0.86rem; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--ink); cursor: pointer; }
+.chip-btn:hover { border-color: var(--accent); color: var(--accent); }
+.chip-btn.bad:hover { border-color: var(--review); color: var(--review); }
+.fields { display: flex; flex-direction: column; gap: 14px; }
+.fields .field { display: flex; flex-direction: column; }
+label { display: block; font-weight: 700; font-size: 0.8rem; margin-bottom: 5px; color: var(--ink); }
+input[type=text], input[type=number] { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; font: inherit; background: #fff; color: var(--ink); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; align-items: center; }
+button.primary, button.secondary { font: inherit; font-weight: 700; padding: 12px 20px; border-radius: 12px; border: 1px solid var(--accent); cursor: pointer; }
 button.primary { background: var(--accent); color: #fff; }
-button:disabled { opacity: 0.55; cursor: not-allowed; }
-.status { margin-top: 12px; min-height: 1.4em; color: var(--muted); }
-.status.error { color: var(--review); font-weight: 600; }
-.cols { display: grid; gap: 18px; grid-template-columns: 1fr 1fr; }
-@media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
-.pane h3 { margin: 0 0 4px; font-size: 1rem; }
-.pane p.sub { margin: 0 0 10px; color: var(--muted); font-size: 0.88rem; }
-pre { margin: 0; white-space: pre-wrap; word-break: break-word; font: 0.84rem/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; background: #fbfcf8; border: 1px solid var(--line); border-radius: 12px; padding: 14px; max-height: 360px; overflow: auto; }
-mark.hidden { background: var(--review-soft); color: var(--review); border-radius: 4px; padding: 0 2px; font-weight: 700; }
-.bars { display: grid; gap: 14px; }
-.bar-row { display: grid; grid-template-columns: 220px 1fr 56px; gap: 12px; align-items: center; }
-@media (max-width: 640px) { .bar-row { grid-template-columns: 1fr; } }
-.track { background: #e8eee9; border-radius: 999px; height: 16px; overflow: hidden; }
-.fill { height: 100%; border-radius: 999px; background: var(--review); }
+button.primary:hover:not(:disabled) { background: var(--accent-strong); }
+button.secondary { background: #fff; color: var(--accent); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.status { margin-left: 4px; color: var(--muted); font-size: 0.92rem; }
+.status.error { color: var(--review); font-weight: 700; }
+.banner { display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; border-radius: 14px; padding: 14px 18px; margin-bottom: 18px; font-weight: 600; }
+.banner.alert { background: var(--review-soft); color: var(--review); }
+.banner.ok { background: var(--pass-soft); color: var(--pass); }
+.compare { display: grid; gap: 22px; grid-template-columns: 1fr 1fr; }
+@media (max-width: 760px) { .compare { grid-template-columns: 1fr; } }
+.meter-block h3 { margin: 0 0 2px; font-size: 0.95rem; }
+.meter-block p { margin: 0 0 10px; color: var(--muted); font-size: 0.85rem; }
+.meter { display: flex; align-items: center; gap: 12px; }
+.track { flex: 1; height: 18px; border-radius: 999px; background: #e8eee9; overflow: hidden; }
+.fill { height: 100%; border-radius: 999px; width: 0; transition: width 0.7s cubic-bezier(.2,.8,.2,1); }
+.fill.ats { background: var(--review); }
 .fill.human { background: var(--pass); }
-.chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-.chip { background: var(--review-soft); color: var(--review); border-radius: 999px; padding: 5px 12px; font-size: 0.8rem; font-weight: 700; }
-.badge { display: inline-block; padding: 6px 14px; border-radius: 999px; font-weight: 800; font-size: 0.9rem; }
-.badge.PASS_TO_ATS { background: var(--pass-soft); color: var(--pass); }
-.badge.ADDITIONAL_VERIFICATION { background: var(--verify-soft); color: var(--verify); }
-.badge.MANUAL_REVIEW { background: var(--review-soft); color: var(--review); }
-.reason { border-top: 1px solid var(--line); padding: 10px 0; }
-.reason strong { font-size: 0.85rem; }
-.reason span { display: block; color: var(--muted); font-size: 0.88rem; }
+.fill.same { background: var(--info); }
+.meter strong { font-size: 1.5rem; min-width: 3.2ch; text-align: right; }
+.panes { display: grid; gap: 18px; grid-template-columns: 1fr 1fr; }
+@media (max-width: 860px) { .panes { grid-template-columns: 1fr; } }
+.pane-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.pane-head h3 { margin: 0; font-size: 1rem; }
+.tag { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; }
+.tag.person { background: var(--pass-soft); color: var(--pass); }
+.tag.parser { background: var(--info-soft); color: var(--info); }
+.tag.hidden { background: var(--review-soft); color: var(--review); }
+pre { margin: 0; white-space: pre-wrap; word-break: break-word; font: 0.82rem/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; background: #fbfcf9; border: 1px solid var(--line); border-radius: 12px; padding: 14px; min-height: 240px; max-height: 360px; overflow: auto; }
+.panes .card { display: flex; flex-direction: column; }
+.panes .card pre { flex: 1; }
+mark.hidden { background: #fbd5d1; color: #8c241f; border-radius: 4px; padding: 1px 3px; font-weight: 700; }
+.verdict { display: grid; gap: 24px; grid-template-columns: 170px 1fr; align-items: center; }
+@media (max-width: 640px) { .verdict { grid-template-columns: 1fr; justify-items: center; text-align: center; } }
+.ring { position: relative; width: 150px; height: 150px; }
+.ring svg { width: 150px; height: 150px; transform: rotate(-90deg); }
+.ring .bg { fill: none; stroke: #e8eee9; stroke-width: 12; }
+.ring .fg { fill: none; stroke-width: 12; stroke-linecap: round; transition: stroke-dashoffset 0.9s cubic-bezier(.2,.8,.2,1); }
+.ring .num { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+.ring .num b { font-size: 2.3rem; line-height: 1; }
+.ring .num small { color: var(--muted); font-size: 0.75rem; }
+.route { display: inline-block; padding: 7px 16px; border-radius: 999px; font-weight: 800; font-size: 1rem; }
+.route.PASS_TO_ATS { background: var(--pass-soft); color: var(--pass); }
+.route.ADDITIONAL_VERIFICATION { background: var(--verify-soft); color: var(--verify); }
+.route.MANUAL_REVIEW { background: var(--review-soft); color: var(--review); }
+.verdict p { margin: 10px 0 0; }
+.outcome { margin-top: 12px; font-weight: 700; }
+.reasons { margin-top: 20px; display: grid; gap: 10px; }
+.reason { border: 1px solid var(--line); border-left-width: 5px; border-radius: 12px; padding: 12px 14px; background: #fff; }
+.reason.high, .reason.critical { border-left-color: var(--review); }
+.reason.critical { background: #fff8f7; }
+.reason.medium { border-left-color: #d49a1a; }
+.reason.low { border-left-color: var(--info); }
+.reason-top { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.reason code { font-weight: 800; font-size: 0.85rem; }
+.reason .w { color: var(--muted); font-size: 0.8rem; font-weight: 700; }
+.reason p { margin: 4px 0 0; font-size: 0.92rem; }
+.reason .why { color: var(--muted); }
 [hidden] { display: none !important; }
+footer { color: var(--muted); font-size: 0.85rem; text-align: center; padding: 8px 0 0; }
 </style>
 </head>
 <body>
-<header>
-  <h1>Resume X-ray</h1>
-  <a href="../dashboard/index.html">Open recruiter dashboard</a>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand"><div class="logo" aria-hidden="true">TG</div><div><small>AI Application Firewall</small><strong>Resume X-ray</strong></div></div>
+    <a href="../dashboard/index.html">Recruiter dashboard</a>
+  </div>
 </header>
 <main>
-  <h2>What a human sees is not always what an ATS reads.</h2>
-  <p class="lede">Upload a resume. We read it the way a keyword-ranking ATS parser does, then the way a person does, and show the difference. Anything hidden from people but visible to the parser is highlighted.</p>
-
-  <section class="card" aria-labelledby="job-title">
-    <h3 id="job-title" style="margin-top:0">Job requirements and resume</h3>
-    <div class="grid">
-      <div><label for="must">Must-have skills (comma separated)</label><input id="must" type="text" value="python, sql, docker"></div>
-      <div><label for="nice">Nice-to-have skills</label><input id="nice" type="text" value="kubernetes, aws"></div>
-      <div><label for="years">Minimum years of experience</label><input id="years" type="number" min="0" step="0.5" value="2"></div>
-      <div><label for="file">Resume file (PDF, DOCX or TXT, up to 5 MB)</label><input id="file" type="file" accept=".pdf,.docx,.txt"></div>
-    </div>
-    <div class="actions">
-      <button id="inspect" class="primary" type="button">Inspect resume</button>
-      <button id="submit" type="button" disabled>Send through the firewall</button>
-    </div>
-    <div id="status" class="status" role="status" aria-live="polite"></div>
+  <section class="hero">
+    <h1>What a person sees is not always what an ATS reads.</h1>
+    <p>Drop in a resume. We read it the way a keyword-ranking ATS parser does, then the way a person does, and show every difference before the application reaches a recruiter.</p>
   </section>
 
-  <section id="results" hidden>
-    <div class="card">
-      <h3 style="margin-top:0">Naive ATS ranking score</h3>
-      <div class="bars">
-        <div class="bar-row"><span>What the ATS parser reads</span><div class="track"><div id="atsFill" class="fill"></div></div><strong id="atsScore"></strong></div>
-        <div class="bar-row"><span>What a human reads</span><div class="track"><div id="humanFill" class="fill human"></div></div><strong id="humanScore"></strong></div>
+  <ol class="steps" aria-label="Progress">
+    <li id="s1" class="active"><span>1</span>Upload</li>
+    <li id="s2"><span>2</span>X-ray</li>
+    <li id="s3"><span>3</span>Firewall decision</li>
+  </ol>
+
+  <section class="card" aria-labelledby="up-title">
+    <h2 id="up-title">1. Choose a resume</h2>
+    <p class="sub">PDF, DOCX or TXT up to 5 MB. Use fake or sample resumes only.</p>
+    <div class="upload-grid">
+      <div class="left">
+        <label class="drop" id="drop" for="file" tabindex="0">
+          <div class="icon" aria-hidden="true">&#128196;</div>
+          <strong>Drag a resume here, or click to browse</strong>
+          <span class="hint">We read the text layer and the visible layout</span>
+          <div><span class="file" id="fileName" hidden></span></div>
+          <input id="file" type="file" accept=".pdf,.docx,.txt">
+        </label>
+        <div class="try">
+          <h3>Or try a sample</h3>
+          <div class="chips">
+            <button type="button" class="chip-btn" data-sample="honest_ai_polished.pdf">Honest, AI-polished resume</button>
+            <button type="button" class="chip-btn bad" data-sample="stuffed_hidden_text.pdf">Keyword-stuffed with hidden text</button>
+            <button type="button" class="chip-btn bad" data-sample="visible_injection.docx">Visible instruction injection</button>
+          </div>
+        </div>
       </div>
-      <div id="chips" class="chips" aria-label="Integrity findings"></div>
+      <div class="panel fields">
+        <h3>Job requirements</h3>
+        <div class="field"><label for="must">Must-have skills (comma separated)</label><input id="must" type="text" value="python, sql, docker"></div>
+        <div class="field"><label for="nice">Nice-to-have skills</label><input id="nice" type="text" value="kubernetes, aws"></div>
+        <div class="field"><label for="years">Minimum years of experience</label><input id="years" type="number" min="0" step="0.5" value="2"></div>
+      </div>
     </div>
-    <div class="cols">
-      <div class="card pane"><h3>What a human sees</h3><p class="sub">Visible text only.</p><pre id="human"></pre></div>
-      <div class="card pane"><h3>What the ATS parser reads</h3><p class="sub">Everything in the text layer. Hidden content is highlighted.</p><pre id="ats"></pre></div>
+    <div class="actions">
+      <button id="inspect" class="primary" type="button" disabled>Inspect resume</button>
+      <button id="reset" class="secondary" type="button">Start over</button>
+      <span id="status" class="status" role="status" aria-live="polite">Choose a file or a sample to begin.</span>
+    </div>
+  </section>
+
+  <section id="results" hidden aria-live="polite">
+    <div id="banner" class="banner" hidden></div>
+    <div class="card">
+      <h2>2. How a keyword-matching ATS would rank it</h2>
+      <p class="sub">A simple ATS counts job keywords anywhere in the text layer. Hidden text counts too.</p>
+      <div class="compare">
+        <div class="meter-block"><h3>What the ATS parser reads</h3><p>Everything in the file</p><div class="meter"><div class="track"><div id="atsFill" class="fill ats"></div></div><strong id="atsScore">0</strong></div></div>
+        <div class="meter-block"><h3>What a person reads</h3><p>Only what is visible on the page</p><div class="meter"><div class="track"><div id="humanFill" class="fill human"></div></div><strong id="humanScore">0</strong></div></div>
+      </div>
+    </div>
+    <div class="panes">
+      <div class="card"><div class="pane-head"><h3>What a person sees</h3><span class="tag person">Visible text</span></div><pre id="human" tabindex="0"></pre></div>
+      <div class="card"><div class="pane-head"><h3>What the ATS parser reads</h3><span class="tag parser" id="parserTag">Full text layer</span></div><pre id="ats" tabindex="0"></pre></div>
+    </div>
+    <div class="actions" style="margin: 0 0 20px">
+      <button id="submit" class="primary" type="button" disabled>Send through the firewall</button>
     </div>
   </section>
 
   <section id="decision" class="card" hidden aria-live="polite">
-    <h3 style="margin-top:0">Firewall decision</h3>
-    <p><span id="route" class="badge"></span> &nbsp; Trust score <strong id="score"></strong>/100</p>
-    <p id="summary" class="lede" style="margin-bottom:8px"></p>
-    <div id="reasons"></div>
+    <h2>3. Firewall decision</h2>
+    <p class="sub">Nothing is rejected automatically. Held-back applications go to a person with the reasons below.</p>
+    <div class="verdict">
+      <div class="ring">
+        <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="bg" cx="60" cy="60" r="50"></circle><circle id="ringFg" class="fg" cx="60" cy="60" r="50" stroke-dasharray="314.16" stroke-dashoffset="314.16"></circle></svg>
+        <div class="num"><div><b id="score">0</b><br><small>trust score</small></div></div>
+      </div>
+      <div>
+        <span id="route" class="route"></span>
+        <div id="outcome" class="outcome"></div>
+        <p id="summary"></p>
+      </div>
+    </div>
+    <div id="reasons" class="reasons"></div>
   </section>
+
+  <footer>Resume X-ray runs against your local firewall API. Sample resumes are synthetic.</footer>
 </main>
 <script>
 const API = "http://localhost:8000";
 const $ = (id) => document.getElementById(id);
 const ROUTES = { PASS_TO_ATS: "Pass to ATS", ADDITIONAL_VERIFICATION: "Additional verification", MANUAL_REVIEW: "Manual review" };
+const COLORS = { PASS_TO_ATS: "#176b43", ADDITIONAL_VERIFICATION: "#c58a10", MANUAL_REVIEW: "#a3302a" };
+const WHY = {
+  RESUME_HIDDEN_TEXT: "Text is hidden from people (for example near-white or tiny) but a parser still reads it.",
+  RESUME_PROMPT_INJECTION: "The resume contains instructions aimed at an AI screener, such as asking to be ranked first.",
+  RESUME_KEYWORD_STUFFING: "Job keywords repeat far more often than real experience would explain.",
+  RESUME_PARSE_DIVERGENCE: "A meaningful part of what the ATS reads cannot be seen on the page.",
+  QUAL_MISSING_MUST_HAVE: "Some required skills are not listed. This is a fit signal, not evidence of fraud.",
+  QUAL_UNDER_EXPERIENCE: "Stated experience is below the minimum. This is a fit signal, not evidence of fraud.",
+  TIMELINE_INVALID: "A date is impossible or inconsistent, for example an end before a start.",
+  TIMELINE_OVERLAP: "Two full-time roles overlap for a long stretch.",
+  DUP_EMAIL: "The same email, ignoring dots and plus tags, appeared in an earlier application.",
+  DUP_PHONE: "The same phone number appeared in an earlier application.",
+  DUP_SAME_JOB: "The same person already applied to this job.",
+  DUP_RESUME_NEAR: "The resume is a near copy of one from a different person."
+};
+const SAMPLE_TYPES = { pdf: "application/pdf", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", txt: "text/plain" };
+const state = { file: null, inspected: false };
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -121,6 +250,23 @@ function jobJson() {
 function setStatus(message, isError) {
   $("status").textContent = message;
   $("status").className = isError ? "status error" : "status";
+}
+function setStep(active) {
+  ["s1", "s2", "s3"].forEach((id, index) => {
+    const item = $(id);
+    item.className = index + 1 < active ? "done" : index + 1 === active ? "active" : "";
+  });
+}
+function percent(value) { return Math.max(0, Math.min(100, value)); }
+function animateNumber(node, target, decimals) {
+  const start = performance.now();
+  const duration = 700;
+  function tick(now) {
+    const progress = Math.min(1, (now - start) / duration);
+    node.textContent = (target * progress).toFixed(decimals);
+    if (progress < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
 }
 function highlight(container, text, spans) {
   container.textContent = "";
@@ -149,6 +295,7 @@ function highlight(container, text, spans) {
     position = end;
   }
   if (position < text.length) container.append(document.createTextNode(text.slice(position)));
+  return merged.length;
 }
 function formFor(file) {
   const data = new FormData();
@@ -157,80 +304,156 @@ function formFor(file) {
   return data;
 }
 async function call(path, data) {
-  const response = await fetch(API + path, { method: "POST", body: data });
+  let response;
+  try {
+    response = await fetch(API + path, { method: "POST", body: data });
+  } catch (error) {
+    throw new Error("The firewall API is not reachable at " + API + ". Start it and try again.");
+  }
   if (!response.ok) {
-    let detail = "request failed (" + response.status + ")";
+    let detail = "Request failed (" + response.status + ")";
     try {
       const body = await response.json();
       if (typeof body.detail === "string") detail = body.detail;
     } catch (error) {
-      detail = "request failed (" + response.status + ")";
+      detail = "Request failed (" + response.status + ")";
     }
     throw new Error(detail);
   }
   return response.json();
 }
-function percent(value) { return Math.max(0, Math.min(100, value)); }
-
-$("inspect").addEventListener("click", async () => {
-  const file = $("file").files[0];
-  if (!file) { setStatus("Choose a resume file first.", true); return; }
+function chooseFile(file) {
+  state.file = file;
+  state.inspected = false;
+  $("fileName").textContent = file.name;
+  $("fileName").hidden = false;
+  $("inspect").disabled = false;
+  $("results").hidden = true;
+  $("decision").hidden = true;
+  setStep(1);
+  setStatus("Ready. Inspecting...");
+  runInspect();
+}
+async function runInspect() {
+  if (!state.file) { setStatus("Choose a file or a sample first.", true); return; }
   $("inspect").disabled = true;
   setStatus("Reading the resume both ways...");
   try {
-    const result = await call("/v1/resume/inspect", formFor(file));
-    $("atsFill").style.width = percent(result.naive_ats_score) + "%";
-    $("humanFill").style.width = percent(result.human_view_ats_score) + "%";
-    $("atsScore").textContent = result.naive_ats_score.toFixed(1);
-    $("humanScore").textContent = result.human_view_ats_score.toFixed(1);
+    const result = await call("/v1/resume/inspect", formFor(state.file));
+    const ats = result.naive_ats_score;
+    const human = result.human_view_ats_score;
+    const gap = ats - human;
+    $("atsFill").style.width = percent(ats) + "%";
+    $("humanFill").style.width = percent(human) + "%";
+    animateNumber($("atsScore"), ats, 1);
+    animateNumber($("humanScore"), human, 1);
+    $("atsFill").className = "fill " + (gap > 5 ? "ats" : "same");
     highlight($("human"), result.human_view, []);
-    highlight($("ats"), result.ats_view, result.hidden_spans);
-    const chips = $("chips");
-    chips.textContent = "";
-    if (result.reasons.length === 0) chips.append(el("span", "badge PASS_TO_ATS", "No resume integrity flags"));
-    for (const reason of result.reasons) chips.append(el("span", "chip", reason.code));
+    const hiddenCount = highlight($("ats"), result.ats_view, result.hidden_spans);
+    $("parserTag").className = hiddenCount > 0 ? "tag hidden" : "tag parser";
+    $("parserTag").textContent = hiddenCount > 0 ? "Hidden content found" : "Full text layer";
+    const banner = $("banner");
+    banner.hidden = false;
+    banner.textContent = "";
+    if (gap > 5 || hiddenCount > 0) {
+      banner.className = "banner alert";
+      banner.append(el("span", "", "A keyword-matching ATS would score this resume " + ats.toFixed(1) + " but a person would score it " + human.toFixed(1) + ". Content is hidden from people."));
+    } else {
+      banner.className = "banner ok";
+      banner.append(el("span", "", "Both views match. Nothing is hidden from a person, so there is no gap to exploit."));
+    }
+    state.inspected = true;
     $("results").hidden = false;
-    $("decision").hidden = true;
     $("submit").disabled = false;
+    setStep(2);
     setStatus("Done. Compare the two views, then send it through the firewall.");
+    $("results").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (error) {
-    setStatus("Could not inspect: " + error.message, true);
+    setStatus(error.message, true);
   } finally {
     $("inspect").disabled = false;
   }
-});
-
-$("submit").addEventListener("click", async () => {
-  const file = $("file").files[0];
-  if (!file) return;
+}
+async function runSubmit() {
+  if (!state.file || !state.inspected) return;
   $("submit").disabled = true;
   setStatus("Sending through the firewall...");
   try {
-    const data = formFor(file);
+    const data = formFor(state.file);
     data.append("device_id", "xray-" + Math.random().toString(36).slice(2, 10));
     data.append("application_id", "xray-" + Date.now());
     data.append("session_seconds", "120");
     const decision = await call("/v1/applications/upload", data);
-    $("route").className = "badge " + decision.route;
+    const color = COLORS[decision.route] || "#145c3d";
+    const ring = $("ringFg");
+    ring.style.stroke = color;
+    ring.style.strokeDashoffset = String(314.16 * (1 - percent(decision.score) / 100));
+    animateNumber($("score"), decision.score, 0);
+    $("route").className = "route " + decision.route;
     $("route").textContent = ROUTES[decision.route] || decision.route;
-    $("score").textContent = decision.score;
+    $("outcome").textContent = decision.route === "PASS_TO_ATS" ? "Delivered to the ATS." : "Held back from the ATS for a person to review.";
+    $("outcome").style.color = color;
     $("summary").textContent = decision.summary;
     const list = $("reasons");
     list.textContent = "";
+    if (decision.reasons.length === 0) list.append(el("p", "sub", "No concerns were found."));
     for (const reason of decision.reasons) {
-      const row = el("div", "reason");
-      row.append(el("strong", "", reason.code + " (weight " + reason.weight + ")"));
-      row.append(el("span", "", reason.detail));
-      list.append(row);
+      const card = el("div", "reason " + reason.severity);
+      const top = el("div", "reason-top");
+      top.append(el("code", "", reason.code), el("span", "w", "weight " + reason.weight));
+      card.append(top, el("p", "", reason.detail));
+      if (WHY[reason.code]) card.append(el("p", "why", WHY[reason.code]));
+      list.append(card);
     }
     $("decision").hidden = false;
-    setStatus(decision.route === "PASS_TO_ATS" ? "Passed to the ATS." : "Held back from the ATS for a person to review.");
+    setStep(3);
+    setStatus(decision.route === "PASS_TO_ATS" ? "Passed to the ATS." : "Held back for review.");
+    $("decision").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (error) {
-    setStatus("Could not submit: " + error.message, true);
+    setStatus(error.message, true);
   } finally {
     $("submit").disabled = false;
   }
+}
+function reset() {
+  state.file = null;
+  state.inspected = false;
+  $("file").value = "";
+  $("fileName").hidden = true;
+  $("inspect").disabled = true;
+  $("results").hidden = true;
+  $("decision").hidden = true;
+  setStep(1);
+  setStatus("Choose a file or a sample to begin.");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+$("file").addEventListener("change", (event) => { if (event.target.files[0]) chooseFile(event.target.files[0]); });
+$("drop").addEventListener("dragover", (event) => { event.preventDefault(); $("drop").classList.add("over"); });
+$("drop").addEventListener("dragleave", () => $("drop").classList.remove("over"));
+$("drop").addEventListener("drop", (event) => {
+  event.preventDefault();
+  $("drop").classList.remove("over");
+  if (event.dataTransfer.files[0]) chooseFile(event.dataTransfer.files[0]);
 });
+$("drop").addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); $("file").click(); } });
+document.querySelectorAll("[data-sample]").forEach((button) => {
+  button.addEventListener("click", async () => {
+    const name = button.dataset.sample;
+    setStatus("Loading sample...");
+    try {
+      const response = await fetch("./samples/" + name);
+      if (!response.ok) throw new Error("sample missing");
+      const blob = await response.blob();
+      chooseFile(new File([blob], name, { type: SAMPLE_TYPES[name.split(".").pop()] || "application/octet-stream" }));
+    } catch (error) {
+      setStatus("Could not load the sample file.", true);
+    }
+  });
+});
+$("inspect").addEventListener("click", runInspect);
+$("submit").addEventListener("click", runSubmit);
+$("reset").addEventListener("click", reset);
 </script>
 </body>
 </html>
