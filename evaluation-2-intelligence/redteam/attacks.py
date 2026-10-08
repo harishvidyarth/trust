@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import random
 from collections.abc import Callable, Iterator
 from typing import Any
@@ -161,15 +162,37 @@ def _ollama_paraphrase(text: str, seed: int, base_url: str) -> str | None:
             models = tags.json().get("models", [])
             if not models:
                 return None
+            requested_model = os.getenv("FIREWALL_REDTEAM_MODEL", "").strip()
+            model_names = [str(item.get("name", "")) for item in models]
+            model = requested_model if requested_model in model_names else next(
+                (name for name in model_names if name and "embed" not in name.lower()),
+                "",
+            )
+            if not model:
+                return None
+            strategies = (
+                "Reverse the sentence order and replace wording with close synonyms.",
+                "Combine the facts into two longer sentences with different syntax.",
+                "Use concise clauses and mostly passive voice.",
+                "Start with collaboration, then describe testing, data, and service work.",
+                "Use achievement-style prose with varied sentence openings.",
+                "Use formal nominal phrasing while preserving every fact.",
+                "Put operational outcomes before the tools and implementation details.",
+                "Use plain language and split the facts into short sentences.",
+                "Lead with database work and end with the application service.",
+                "Lead with release security and end with team collaboration.",
+            )
+            strategy = strategies[seed % len(strategies)]
             response = client.post(
                 "/api/generate",
                 json={
-                    "model": models[0]["name"],
+                    "model": model,
                     "prompt": (
-                        "Paraphrase this resume paragraph without adding facts. Reorder sentences, "
-                        f"use synonyms, and return only the paragraph:\n{text}"
+                        "Paraphrase this synthetic resume paragraph without adding facts. "
+                        f"{strategy} Return only the paragraph:\n{text}"
                     ),
                     "stream": False,
+                    "keep_alive": "10m",
                     "options": {"temperature": 0, "seed": seed},
                 },
                 timeout=20.0,

@@ -1,0 +1,235 @@
+{
+  "metadata": {
+    "seed": 20261008,
+    "count": 45,
+    "count_per_class": 15,
+    "construction": "Deterministic templates and rules; no LLM generated or assigned labels."
+  },
+  "records": [
+    {
+      "id": "human-09",
+      "label": "human",
+      "text": "Vikram Jain\nData Analyst\n\nI have worked mostly with Go, plus Kafka 3.6 when the project called for it.\nAt Riverline Tech, I moved a nightly import into smaller jobs; it used to take about three hours and now usually finishes in 39 minutes.\nFixed the duplicate retry path after it affected 39 customer records. That one needed a data repair script and a slightly awkward Monday call.\nOn a team of 4, I reviewed changes and looked after Redis 7.\nThe first version was rough and we rewrote the retry part after an outage.\nSide project: a bus reminder bot for my family. It runs on an old mini PC."
+    },
+    {
+      "id": "human-05",
+      "label": "human",
+      "text": "Rohan Iyer\nQa Engineer\n\nI have worked mostly with Python, plus FastAPI when the project called for it.\nAt Northstar Labs, I moved a nightly import into smaller jobs; it used to take about three hours and now usually finishes in 35 minutes.\nFixed the duplicate retry path after it affected 11 customer records. That one needed a data repair script and a slightly awkward Monday call.\nOn a team of 8, I reviewed changes and looked after PostgreSQL 15.\nFrontend is not really my thing, though I can fix a React form when needed.\nSide project: a bus reminder bot for my family. It runs on an old mini PC."
+    },
+    {
+      "id": "human-04",
+      "label": "human",
+      "text": "Diya Sen\nQa Engineer\n\nI have worked mostly with TypeScript, plus Node.js 20 when the project called for it.\nAt MapleWorks, I moved a nightly import into smaller jobs; it used to take about three hours and now usually finishes in 42 minutes.\nFixed the duplicate retry path after it affected 32 customer records. That one needed a data repair script and a slightly awkward Monday call.\nOn a team of 4, I reviewed changes and looked after MongoDB 7.\nFrontend is not really my thing, though I can fix a React form when needed.\nSide project: a bus reminder bot for my family. It runs on an old mini PC."
+    },
+    {
+      "id": "ai_polished-02",
+      "label": "ai_polished",
+      "text": "Meera Nair\nData Analyst\n\nData Analyst focused on dependable services and clear collaboration.\nBuilt Go services with Kafka 3.6 and Redis 7, improving median response time by 33%.\nReworked deployment checks at Riverline Tech, reducing repeat incidents by 43%.\nPartnered with product and support teams to translate recurring customer issues into engineering work.\nCreated runbooks for on-call handoffs and coached two graduate developers through their first releases.\nImproved test coverage around payment and notification workflows while keeping changes easy to review."
+    },
+    {
+      "id": "ai_polished-09",
+      "label": "ai_polished",
+      "text": "Vikram Jain\nData Analyst\n\nData Analyst focused on dependable services and clear collaboration.\nBuilt Python services with FastAPI and PostgreSQL 15, improving median response time by 18%.\nReworked deployment checks at Riverline Tech, reducing repeat incidents by 29%.\nPartnered with product and support teams to translate recurring customer issues into engineering work.\nCreated runbooks for on-call handoffs and coached two graduate developers through their first releases.\nImproved test coverage around payment and notification workflows while keeping changes easy to review."
+    },
+    {
+      "id": "human-11",
+      "label": "human",
+      "text": "Neel Joshi\nData Analyst\n\nI have worked mostly with Python, plus FastAPI when the project called for it.\nAt MapleWorks, I moved a nightly import into smaller jobs; it used to take about three hours and now usually finishes in 50 minutes.\nFixed the duplicate retry path after it affected 40 customer records. That one needed a data repair script and a slightly awkward Monday call.\nOn a team of 8, I reviewed changes and looked after PostgreSQL 15.\nFrontend is not really my thing, though I can fix a React form when needed.\nSide project: a bus reminder bot for my family. It runs on an old mini PC."
+    },
+    {
+      "id": "ai_polished-08",
+      "label": "ai_polished",
+      "text": "Tara Menon\nPlatform Developer\n\nPlatform Developer focused on dependable services and clear collaboration.\nBuilt Java services with Spring Boot 3.1 and MySQL 8, improving median response time by 18%.\nReworked deployment checks at Riverline Tech, reducing repeat incidents by 29%.\nPartnered with product and support teams to translate recurring customer issues into engineering work.\nCreated runbooks for on-call handoffs and coached two graduate developers through their first releases.\nImproved test coverage around payment and notification workflows while keeping changes easy to review."
+    },
+    {
+      "id": "ai_polished-06",
+      "label": "ai_polished",
+      "text": "Nisha Das\nPlatform Developer\n\nPlatform Developer focused on dependable services and clear collaboration.\nBuilt Go services with Kafka 3.6 and Redis 7, improving median response time by 33%.\nReworked deployment checks at Pine Systems, reducing repeat incidents by 29%.\nPartnered with product and support teams to translate recurring customer issues into engineering work.\nCreated runbooks for on-call handoffs and coached two graduate developers through their first releases.\nImproved test coverage around payment and notification workflows while keeping changes easy to review."
+    },
+    {
+      "id": "ai_generated-06",
+      "label": "ai_generated",
+      "text": "Nisha Das\nQa Engineer\n\nResults-driven and highly motivated professional with a proven track record of delivering innovative, cutting-edge solutions in dynamic environments.\nSpearheaded strategic initiatives at Northstar Labs, streamlining robust workflows and increasing efficiency by 50%.\nLeveraged best-in-class technologies to foster seamless collaboration and improve productivity by 45%.\nOrchestrated cross-functional stakeholders, championed agile practices, and elevated delivery quality by 25%.\nPioneered scalable solutions that optimized performance, enhanced reliability, and reduced costs by 20%.\nFacilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+    },
+    {
+      "id": "ai_generated-03",
+      "label": "ai_generated",
+      "text": "Kabir Rao\nBackend Engineer\n\nResults-driven and highly motivated professional with a proven track record of delivering innovative, cutting-edge solutions in dynamic environments.\nSpearheaded strategic initiatives at Pine Systems, streamlining robust workflows and increasing efficiency by 30%.\nLeveraged best-in-class technologies to foster seamless collaboration and improve productivity by 25%.\nOrchestrated cross-functional stakeholders, championed agile practices, and elevated delivery quality by 40%.\nPioneered scalable solutions that optimized performance, enhanced reliability, and reduced costs by 35%.\nFacilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+    },
+    {
+      "id": "ai_polished-13",
+      "label": "ai_polished",
+      "text": "Kiran Bhat\nQa Engineer\n\nQa Engineer focused on dependable services and clear collaboration.\nBuilt Go services with Kafka 3.6 and Redis 7, improving median response time by 18%.\nReworked deployment checks at Pine Systems, reducing repeat incidents by 21%.\nPartnered with product and support teams to translate recurring customer issues into engineering work.\nCreated runbooks for on-call handoffs and coached two graduate developers through their first releases.\nImproved test coverage around payment and notification workflows while keeping changes easy to review."
+    },
+    {
+      "id": "ai_generated-15",
+      "label": "ai_generated",
+      "text": "Dev Kapoor\nBackend Engineer\n\nResults-driven and highly motivated professional with a proven track record of delivering innovative, cutting-edge solutions in dynamic environments.\nSpearheaded strategic initiatives at Northstar Labs, streamlining robust workflows and increasing efficiency by 30%.\nLeveraged best-in-class technologies to foster seamless collaboration and improve productivity by 40%.\nOrchestrated cross-functional stakeholders, championed agile practices, and elevated delivery quality by 25%.\nPioneered scalable solutions that optimized performance, enhanced reliability, and reduced costs by 20%.\nFacilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+    },
+    {
+      "id": "ai_generated-09",
+      "label": "ai_generated",
+      "text": "Vikram Jain\nPlatform Developer\n\nResults-driven and highly motivated professional with a proven track record of delivering innovative, cutting-edge solutions in dynamic environments.\nSpearheaded strategic initiatives at Northstar Labs, streamlining robust workflows and increasing efficiency by 50%.\nLeveraged best-in-class technologies to foster seamless collaboration and improve productivity by 35%.\nOrchestrated cross-functional stakeholders, championed agile practices, and elevated delivery quality by 40%.\nPioneered scalable solutions that optimized performance, enhanced reliability, and reduced costs by 45%.\nFacilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+    },
+    {
+      "id": "ai_generated-07",
+      "label": "ai_generated",
+      "text": "Arjun Bose\nPlatform Developer\n\nResults-driven and highly motivated professional with a proven track record of delivering innovative, cutting-edge solutions in dynamic environments.\nSpearheaded strategic initiatives at MapleWorks, streamlining robust workflows and increasing efficiency by 45%.\nLeveraged best-in-class technologies to foster seamless collaboration and improve productivity by 25%.\nOrchestrated cross-functional stakeholders, championed agile practices, and elevated delivery quality by 50%.\nPioneered scalable solutions that optimized performance, enhanced reliability, and reduced costs by 30%.\nFacilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+    },
+    {
+      "id": "human-01",
+      "label": "human",
+      "text": "Aarav Shah\nPlatform Developer\n\nI have worked mostly with TypeScript, plus Node.js 20 when the project called for it.\nAt Northstar Labs, I moved a nightly import into smaller jobs; it used to take about three hours and now usually finishes in 38 minutes.\nFixed the duplicate retry path after it affected 26 customer records. That one needed a data repair script and a slightly awkward Monday call.\nOn a team of 6, I reviewed changes and looked after MongoDB 7.\nFrontend is not really my thing, though I can fix a React form when needed.\nSide project: a bus reminder bot for my family. It runs on an old mini PC."
+    },
+    {
+      "id": "ai_polished-10",
+      "label": "ai_polished",
+      "text": "Leela Roy\nPlatform Developer\n\nPlatform Developer focused on dependable services and clear collaboration.\nBuilt Java services with Spring Boot 3.1 and MySQL 8, improving median response time by 18%.\nReworked deployment checks at MapleWorks, reducing repeat incidents by 36%.\nPartnered with product and support teams to translate recurring customer issues into engineering work.\nCreated runbooks for on-call handoffs and coached two graduate developers through their first releases.\nImproved test coverage around payment and notification workflows while keeping changes easy to review."
+    },
+    {
+      "id": "ai_polished-07",
+      "label": "ai_polished",
+      "text": "Arjun Bose\nQa Engineer\n\nQa Engineer focused on dependable services and clear collaboration.\nBuilt TypeScript services with Node.js 20 and MongoDB 7, improving median response time by 33%.\nReworked deployment checks at Riverline Tech, reducing repeat incidents by 43%.\nPartnered with product and support teams to translate recurring customer issues into engineering work.\nCreated runbooks for on-call handoffs and coached two graduate developers through their first releases.\nImproved test coverage around payment and notification workflows while keeping changes easy to review."
+    },
+    {
+      "id": "ai_polished-11",
+      "label": "ai_polished",
+      "text": "Neel Joshi\nData Analyst\n\nData Analyst focused on dependable services and clear collaboration.\nBuilt Java services with Spring Boot 3.1 and MySQL 8, improving median response time by 22%.\nReworked deployment checks at Riverline Tech, reducing repeat incidents by 43%.\nPartnered with product and support teams to translate recurring customer issues into engineering work.\nCreated runbooks for on-call handoffs and coached two graduate developers through their first releases.\nImproved test coverage around payment and notification workflows while keeping changes easy to review."
+    },
+    {
+      "id": "ai_generated-12",
+      "label": "ai_generated",
+      "text": "Ananya Pillai\nQa Engineer\n\nResults-driven and highly motivated professional with a proven track record of delivering innovative, cutting-edge solutions in dynamic environments.\nSpearheaded strategic initiatives at Riverline Tech, streamlining robust workflows and increasing efficiency by 25%.\nLeveraged best-in-class technologies to foster seamless collaboration and improve productivity by 35%.\nOrchestrated cross-functional stakeholders, championed agile practices, and elevated delivery quality by 45%.\nPioneered scalable solutions that optimized performance, enhanced reliability, and reduced costs by 30%.\nFacilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+    },
+    {
+      "id": "ai_generated-01",
+      "label": "ai_generated",
+      "text": "Aarav Shah\nBackend Engineer\n\nResults-driven and highly motivated professional with a proven track record of delivering innovative, cutting-edge solutions in dynamic environments.\nSpearheaded strategic initiatives at MapleWorks, streamlining robust workflows and increasing efficiency by 35%.\nLeveraged best-in-class technologies to foster seamless collaboration and improve productivity by 40%.\nOrchestrated cross-functional stakeholders, championed agile practices, and elevated delivery quality by 45%.\nPioneered scalable solutions that optimized performance, enhanced reliability, and reduced costs by 50%.\nFacilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+    },
+    {
+      "id": "ai_generated-05",
+      "label": "ai_generated",
+      "text": "Rohan Iyer\nData Analyst\n\nResults-driven and highly motivated professional with a proven track record of delivering innovative, cutting-edge solutions in dynamic environments.\nSpearheaded strategic initiatives at Riverline Tech, streamlining robust workflows and increasing efficiency by 30%.\nLeveraged best-in-class technologies to foster seamless collaboration and improve productivity by 50%.\nOrchestrated cross-functional stakeholders, championed agile practices, and elevated delivery quality by 25%.\nPioneered scalable solutions that optimized performance, enhanced reliability, and reduced costs by 35%.\nFacilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+    },
+    {
+      "id": "ai_generated-10",
+      "label": "ai_generated",
+      "text": "Leela Roy\nData Analyst\n\nResults-driven and highly motivated professional with a proven track record of delivering innovative, cutting-edge solutions in dynamic environments.\nSpearheaded strategic initiatives at MapleWorks, streamlining robust workflows and increasing efficiency by 45%.\nLeveraged best-in-class technologies to foster seamless collaboration and improve productivity by 25%.\nOrchestrated cross-functional stakeholders, championed agile practices, and elevated delivery quality by 35%.\nPioneered scalable solutions that optimized performance, enhanced reliability, and reduced costs by 40%.\nFacilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+    },
+    {
+      "id": "ai_generated-14",
+      "label": "ai_generated",
+      "text": "Sara Ali\nBackend Engineer\n\nResults-driven and highly motivated professional with a proven track record of delivering innovative, cutting-edge solutions in dynamic environments.\nSpearheaded strategic initiatives at Riverline Tech, streamlining robust workflows and increasing efficiency by 45%.\nLeveraged best-in-class technologies to foster seamless collaboration and improve productivity by 35%.\nOrchestrated cross-functional stakeholders, championed agile practices, and elevated delivery quality by 20%.\nPioneered scalable solutions that optimized performance, enhanced reliability, and reduced costs by 40%.\nFacilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+    },
+    {
+      "id": "human-07",
+      "label": "human",
+      "text": "Arjun Bose\nData Analyst\n\nI have worked mostly with TypeScript, plus Node.js 20 when the project called for it.\nAt Pine Systems, I moved a nightly import into smaller jobs; it used to take about three hours and now usually finishes in 44 minutes.\nFixed the duplicate retry path after it affected 43 customer records. That one needed a data repair script and a slightly awkward Monday call.\nOn a team of 6, I reviewed changes and looked after MongoDB 7.\nI still keep a small checklist because I once missed a timezone bug.\nSide project: a bus reminder bot for my family. It runs on an old mini PC."
+    },
+    {
+      "id": "ai_generated-02",
+      "label": "ai_generated",
+      "text": "Meera Nair\nBackend Engineer\n\nResults-driven and highly motivated professional with a proven track record of delivering innovative, cutting-edge solutions in dynamic environments.\nSpearheaded strategic initiatives at Northstar Labs, streamlining robust workflows and increasing efficiency by 50%.\nLeveraged best-in-class technologies to foster seamless collaboration and improve productivity by 30%.\nOrchestrated cross-functional stakeholders, championed agile practices, and elevated delivery quality by 35%.\nPioneered scalable solutions that optimized performance, enhanced reliability, and reduced costs by 45%.\nFacilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+    },
+    {
+      "id": "human-15",
+      "label": "human",
+      "text": "Dev Kapoor\nPlatform Developer\n\nI have worked mostly with Java, plus Spring Boot 3.1 when the project called for it.\nAt MapleWorks, I moved a nightly import into smaller jobs; it used to take about three hours and now usually finishes in 41 minutes.\nFixed the duplicate retry path after it affected 14 customer records. That one needed a data repair script and a slightly awkward Monday call.\nOn a team of 5, I reviewed changes and looked after MySQL 8.\nThe first version was rough and we rewrote the retry part after an outage.\nSide project: a bus reminder bot for my family. It runs on an old mini PC."
+    },
+    {
+      "id": "ai_generated-11",
+      "label": "ai_generated",
+      "text": "Neel Joshi\nBackend Engineer\n\nResults-driven and highly motivated professional with a proven track record of delivering innovative, cutting-edge solutions in dynamic environments.\nSpearheaded strategic initiatives at Pine Systems, streamlining robust workflows and increasing efficiency by 50%.\nLeveraged best-in-class technologies to foster seamless collaboration and improve productivity by 40%.\nOrchestrated cross-functional stakeholders, championed agile practices, and elevated delivery quality by 30%.\nPioneered scalable solutions that optimized performance, enhanced reliability, and reduced costs by 20%.\nFacilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+    },
+    {
+      "id": "ai_generated-13",
+      "label": "ai_generated",
+      "text": "Kiran Bhat\nQa Engineer\n\nResults-driven and highly motivated professional with a proven track record of delivering innovative, cutting-edge solutions in dynamic environments.\nSpearheaded strategic initiatives at MapleWorks, streamlining robust workflows and increasing efficiency by 45%.\nLeveraged best-in-class technologies to foster seamless collaboration and improve productivity by 50%.\nOrchestrated cross-functional stakeholders, championed agile practices, and elevated delivery quality by 30%.\nPioneered scalable solutions that optimized performance, enhanced reliability, and reduced costs by 35%.\nFacilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+    },
+    {
+      "id": "ai_generated-04",
+      "label": "ai_generated",
+      "text": "Diya Sen\nData Analyst\n\nResults-driven and highly motivated professional with a proven track record of delivering innovative, cutting-edge solutions in dynamic environments.\nSpearheaded strategic initiatives at MapleWorks, streamlining robust workflows and increasing efficiency by 50%.\nLeveraged best-in-class technologies to foster seamless collaboration and improve productivity by 35%.\nOrchestrated cross-functional stakeholders, championed agile practices, and elevated delivery quality by 20%.\nPioneered scalable solutions that optimized performance, enhanced reliability, and reduced costs by 45%.\nFacilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+    },
+    {
+      "id": "human-12",
+      "label": "human",
+      "text": "Ananya Pillai\nPlatform Developer\n\nI have worked mostly with Java, plus Spring Boot 3.1 when the project called for it.\nAt Northstar Labs, I moved a nightly import into smaller jobs; it used to take about three hours and now usually finishes in 51 minutes.\nFixed the duplicate retry path after it affected 41 customer records. That one needed a data repair script and a slightly awkward Monday call.\nOn a team of 6, I reviewed changes and looked after MySQL 8.\nI still keep a small checklist because I once missed a timezone bug.\nSide project: a bus reminder bot for my family. It runs on an old mini PC."
+    },
+    {
+      "id": "human-13",
+      "label": "human",
+      "text": "Kiran Bhat\nQa Engineer\n\nI have worked mostly with Java, plus Spring Boot 3.1 when the project called for it.\nAt MapleWorks, I moved a nightly import into smaller jobs; it used to take about three hours and now usually finishes in 35 minutes.\nFixed the duplicate retry path after it affected 41 customer records. That one needed a data repair script and a slightly awkward Monday call.\nOn a team of 7, I reviewed changes and looked after MySQL 8.\nFrontend is not really my thing, though I can fix a React form when needed.\nSide project: a bus reminder bot for my family. It runs on an old mini PC."
+    },
+    {
+      "id": "human-02",
+      "label": "human",
+      "text": "Meera Nair\nData Analyst\n\nI have worked mostly with Java, plus Spring Boot 3.1 when the project called for it.\nAt Riverline Tech, I moved a nightly import into smaller jobs; it used to take about three hours and now usually finishes in 36 minutes.\nFixed the duplicate retry path after it affected 32 customer records. That one needed a data repair script and a slightly awkward Monday call.\nOn a team of 5, I reviewed changes and looked after MySQL 8.\nMost of this was maintenance work, not a greenfield build.\nSide project: a bus reminder bot for my family. It runs on an old mini PC."
+    },
+    {
+      "id": "ai_polished-15",
+      "label": "ai_polished",
+      "text": "Dev Kapoor\nBackend Engineer\n\nBackend Engineer focused on dependable services and clear collaboration.\nBuilt TypeScript services with Node.js 20 and MongoDB 7, improving median response time by 33%.\nReworked deployment checks at Northstar Labs, reducing repeat incidents by 21%.\nPartnered with product and support teams to translate recurring customer issues into engineering work.\nCreated runbooks for on-call handoffs and coached two graduate developers through their first releases.\nImproved test coverage around payment and notification workflows while keeping changes easy to review."
+    },
+    {
+      "id": "human-08",
+      "label": "human",
+      "text": "Tara Menon\nData Analyst\n\nI have worked mostly with TypeScript, plus Node.js 20 when the project called for it.\nAt Pine Systems, I moved a nightly import into smaller jobs; it used to take about three hours and now usually finishes in 34 minutes.\nFixed the duplicate retry path after it affected 41 customer records. That one needed a data repair script and a slightly awkward Monday call.\nOn a team of 4, I reviewed changes and looked after MongoDB 7.\nFrontend is not really my thing, though I can fix a React form when needed.\nSide project: a bus reminder bot for my family. It runs on an old mini PC."
+    },
+    {
+      "id": "ai_polished-12",
+      "label": "ai_polished",
+      "text": "Ananya Pillai\nQa Engineer\n\nQa Engineer focused on dependable services and clear collaboration.\nBuilt Go services with Kafka 3.6 and Redis 7, improving median response time by 22%.\nReworked deployment checks at Northstar Labs, reducing repeat incidents by 21%.\nPartnered with product and support teams to translate recurring customer issues into engineering work.\nCreated runbooks for on-call handoffs and coached two graduate developers through their first releases.\nImproved test coverage around payment and notification workflows while keeping changes easy to review."
+    },
+    {
+      "id": "ai_generated-08",
+      "label": "ai_generated",
+      "text": "Tara Menon\nQa Engineer\n\nResults-driven and highly motivated professional with a proven track record of delivering innovative, cutting-edge solutions in dynamic environments.\nSpearheaded strategic initiatives at Northstar Labs, streamlining robust workflows and increasing efficiency by 35%.\nLeveraged best-in-class technologies to foster seamless collaboration and improve productivity by 45%.\nOrchestrated cross-functional stakeholders, championed agile practices, and elevated delivery quality by 20%.\nPioneered scalable solutions that optimized performance, enhanced reliability, and reduced costs by 50%.\nFacilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+    },
+    {
+      "id": "ai_polished-05",
+      "label": "ai_polished",
+      "text": "Rohan Iyer\nData Analyst\n\nData Analyst focused on dependable services and clear collaboration.\nBuilt Java services with Spring Boot 3.1 and MySQL 8, improving median response time by 22%.\nReworked deployment checks at MapleWorks, reducing repeat incidents by 21%.\nPartnered with product and support teams to translate recurring customer issues into engineering work.\nCreated runbooks for on-call handoffs and coached two graduate developers through their first releases.\nImproved test coverage around payment and notification workflows while keeping changes easy to review."
+    },
+    {
+      "id": "human-14",
+      "label": "human",
+      "text": "Sara Ali\nQa Engineer\n\nI have worked mostly with TypeScript, plus Node.js 20 when the project called for it.\nAt Northstar Labs, I moved a nightly import into smaller jobs; it used to take about three hours and now usually finishes in 44 minutes.\nFixed the duplicate retry path after it affected 36 customer records. That one needed a data repair script and a slightly awkward Monday call.\nOn a team of 5, I reviewed changes and looked after MongoDB 7.\nMost of this was maintenance work, not a greenfield build.\nSide project: a bus reminder bot for my family. It runs on an old mini PC."
+    },
+    {
+      "id": "human-06",
+      "label": "human",
+      "text": "Nisha Das\nQa Engineer\n\nI have worked mostly with Go, plus Kafka 3.6 when the project called for it.\nAt Pine Systems, I moved a nightly import into smaller jobs; it used to take about three hours and now usually finishes in 37 minutes.\nFixed the duplicate retry path after it affected 41 customer records. That one needed a data repair script and a slightly awkward Monday call.\nOn a team of 7, I reviewed changes and looked after Redis 7.\nFrontend is not really my thing, though I can fix a React form when needed.\nSide project: a bus reminder bot for my family. It runs on an old mini PC."
+    },
+    {
+      "id": "ai_polished-03",
+      "label": "ai_polished",
+      "text": "Kabir Rao\nData Analyst\n\nData Analyst focused on dependable services and clear collaboration.\nBuilt Java services with Spring Boot 3.1 and MySQL 8, improving median response time by 22%.\nReworked deployment checks at Pine Systems, reducing repeat incidents by 29%.\nPartnered with product and support teams to translate recurring customer issues into engineering work.\nCreated runbooks for on-call handoffs and coached two graduate developers through their first releases.\nImproved test coverage around payment and notification workflows while keeping changes easy to review."
+    },
+    {
+      "id": "human-10",
+      "label": "human",
+      "text": "Leela Roy\nPlatform Developer\n\nI have worked mostly with TypeScript, plus Node.js 20 when the project called for it.\nAt Northstar Labs, I moved a nightly import into smaller jobs; it used to take about three hours and now usually finishes in 55 minutes.\nFixed the duplicate retry path after it affected 22 customer records. That one needed a data repair script and a slightly awkward Monday call.\nOn a team of 4, I reviewed changes and looked after MongoDB 7.\nMost of this was maintenance work, not a greenfield build.\nSide project: a bus reminder bot for my family. It runs on an old mini PC."
+    },
+    {
+      "id": "ai_polished-01",
+      "label": "ai_polished",
+      "text": "Aarav Shah\nBackend Engineer\n\nBackend Engineer focused on dependable services and clear collaboration.\nBuilt Go services with Kafka 3.6 and Redis 7, improving median response time by 18%.\nReworked deployment checks at Pine Systems, reducing repeat incidents by 21%.\nPartnered with product and support teams to translate recurring customer issues into engineering work.\nCreated runbooks for on-call handoffs and coached two graduate developers through their first releases.\nImproved test coverage around payment and notification workflows while keeping changes easy to review."
+    },
+    {
+      "id": "ai_polished-14",
+      "label": "ai_polished",
+      "text": "Sara Ali\nBackend Engineer\n\nBackend Engineer focused on dependable services and clear collaboration.\nBuilt Java services with Spring Boot 3.1 and MySQL 8, improving median response time by 18%.\nReworked deployment checks at Northstar Labs, reducing repeat incidents by 29%.\nPartnered with product and support teams to translate recurring customer issues into engineering work.\nCreated runbooks for on-call handoffs and coached two graduate developers through their first releases.\nImproved test coverage around payment and notification workflows while keeping changes easy to review."
+    },
+    {
+      "id": "human-03",
+      "label": "human",
+      "text": "Kabir Rao\nPlatform Developer\n\nI have worked mostly with Python, plus FastAPI when the project called for it.\nAt Pine Systems, I moved a nightly import into smaller jobs; it used to take about three hours and now usually finishes in 44 minutes.\nFixed the duplicate retry path after it affected 27 customer records. That one needed a data repair script and a slightly awkward Monday call.\nOn a team of 7, I reviewed changes and looked after PostgreSQL 15.\nI still keep a small checklist because I once missed a timezone bug.\nSide project: a bus reminder bot for my family. It runs on an old mini PC."
+    },
+    {
+      "id": "ai_polished-04",
+      "label": "ai_polished",
+      "text": "Diya Sen\nQa Engineer\n\nQa Engineer focused on dependable services and clear collaboration.\nBuilt TypeScript services with Node.js 20 and MongoDB 7, improving median response time by 27%.\nReworked deployment checks at MapleWorks, reducing repeat incidents by 29%.\nPartnered with product and support teams to translate recurring customer issues into engineering work.\nCreated runbooks for on-call handoffs and coached two graduate developers through their first releases.\nImproved test coverage around payment and notification workflows while keeping changes easy to review."
+    }
+  ]
+}

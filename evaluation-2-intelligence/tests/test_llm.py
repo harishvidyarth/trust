@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from urllib.error import HTTPError
 
 from firewall.config import Config
 from firewall.engine import evaluate
@@ -78,3 +79,43 @@ def test_llm_skill_suggestions_are_advisory_and_parsed_from_mocked_transport():
 
     client = OllamaClient(transport=transport)
     assert client.suggest_skill_canonicalizations(["React.js", "NodeJS"]) == ["react", "node.js"]
+
+
+def test_embed_uses_modern_ollama_endpoint_with_caps_and_keep_alive():
+    captured = []
+
+    def transport(request, timeout):
+        captured.append((request, timeout))
+        return json.dumps({"embeddings": [[0.25, -0.5, 0.75]]}).encode()
+
+    vector = OllamaClient(transport=transport, timeout=20).embed("x" * 50_000)
+
+    assert vector == (0.25, -0.5, 0.75)
+    request, timeout = captured[0]
+    payload = json.loads(request.data)
+    assert request.full_url.endswith("/api/embed")
+    assert timeout == 3.0
+    assert payload["model"] == "nomic-embed-text"
+    assert payload["keep_alive"] == "10m"
+    assert payload["truncate"] is True
+    assert len(payload["input"].encode()) <= 16_384
+
+
+def test_embed_falls_back_to_legacy_ollama_endpoint():
+    paths = []
+
+    def transport(request, timeout):
+        paths.append(request.full_url)
+        if request.full_url.endswith("/api/embed"):
+            raise HTTPError(request.full_url, 404, "not found", {}, None)
+        return json.dumps({"embedding": [1, 2, 3]}).encode()
+
+    assert OllamaClient(transport=transport).embed("resume") == (1.0, 2.0, 3.0)
+    assert [path.rsplit("/", 1)[-1] for path in paths] == ["embed", "embeddings"]
+
+
+def test_embed_failure_is_silent():
+    def transport(request, timeout):
+        raise TimeoutError
+
+    assert OllamaClient(transport=transport).embed("resume") is None

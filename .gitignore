@@ -11,3 +11,6 @@ __pycache__/
 *.log
 node_modules/
 eval/data/*.jsonl
+.state/
+**/.state/
+**/web/console/screenshots/

@@ -1,25 +1,27 @@
 :root {
   color-scheme: light;
-  --bg: #f3f5f0;
+  --bg: #fbfaf7;
   --surface: #ffffff;
-  --surface-raised: #fbfcf8;
-  --ink: #17231c;
-  --muted: #56635b;
-  --line: #ccd4ce;
-  --accent: #145c3d;
-  --accent-strong: #0b452d;
-  --accent-soft: #dcece3;
-  --pass: #176b43;
-  --pass-soft: #d7eee1;
-  --verify: #855100;
-  --verify-soft: #f8e9bd;
-  --review: #9c2f28;
-  --review-soft: #f6dbd8;
-  --info: #245b94;
-  --info-soft: #dce9f7;
-  --shadow: 0 12px 36px rgba(22, 40, 30, 0.08);
-  --radius: 18px;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --surface-raised: #f4f2ea;
+  --ink: #1c1c1a;
+  --muted: #66645c;
+  --line: #dcd8cc;
+  --accent: #1f3556;
+  --accent-strong: #15253f;
+  --accent-soft: #e8edf5;
+  --pass: #1d6a3a;
+  --pass-soft: #e4f2e9;
+  --verify: #8a5a00;
+  --verify-soft: #fbefd3;
+  --review: #b3261e;
+  --review-soft: #fbe5e3;
+  --info: #1f3556;
+  --info-soft: #e8edf5;
+  --shadow: none;
+  --radius: 4px;
+  --serif: "Palatino Linotype", Palatino, "Book Antiqua", "URW Palladio L", Georgia, serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -29,9 +31,7 @@ html { scroll-behavior: smooth; }
 body {
   margin: 0;
   min-width: 320px;
-  background:
-    radial-gradient(circle at 10% -10%, rgba(58, 137, 94, 0.15), transparent 26rem),
-    var(--bg);
+  background: var(--bg);
   color: var(--ink);
   line-height: 1.5;
 }
@@ -43,7 +43,7 @@ button, select, [tabindex="0"] { min-height: 44px; }
 button { cursor: pointer; }
 
 :focus-visible {
-  outline: 3px solid #1677d2;
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
@@ -54,7 +54,7 @@ button { cursor: pointer; }
   left: 0.75rem;
   padding: 0.75rem 1rem;
   transform: translateY(-160%);
-  border-radius: 0.5rem;
+  border-radius: 4px;
   background: var(--ink);
   color: var(--surface);
 }
@@ -84,7 +84,7 @@ button { cursor: pointer; }
   width: 2.7rem;
   height: 2.7rem;
   place-items: center;
-  border-radius: 0.8rem;
+  border-radius: 4px;
   background: var(--accent);
   color: #fff;
   font-weight: 800;
@@ -128,7 +128,7 @@ main { width: min(1480px, 100%); margin: 0 auto; padding: 2rem clamp(1rem, 3vw, 
 .hero h2 {
   max-width: 900px;
   margin: 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--serif);
   font-size: clamp(2.1rem, 5vw, 4.8rem);
   font-weight: 500;
   letter-spacing: -0.055em;
@@ -157,8 +157,8 @@ main { width: min(1480px, 100%); margin: 0 auto; padding: 2rem clamp(1rem, 3vw, 
 
 .funnel-panel, .reasons-panel, .policy-panel, .feed-panel, .detail-panel { padding: clamp(1.1rem, 2.5vw, 1.7rem); }
 .funnel { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
-.funnel-card { position: relative; min-height: 8rem; padding: 1rem; overflow: hidden; border-radius: 0.85rem; background: var(--surface-raised); }
-.funnel-card::after { content: ""; position: absolute; right: -1.5rem; bottom: -2.2rem; width: 6rem; height: 6rem; border-radius: 50%; background: currentColor; opacity: 0.07; }
+.funnel-card { position: relative; min-height: 8rem; padding: 1rem; overflow: hidden; border-radius: 4px; background: var(--surface-raised); }
+.funnel-card::after { content: none; }
 .funnel-card strong, .funnel-card span { display: block; }
 .funnel-card strong { margin-top: 0.45rem; font-size: 2rem; line-height: 1; }
 .funnel-card span { margin-top: 0.35rem; color: var(--muted); font-size: 0.84rem; }
@@ -180,7 +180,7 @@ main { width: min(1480px, 100%); margin: 0 auto; padding: 2rem clamp(1rem, 3vw, 
   align-items: center;
   min-height: 1.7rem;
   padding: 0.25rem 0.55rem;
-  border-radius: 999px;
+  border-radius: 4px;
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -197,7 +197,7 @@ main { width: min(1480px, 100%); margin: 0 auto; padding: 2rem clamp(1rem, 3vw, 
 .secondary-button, .action-button, .detail-link {
   min-height: 2.6rem;
   border: 1px solid var(--line);
-  border-radius: 0.6rem;
+  border-radius: 4px;
   background: var(--surface);
   color: var(--ink);
   font-weight: 700;
@@ -207,7 +207,7 @@ main { width: min(1480px, 100%); margin: 0 auto; padding: 2rem clamp(1rem, 3vw, 
 .action-button.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
 .action-button.danger { border-color: var(--review); color: var(--review); }
 
-.table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 0.8rem; }
+.table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 4px; }
 table { width: 100%; min-width: 940px; border-collapse: collapse; }
 th, td { padding: 0.82rem 0.7rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
 th { background: var(--surface-raised); color: var(--muted); font-size: 0.73rem; letter-spacing: 0.06em; text-transform: uppercase; }
@@ -222,7 +222,8 @@ tbody tr:hover { background: color-mix(in srgb, var(--accent-soft) 38%, transpar
 .state-pill.approve, .state-pill.verified { color: #0b5130; background: var(--pass-soft); border-color: transparent; }
 .state-pill.reject, .state-pill.failed { color: #79231f; background: var(--review-soft); border-color: transparent; }
 .state-pill.pending, .state-pill.request-verification { color: #674000; background: var(--verify-soft); border-color: transparent; }
-.detail-link { width: 2.75rem; padding: 0.35rem; }
+.detail-link { width: 100%; min-width: 7rem; padding: 0.35rem 1.25rem; }
+td:last-child, th:last-child { text-align: right; padding-right: 1.1rem; min-width: 8.5rem; }
 .empty-state, .detail-empty { color: var(--muted); text-align: center; }
 .detail-empty { padding: 3rem 1rem; }
 .detail-empty h2 { color: var(--ink); }
@@ -248,16 +249,16 @@ tbody tr:hover { background: color-mix(in srgb, var(--accent-soft) 38%, transpar
 .detail-layout h3 { margin: 0 0 0.8rem; font-size: 0.95rem; letter-spacing: 0.02em; }
 .summary-box { margin: 0 0 1.2rem; padding: 0.9rem 1rem; border-left: 4px solid var(--accent); background: var(--surface-raised); }
 .reason-list { display: grid; gap: 0.65rem; }
-.reason-item { padding: 0.9rem; border: 1px solid var(--line); border-radius: 0.75rem; background: var(--surface-raised); }
+.reason-item { padding: 0.9rem; border: 1px solid var(--line); border-radius: 4px; background: var(--surface-raised); }
 .reason-title { display: flex; justify-content: space-between; gap: 1rem; }
 .reason-title strong { font-size: 0.9rem; }
 .reason-item p { margin: 0.35rem 0 0; color: var(--muted); font-size: 0.86rem; }
-.weight-track { height: 0.42rem; margin-top: 0.65rem; overflow: hidden; border-radius: 999px; background: var(--line); }
+.weight-track { height: 0.42rem; margin-top: 0.65rem; overflow: hidden; border-radius: 4px; background: var(--line); }
 .weight-fill { height: 100%; border-radius: inherit; background: var(--review); }
-.decision-controls { padding: 1rem; border-radius: 0.8rem; background: var(--surface-raised); }
+.decision-controls { padding: 1rem; border-radius: 4px; background: var(--surface-raised); }
 .control-group + .control-group { margin-top: 1.2rem; }
 .control-group label { display: block; margin-bottom: 0.45rem; font-size: 0.82rem; font-weight: 750; }
-.control-group select { width: 100%; padding: 0.55rem; border: 1px solid var(--line); border-radius: 0.5rem; background: var(--surface); color: var(--ink); }
+.control-group select { width: 100%; padding: 0.55rem; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--ink); }
 .detail-actions { flex-wrap: wrap; gap: 0.5rem; align-items: stretch; }
 .detail-actions .action-button { flex: 1 1 7rem; }
 .saved-status { min-height: 1.5rem; margin: 0.7rem 0 0; color: var(--muted); font-size: 0.82rem; }
@@ -290,3 +291,4 @@ footer { padding: 1.5rem; border-top: 1px solid var(--line); color: var(--muted)
 @media (forced-colors: active) {
   .status-dot, .route-badge, .state-pill, .weight-fill, .chart-bar { forced-color-adjust: auto; }
 }
+.brand-block h1, .section-heading h2, .detail-identity h2, .detail-empty h2 { font-family: var(--serif); }

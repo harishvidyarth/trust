@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "label": "task6-semantic-on",
+  "generated_at": "2026-10-08T14:47:18.265138+00:00",
+  "requested_base_url": "http://127.0.0.1",
+  "definitions": {
+    "flagged": "Decision route is not PASS_TO_ATS.",
+    "evasion_rate": "Attack submissions routed PASS_TO_ATS / attack submissions.",
+    "detection_rate": "Attack submissions not routed PASS_TO_ATS / attack submissions.",
+    "control_false_positive_rate": "Control submissions not routed PASS_TO_ATS / control submissions.",
+    "time_to_first_flag_seconds": "Synthetic submitted_at delta from first measured submission; null if never flagged."
+  },
+  "scenarios": [
+    {
+      "name": "paraphrase_copy",
+      "kind": "attack",
+      "seed": 2026,
+      "application_count": 10,
+      "passed_count": 2,
+      "flagged_count": 8,
+      "evasion_rate": 0.2,
+      "detection_rate": 0.8,
+      "control_false_positive_rate": null,
+      "time_to_first_flag_seconds": 75.0,
+      "first_flag_application_index": 2,
+      "route_counts": {
+        "PASS_TO_ATS": 2,
+        "ADDITIONAL_VERIFICATION": 8,
+        "MANUAL_REVIEW": 0
+      },
+      "reason_codes_seen": {
+        "DUP_RESUME_NEAR": 8
+      },
+      "wall_time_seconds": 0.1963,
+      "startup_attempts": 1,
+      "decisions": [
+        {
+          "application_id": "copy-2026-000",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "copy-2026-001",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "copy-2026-002",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "copy-2026-003",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "copy-2026-004",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "copy-2026-005",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "copy-2026-006",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "copy-2026-007",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "copy-2026-008",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "copy-2026-009",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        }
+      ]
+    }
+  ]
+}

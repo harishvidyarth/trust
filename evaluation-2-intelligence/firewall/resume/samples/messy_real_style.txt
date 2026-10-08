@@ -1,0 +1,9 @@
+Kavya Menon
+kavya.menon@example.com | +91 90000 11111
+
+What I work with
+Across client work I shipped Python services with FastAPI and PostgreSQL.
+
+Recent work
+At Northstar Labs I worked as Backend Engineer from January 2022 through March 2025.
+I owned onboarding APIs and production incident follow-up.

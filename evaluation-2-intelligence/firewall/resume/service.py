@@ -5,7 +5,7 @@ import unicodedata
 
 from pydantic import BaseModel, Field
 
-from firewall.models import Candidate, JobRequirements
+from firewall.models import Candidate, JobRequirements, ResumeAgreement
 from firewall.resume.extract import HiddenSpan, extract_resume
 from firewall.resume.integrity import detect_integrity_reasons
 from firewall.resume.parse import parse_candidate
@@ -18,6 +18,7 @@ class ResumeAnalysis(BaseModel):
     ats_view_text: str
     hidden_spans: list[HiddenSpan] = Field(default_factory=list)
     parsed_ok: bool
+    agreement: ResumeAgreement
 
 
 def _term_present(text: str, term: str) -> bool:
@@ -40,6 +41,21 @@ def naive_ats_rank(text_all: str, job: JobRequirements) -> float:
     return round(min(100.0, coverage * 75 + frequency_bonus), 2)
 
 
+def view_agreement(text_all: str, text_visible: str) -> ResumeAgreement:
+    ats_tokens = set(re.findall(r"\w+", unicodedata.normalize("NFKC", text_all).casefold()))
+    visible_tokens = set(re.findall(r"\w+", unicodedata.normalize("NFKC", text_visible).casefold()))
+    if not ats_tokens and not visible_tokens:
+        return ResumeAgreement(score=0.0, label="No comparable text")
+    score = round(len(ats_tokens & visible_tokens) / len(ats_tokens | visible_tokens) * 100, 2)
+    if score >= 90:
+        label = "High agreement"
+    elif score >= 70:
+        label = "Moderate agreement"
+    else:
+        label = "Low agreement"
+    return ResumeAgreement(score=score, label=label)
+
+
 def analyze_resume(data: bytes, filename: str, job: JobRequirements) -> ResumeAnalysis:
     extracted = extract_resume(data, filename)
     candidate = parse_candidate(extracted.text_visible)
@@ -50,4 +66,5 @@ def analyze_resume(data: bytes, filename: str, job: JobRequirements) -> ResumeAn
         ats_view_text=extracted.text_all,
         hidden_spans=extracted.hidden_spans,
         parsed_ok=bool(extracted.text_visible.strip()) and "error" not in extracted.metadata,
+        agreement=view_agreement(extracted.text_all, extracted.text_visible),
     )

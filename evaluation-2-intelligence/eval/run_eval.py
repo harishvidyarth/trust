@@ -38,9 +38,47 @@ ROUTES = ("PASS_TO_ATS", "ADDITIONAL_VERIFICATION", "MANUAL_REVIEW")
 LEGIT_LABEL = "LEGIT"
 SIGNAL_GROUPS = {
     "duplicates": {"DUP_EMAIL", "DUP_PHONE", "DUP_RESUME_NEAR", "DUP_SAME_JOB"},
-    "automation": {"VELOCITY_HIGH", "FAST_SUBMIT", "PASTE_BULK", "TEMPLATE_REUSE"},
+    "automation": {
+        "VELOCITY_HIGH",
+        "NETWORK_BURST",
+        "IDENTITY_DEVICE_ROTATION",
+        "FAST_SUBMIT",
+        "PASTE_BULK",
+        "TEMPLATE_REUSE",
+    },
+    "identity_links": {"LINK_REUSE", "FUZZY_IDENTITY", "EMAIL_ALIAS"},
     "qualification": {"QUAL_MISSING_MUST_HAVE", "QUAL_UNDER_EXPERIENCE"},
     "consistency": {"TIMELINE_INVALID", "TIMELINE_OVERLAP"},
+    "resume_hidden": {
+        "RESUME_HIDDEN_TEXT",
+        "RESUME_HIDDEN_NEAR_WHITE",
+        "RESUME_HIDDEN_TINY_FONT",
+        "RESUME_HIDDEN_OUTSIDE_BOUNDS",
+        "RESUME_HIDDEN_ZERO_WIDTH",
+        "RESUME_HIDDEN_OVERLAPPING_DUPLICATE",
+        "RESUME_HIDDEN_VANISHED_DOCX",
+    },
+    "resume_injection": {
+        "RESUME_PROMPT_INJECTION",
+        "RESUME_INJECTION_INSTRUCTION_PHRASE",
+        "RESUME_INJECTION_ROLE_PLAY_MARKER",
+        "RESUME_INJECTION_IGNORE_PREVIOUS",
+        "RESUME_INJECTION_SCREENER_ADDRESSED",
+        "RESUME_INJECTION_HIDDEN_LOCATION",
+    },
+    "resume_stuffing": {
+        "RESUME_KEYWORD_STUFFING",
+        "RESUME_STUFFING_OVERALL_DENSITY",
+        "RESUME_STUFFING_CONCENTRATED_LINE",
+        "RESUME_STUFFING_REPEATED_SKILL_BLOCK",
+        "RESUME_STUFFING_UNSUPPORTED_SKILLS",
+    },
+    "resume_divergence": {
+        "RESUME_PARSE_DIVERGENCE",
+        "RESUME_DIVERGENCE_LOW",
+        "RESUME_DIVERGENCE_MEDIUM",
+        "RESUME_DIVERGENCE_HIGH",
+    },
 }
 
 
@@ -63,13 +101,23 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
     return records
 
 
-def replay(records: list[dict[str, Any]], config: Any) -> list[dict[str, Any]]:
+def replay(
+    records: list[dict[str, Any]],
+    config: Any,
+    excluded_reason_codes: set[str] | None = None,
+) -> list[dict[str, Any]]:
     store = InMemoryApplicationStore()
     evaluated: list[dict[str, Any]] = []
     for record in records:
         application = Application.model_validate(record["application"])
         job = JobRequirements.model_validate(record["job"])
-        decision = evaluate(application, job, store, config)
+        decision = evaluate(
+            application,
+            job,
+            store,
+            config,
+            excluded_reason_codes=excluded_reason_codes,
+        )
         evaluated.append(
             {
                 "application_id": application.application_id,
@@ -154,11 +202,7 @@ def threshold_sweep(records: list[dict[str, Any]], base_config: Any) -> list[dic
 def run_ablations(records: list[dict[str, Any]], base_config: Any, baseline: dict[str, Any]) -> list[dict[str, Any]]:
     results = [{"group": "baseline", **baseline, "delta_f1": 0.0, "delta_recall": 0.0}]
     for group, codes in SIGNAL_GROUPS.items():
-        weights = dict(base_config.weights)
-        for code in codes:
-            if code in weights:
-                weights[code] = 0
-        rows = replay(records, replace(base_config, weights=weights))
+        rows = replay(records, base_config, excluded_reason_codes=codes)
         metrics = compute_metrics(rows)
         results.append(
             {
@@ -209,7 +253,7 @@ def plot_ablations(ablations: list[dict[str, Any]], output: Path) -> None:
     axis.bar([item - width for item in x], [row["precision"] for row in ablations], width, label="Precision")
     axis.bar(x, [row["recall"] for row in ablations], width, label="Recall")
     axis.bar([item + width for item in x], [row["f1"] for row in ablations], width, label="F1")
-    axis.set_title("Signal-group ablation (held-out profile)")
+    axis.set_title("Signal-group removal ablation (held-out profile)")
     axis.set_ylabel("Metric")
     axis.set_ylim(0, 1.05)
     axis.set_xticks(x, labels, rotation=22)
@@ -310,6 +354,8 @@ def _markdown_report(payload: dict[str, Any], primary_name: str) -> str:
             "",
             "## Signal-group ablation (held-out)",
             "",
+            "Each configuration removes that signal group's reasons before scoring and hard-routing rules are applied.",
+            "",
             "| Configuration | Precision | Recall | F1 | Δ recall | Δ F1 |",
             "|---|---:|---:|---:|---:|---:|",
         ]
@@ -342,7 +388,7 @@ def _markdown_report(payload: dict[str, Any], primary_name: str) -> str:
             "## Charts",
             "",
             "- `route_by_class.png` — stacked route distribution.",
-            "- `ablation.png` — precision, recall, and F1 with each signal group zero-weighted.",
+            "- `ablation.png` — precision, recall, and F1 with each signal group's reasons removed.",
             "- `threshold_sweep.png` — precision-recall view of routing thresholds.",
             "",
         ]
@@ -426,4 +472,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

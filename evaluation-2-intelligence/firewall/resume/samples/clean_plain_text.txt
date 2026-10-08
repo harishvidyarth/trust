@@ -1,0 +1,18 @@
+Meera Joshi
+meera.joshi@example.com | +91 90099 00219
+Backend engineer who likes clear code and small services.
+Skills
+Python, SQL, Docker, AWS, Flask, PostgreSQL
+Experience
+Backend Engineer | Tidewater Apps | Feb 2022 - Present
+Maintain six Flask services and the Postgres databases behind them.
+Cut the slowest report from 40 seconds to 6 by adding two indexes.
+Wrote the Docker setup that new joiners use to run everything locally.
+Developer | Kiln Interactive | Jul 2019 - Jan 2022
+Built payment callbacks for a ticketing site that handles about 500 orders a day.
+Fixed a timezone bug that had been double-counting refunds.
+Projects
+Recipe API
+A small Flask API that stores recipes and shopping lists, running on AWS with a tiny RDS instance.
+Education
+B.Sc Computer Science | 2019

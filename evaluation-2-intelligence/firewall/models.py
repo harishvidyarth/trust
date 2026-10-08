@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 
 class Experience(BaseModel):
@@ -19,6 +19,8 @@ class Project(BaseModel):
 
 
 class Candidate(BaseModel):
+    _qualification_only_experience: bool = PrivateAttr(default=False)
+
     name: str
     email: str
     phone: str
@@ -60,6 +62,20 @@ class Reason(BaseModel):
     severity: str
     detail: str
     weight: int = Field(ge=0)
+    explanation: str = ""
+    evidence: str = ""
+
+
+class HiddenIntent(BaseModel):
+    span_index: int = Field(ge=0)
+    hidden_reason: str
+    label: Literal["keyword_stuffing", "screener_instruction", "harmless"]
+    evidence: str
+
+
+class ResumeAgreement(BaseModel):
+    score: Annotated[float, Field(ge=0, le=100)]
+    label: str
 
 
 class Decision(BaseModel):
@@ -68,6 +84,10 @@ class Decision(BaseModel):
     route: Route
     reasons: list[Reason] = Field(default_factory=list)
     summary: str
+    recruiter_summary: str | None = None
+    candidate_fixes: list[str] | None = None
+    hidden_intent: list[HiddenIntent] = Field(default_factory=list)
+    agreement: ResumeAgreement | None = None
     llm_used: bool = False
 
 

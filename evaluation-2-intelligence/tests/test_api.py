@@ -77,7 +77,7 @@ def test_evaluate_get_stats_and_mock_ats(application_factory, job_factory):
         ),
     )
     assert weak.status_code == 200
-    assert weak.json()["route"] == "MANUAL_REVIEW"
+    assert weak.json()["route"] == "ADDITIONAL_VERIFICATION"
 
     stored = client.get("/v1/decisions/app-1")
     assert stored.json() == honest.json()

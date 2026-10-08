@@ -16,6 +16,7 @@ from firewall.index_keys import (
     template_text,
 )
 from firewall.models import Application, Decision
+from firewall.signals.identity_links import link_index_keys, name_index_keys, signature_index_keys
 
 
 class ApplicationStore(ABC):
@@ -34,6 +35,18 @@ class ApplicationStore(ABC):
 
     @abstractmethod
     def by_job(self, job_id: str) -> tuple[Application, ...]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def by_link(self, key: str) -> tuple[Application, ...]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def by_name_token(self, token: str) -> tuple[Application, ...]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def by_signature(self, key: str) -> tuple[Application, ...]:
         raise NotImplementedError
 
     @abstractmethod
@@ -90,6 +103,9 @@ class InMemoryApplicationStore(ApplicationStore):
         self._by_email: dict[str, set[str]] = defaultdict(set)
         self._by_phone: dict[str, set[str]] = defaultdict(set)
         self._by_job: dict[str, set[str]] = defaultdict(set)
+        self._by_link: dict[str, set[str]] = defaultdict(set)
+        self._by_name_token: dict[str, set[str]] = defaultdict(set)
+        self._by_signature: dict[str, set[str]] = defaultdict(set)
         self._by_device_time: dict[str, list[tuple[float, str]]] = defaultdict(list)
         self._by_ip_time: dict[str, list[tuple[float, str]]] = defaultdict(list)
         self._by_email_time: dict[str, list[tuple[float, str]]] = defaultdict(list)
@@ -125,6 +141,18 @@ class InMemoryApplicationStore(ApplicationStore):
     def by_job(self, job_id: str) -> tuple[Application, ...]:
         with self._lock:
             return self._ordered(set(self._by_job.get(job_id, ())))
+
+    def by_link(self, key: str) -> tuple[Application, ...]:
+        with self._lock:
+            return self._ordered(set(self._by_link.get(key, ())))
+
+    def by_name_token(self, token: str) -> tuple[Application, ...]:
+        with self._lock:
+            return self._ordered(set(self._by_name_token.get(token, ())))
+
+    def by_signature(self, key: str) -> tuple[Application, ...]:
+        with self._lock:
+            return self._ordered(set(self._by_signature.get(key, ())))
 
     @staticmethod
     def _time_slice(items: list[tuple[float, str]], start: float, end: float) -> list[tuple[float, str]]:
@@ -236,6 +264,12 @@ class InMemoryApplicationStore(ApplicationStore):
             self._discard(self._by_phone, phone, application_id)
             self._discard_time(self._by_phone_time, phone, timestamped)
         self._discard(self._by_job, application.job_id, application_id)
+        for key in link_index_keys(application):
+            self._discard(self._by_link, key, application_id)
+        for key in name_index_keys(application.candidate.name):
+            self._discard(self._by_name_token, key, application_id)
+        for key in signature_index_keys(application):
+            self._discard(self._by_signature, key, application_id)
         self._discard_time(self._by_device_time, application.signals.device_id, timestamped)
         self._discard_time(self._by_ip_time, application.signals.ip, timestamped)
         position = bisect_left(self._time_ordered, timestamped)
@@ -287,6 +321,12 @@ class InMemoryApplicationStore(ApplicationStore):
             self._by_phone[phone].add(application_id)
             insort(self._by_phone_time[phone], timestamped)
         self._by_job[application.job_id].add(application_id)
+        for key in link_index_keys(application):
+            self._by_link[key].add(application_id)
+        for key in name_index_keys(application.candidate.name):
+            self._by_name_token[key].add(application_id)
+        for key in signature_index_keys(application):
+            self._by_signature[key].add(application_id)
         insort(self._by_device_time[application.signals.device_id], timestamped)
         insort(self._by_ip_time[application.signals.ip], timestamped)
         insort(self._time_ordered, timestamped)
@@ -339,6 +379,9 @@ class InMemoryApplicationStore(ApplicationStore):
             self._by_email.clear()
             self._by_phone.clear()
             self._by_job.clear()
+            self._by_link.clear()
+            self._by_name_token.clear()
+            self._by_signature.clear()
             self._by_device_time.clear()
             self._by_ip_time.clear()
             self._by_email_time.clear()

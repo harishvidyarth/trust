@@ -284,12 +284,14 @@ class Router:
         return cls(config, forwarders)
 
     def dispatch(self, route: Route | str, application: Application) -> list[bool]:
+        return [forwarder.forward(application) for forwarder in self.destinations(route)]
+
+    def destinations(self, route: Route | str) -> tuple[ATSForwarder, ...]:
         resolved_route = route if isinstance(route, Route) else Route(route)
         try:
-            destinations = self._routes[resolved_route]
+            return self._routes[resolved_route]
         except KeyError as error:
             raise ForwardingError(f"no forwarder configured for route {resolved_route.value}") from error
-        return [forwarder.forward(application) for forwarder in destinations]
 
     def route(self, route: Route | str, application: Application) -> list[bool]:
         return self.dispatch(route, application)

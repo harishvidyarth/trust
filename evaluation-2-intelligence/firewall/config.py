@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Mapping
@@ -25,6 +25,13 @@ DEFAULT_WEIGHTS = {
     "TIMELINE_OVERLAP": 20,
 }
 
+DEFAULT_FAMILY_CAP = {
+    "HIDDEN": 25,
+    "INJECTION": 35,
+    "STUFFING": 20,
+    "DIVERGENCE": 20,
+}
+
 
 @dataclass(frozen=True)
 class Config:
@@ -37,14 +44,22 @@ class Config:
     identity_device_window_seconds: int = 3600
     duplicate_similarity_threshold: float = 0.75
     min_shingles_for_similarity: int = 8
+    semantic_dup_enabled: bool = False
+    semantic_dup_similarity_threshold: float = 0.95
+    semantic_dup_min_chars: int = 40
+    semantic_dup_chunk_chars: int = 4_000
+    semantic_dup_max_chunks: int = 8
+    corroboration_enabled: bool = True
+    corroboration_min: int = 41
+    corroboration_max: int = 69
     min_session_seconds: float = 30.0
     paste_ratio_threshold: float = 0.90
     template_reuse_limit: int = 3
     overlap_months: int = 2
     max_future_end_months: int = 12
     claimed_experience_tolerance_years: float = 1.0
-    qual_pass_coverage: float = 0.6
     weights: Mapping[str, int] = field(default_factory=lambda: dict(DEFAULT_WEIGHTS))
+    family_cap: Mapping[str, int] = field(default_factory=lambda: dict(DEFAULT_FAMILY_CAP))
 
     def __post_init__(self) -> None:
         if not 0 <= self.review_max < self.pass_min <= 100:
@@ -55,14 +70,33 @@ class Config:
             raise ValueError("duplicate similarity threshold must be between 0 and 1")
         if self.min_shingles_for_similarity <= 0:
             raise ValueError("minimum shingles must be positive")
+        if not isinstance(self.semantic_dup_enabled, bool):
+            raise ValueError("semantic duplicate switch must be boolean")
+        if not 0 <= self.semantic_dup_similarity_threshold <= 1:
+            raise ValueError("semantic duplicate similarity threshold must be between 0 and 1")
+        if self.semantic_dup_min_chars <= 0:
+            raise ValueError("semantic duplicate minimum text length must be positive")
+        if self.semantic_dup_chunk_chars <= 0:
+            raise ValueError("semantic duplicate chunk size must be positive")
+        if self.semantic_dup_max_chunks <= 0:
+            raise ValueError("semantic duplicate maximum chunks must be positive")
+        if not isinstance(self.corroboration_enabled, bool):
+            raise ValueError("corroboration switch must be boolean")
+        if not 0 <= self.corroboration_min <= self.corroboration_max <= 100:
+            raise ValueError("corroboration thresholds must satisfy 0 <= min <= max <= 100")
         if self.max_future_end_months < 0:
             raise ValueError("maximum future end months must be non-negative")
-        if not 0 <= self.qual_pass_coverage <= 1:
-            raise ValueError("qualification pass coverage must be between 0 and 1")
         copied_weights = dict(self.weights)
         if any(isinstance(value, bool) or not isinstance(value, int) or value < 0 for value in copied_weights.values()):
             raise ValueError("weights must be non-negative integers")
+        copied_family_cap = dict(self.family_cap)
+        if any(
+            isinstance(value, bool) or not isinstance(value, int) or value < 0
+            for value in copied_family_cap.values()
+        ):
+            raise ValueError("family caps must be non-negative integers")
         object.__setattr__(self, "weights", MappingProxyType(copied_weights))
+        object.__setattr__(self, "family_cap", MappingProxyType(copied_family_cap))
 
     @classmethod
     def from_dict(cls, values: Mapping[str, Any]) -> Config:
@@ -73,17 +107,25 @@ class Config:
         data = dict(values)
         if "weights" in data:
             data["weights"] = {**DEFAULT_WEIGHTS, **data["weights"]}
+        if "family_cap" in data:
+            data["family_cap"] = {**DEFAULT_FAMILY_CAP, **data["family_cap"]}
         return cls(**data)
 
 
 def load_config(values: Mapping[str, Any] | None = None) -> Config:
     if values is not None:
-        return Config.from_dict(values)
-    config_path = os.getenv("FIREWALL_CONFIG")
-    if not config_path:
-        return Config()
-    with Path(config_path).open(encoding="utf-8") as handle:
-        loaded = json.load(handle)
-    if not isinstance(loaded, dict):
-        raise ValueError("FIREWALL_CONFIG must contain a JSON object")
-    return Config.from_dict(loaded)
+        config = Config.from_dict(values)
+    else:
+        config_path = os.getenv("FIREWALL_CONFIG")
+        if not config_path:
+            config = Config()
+        else:
+            with Path(config_path).open(encoding="utf-8") as handle:
+                loaded = json.load(handle)
+            if not isinstance(loaded, dict):
+                raise ValueError("FIREWALL_CONFIG must contain a JSON object")
+            config = Config.from_dict(loaded)
+    semantic_override = os.getenv("FIREWALL_SEMANTIC_DUP")
+    if semantic_override in {"0", "1"}:
+        config = replace(config, semantic_dup_enabled=semantic_override == "1")
+    return config

@@ -1,68 +1,109 @@
 # TR∩ST · Evaluation 2: Intelligence
 
-Round 1 built a working pre-ATS firewall. Round 2 measures it, attacks it, closes the gaps the measurements exposed, and adds the building blocks for corroborating claims and for learning from recruiter feedback.
+Round 1 built a working pre-ATS firewall. Round 2 adds AI reasoning that never decides a route, many small checks instead of a few big ones, measurement, login with roles, optional Redis, and one console for candidates, recruiters and admins.
 
-Everything from [Evaluation 1](../evaluation-1-foundation/README.md) is included and unchanged unless listed below. Team QUARTET: Harish Vidyarth N, Keerthisri D, Madhumitha N, Nakshatra PA.
+Everything from [Evaluation 1](../evaluation-1-foundation/README.md) is included unless listed below. Team QUARTET: Harish Vidyarth N, Keerthisri D, Madhumitha N, Nakshatra PA.
+
+## The rule for AI in this project
+
+The language model never decides a route and never changes a weight. Every model answer is checked by plain code first. Temperature is 0, answers must match a JSON schema, the timeout is short, and any failure falls back silently to the rules. Anything the model quotes must appear word for word in the resume or it is thrown away. Resume text is treated as untrusted data and is never followed as instructions.
 
 ## What is new in this round
 
-| Area | What was added | Where | Tests |
-|---|---|---|---|
-| Measurement | Seeded dataset generator with a development and a held-out profile, an evaluation harness with per-class results, threshold sweep and ablation, charts | `eval/` | 4 |
-| Red-team | Six attack strategies and two honest controls run against a fresh server per scenario, with before and after comparison | `redteam/` | 18 |
-| Engine | `IDENTITY_DEVICE_ROTATION`: one person submitting from four or more devices within an hour is routed to verification, whatever the pace | `firewall/signals/automation.py`, `firewall/engine.py` | 4 |
-| Corroboration | Background checks that confirm or contradict claims: GitHub, Crossref DOI, RDAP domain age, OIDC identity, and a scholarly-paper fallback chain | `firewall/enrichment/` | 40 |
-| Learning | Recruiter-feedback weight learner with quorum and rollback, what-if policy simulator, drift detection, capacity-aware thresholds, ROI model, impact-ratio report, hash-chained audit log | `firewall/adaptive/` | 18 |
+| Area | What was added | Where |
+|---|---|---|
+| Many small checks | Resume integrity is now 18 small checks in four families (hidden text, injection, stuffing, divergence), each with a family cap. The four old codes stay at weight 0 for compatibility. | `firewall/resume/integrity.py` |
+| LLM parsing | The model helps only when the rules find no skills and no experience. Values must appear verbatim in the text. | `firewall/resume/parse.py` |
+| Hidden text intent | Hidden text is labelled keyword stuffing, screener instruction or harmless, with the exact quote. Weight unchanged. | `firewall/resume/intent.py` |
+| Style judge | Heuristic and model blended 0.4 and 0.6 only when the model answer is valid. Quotes verified. Weight 0. | `firewall/resume/style.py` |
+| Plain reasoning | A recruiter paragraph, a candidate fix list and a plain sentence for every reason. A test checks every reason code against the wording rule. | `firewall/reasoning.py` |
+| Paraphrase detection | Embedding similarity with nomic-embed-text, off by default. | `firewall/signals/duplicates.py` |
+| New identity checks | Link reuse, fuzzy identity and email alias, using store indexes so the engine never scans every application. | `firewall/signals/identity_links.py` |
+| Corroboration | GitHub, DOI and scholarly checks plus role profiles (general, finance, hardware, sales and design), run only for scores 41 to 69 and only when `FIREWALL_ENRICH=1`. | `firewall/enrichment/`, `firewall/enrichment/roles/` |
+| Connectors | Lever style webhook, `FIREWALL_ROUTES` per route destinations, queued delivery with dead letters and replay, SSRF guard. | `firewall/webhooks.py`, `firewall/delivery.py` |
+| Login and roles | Candidate, recruiter and admin. Argon2 passwords, cookie sessions with CSRF, lockout, audit log, overrides kept separate from the stored decision. | `firewall/auth/` |
+| Redis | Optional persistent store, counters, cache and queue. Falls back to memory when Redis is down. | `firewall/redis_layer/` |
+| Intake and intel | Candidate supplied links and a LinkedIn Save to PDF export, with consent and a dispute flow. No LinkedIn scraping. | `firewall/intake_routes.py`, `firewall/intel/` |
+| Console | One app for all three roles in the original warm theme. | `web/console/` |
 
 ## Results
 
-All results use synthetic data and our own attacker. They show what the system does under stress, not production accuracy.
+All data is synthetic and the attacker is our own. These numbers show behaviour under stress, not production accuracy.
 
 ### Held-out evaluation, 2,400 applications
 
-| Metric | Value |
-|---|---|
-| Precision | 100.0% |
-| Recall | 83.5% |
-| Honest candidates flagged | 0.0% |
-| AI-assisted honest candidates flagged | 0.0% |
-| Honest students behind one campus network flagged | 0.0% |
+| Metric | Start of Round 2 | End of Round 2 |
+|---|---:|---:|
+| Precision | 100.0% | 100.0% |
+| Recall | 83.5% | 87.7% |
+| Honest candidates flagged | 0.0% | 0.0% |
+| AI assisted honest flagged | 0.0% | 0.0% |
+| Honest campus candidates flagged | 0.0% | 0.0% |
+| Duplicates caught | 57.3% | 78.7% |
 
-| Class | Caught |
-|---|---|
-| Fabricated timelines and claims | 100.0% |
-| Naive bots | 96.7% |
-| Resume farms | 93.3% |
-| Evasive bots (rotating identity) | 70.0% |
-| Duplicates (aliases, name variants, copies) | 57.3% |
+On the development profile, precision is 99.9% and 0.3% of honest campus candidates are flagged.
 
-The first evaluation run reported that 95% of honest candidates were flagged. That was a bug in the dataset generator (templated resumes and phone numbers shared across classes), not in the engine. We fixed the generator and re-ran. The held-out profile uses different names, wording and skills from the development profile to reduce circular evaluation.
+The gain in recall comes from the new identity checks. The dataset generator creates alias and name variants, so this gain is partly circular and should not be read as a production figure.
 
-### Red-team: share of attack applications that reached the ATS
+### Ablation, held out (reasons removed before scoring and routing)
 
-| Attack | Before | After fixes | After rotation signal |
+| Removed group | Recall | Change in F1 |
+|---|---:|---:|
+| none | 87.7% | 0.0 |
+| duplicates | 60.0% | minus 18.5 |
+| automation | 54.5% | minus 22.9 |
+| identity links (link reuse, fuzzy identity, email alias) | 83.5% | minus 2.5 |
+| qualification, consistency, resume checks | 87.7% | 0.0 |
+
+The resume integrity checks show no effect here because the generated records contain no resume files. Those checks are measured by the sample resumes and by the red-team instead.
+
+### Red-team, share of attack applications that reached the ATS
+
+| Attack | Round 1 | Start of Round 2 | End of Round 2 |
 |---|---:|---:|---:|
-| Rotating identity (one person, many devices, slow pace) | 100% | 100% | 21.4% |
-| Paraphrased copy | 100% | 60% | 60% |
+| Rotating identity | 100% | 21.4% | 21.4% |
+| Paraphrased copy | 100% | 60% | 60% (20% with embeddings on) |
 | Slow and low, many identities | 83% | 50% | 50% |
-| Email alias abuse | 40% | 30% | 30% |
+| Email alias abuse | 40% | 30% | 10% |
 | Naive flood | 33% | 33% | 33% |
 | Resume farm | 33% | 33% | 33% |
 
-| Honest control | Before | After fixes | After rotation signal |
+Honest controls: the campus burst is flagged 0% of the time. The AI polished control is flagged 30%, which is a flaw in the control. All ten resumes share one sentence skeleton, so some pairs look like a resume farm. Flagged applications go to verification, never to rejection.
+
+### Embedding similarity
+
+| Measure | Off | On |
+|---|---:|---:|
+| Paraphrase evasion, 10 template paraphrases | 60% | 20% |
+| Honest resumes flagged, held out, 900 | 0 | 11 (1.22 points) |
+
+The 0.95 threshold was tuned on the development split. A first try at 0.85 flagged 655 of 900 honest resumes and was rejected. All 11 extra flags go to Additional verification.
+
+### Writing style judge, 45 synthetic resumes
+
+| Mode | Precision | Recall | Human flagged as AI |
 |---|---:|---:|---:|
-| Honest campus burst flagged | 44% | 0% | 0% |
-| Honest AI-polished flagged | 0% | 30% | 30% |
+| Heuristic only | 100% | 50% | 0 of 15 |
+| Hybrid | 97% | 97% | 1 of 15 |
 
-The 30% on the AI-polished control is a flaw in the control, not a regression. All ten control resumes share one sentence skeleton with a few swapped words, so some pairs cross the 0.75 similarity threshold. By text alone that is indistinguishable from a resume farm. Flagged applications go to verification, never to rejection. We do not treat this figure as evidence, and the held-out evaluation above is the cleaner measure.
+The resumes are template written and the labels come from how they were built. The model may find its own style easier to spot. This does not support an accuracy claim, and the style estimate never changes a decision.
 
-## Corroboration design rules
+### Model off, on and unreachable
 
-- Only data the candidate supplied or authorized is checked. There is no scraping of LinkedIn, and LinkedIn is supported only through verified name and email from Sign in with LinkedIn.
-- Absence of data is neutral. Only contradictions count against a candidate.
-- A slow or failing source never blocks an application. It just contributes no signal.
-- Papers are accepted only when the title similarity is at least 0.9, an author surname matches and the year is within one. The first result is never accepted blindly.
-- Positive evidence adds a capped trust bonus and cannot override hard fraud signals.
+Four samples were sent to three servers: model off, model on, and model on but unreachable.
+
+| Sample | Score and route, off, on and unreachable | Style mode on |
+|---|---|---|
+| Clean senior resume | 100 pass, same in all three | hybrid, 3 verified quotes |
+| Hidden injection attack | 51 manual review, same in all three | hybrid, 3 verified quotes |
+| Generic AI style resume | 95 pass, same in all three | hybrid, 3 verified quotes |
+| Messy resume the rules cannot read | 45 off, 65 on, 45 unreachable, route additional verification in all three | hybrid, 3 verified quotes |
+
+On the messy resume the model finds skills that appear word for word in the text, so a false missing skill penalty is lifted. The route did not change here. With the model unreachable the result equals the rules result, as designed. The model adds 5 to 13 seconds per resume, so it stays off by default.
+
+### Speed of the identity checks
+
+2,400 applications through the engine: 134 s with a full scan, 13 s with indexes, identical results.
 
 ## Run it
 
@@ -72,44 +113,28 @@ python3 -m venv .venv
 .venv/bin/python -m pytest -q
 ```
 
-Evaluation:
+Start everything in one command (API on 8000, console on 8081, both on this machine only):
 
 ```bash
-python3 -m venv eval/.venv
-eval/.venv/bin/pip install -r requirements.txt -r eval/requirements.txt
-eval/.venv/bin/python eval/generate_dataset.py --profile dev
-eval/.venv/bin/python eval/generate_dataset.py --profile heldout
-eval/.venv/bin/python eval/run_eval.py
+FIREWALL_ADMIN_USER=you FIREWALL_ADMIN_PASSWORD='choose-a-long-password' python3 scripts/run_all.py
 ```
 
-Red-team (the harness starts the firewall from the root `.venv`):
+Open `http://localhost:8081/console/`. Settings are in `scripts/README_run.md`. Without Redis a restart signs everyone out.
 
-```bash
-python3 -m venv redteam/.venv
-redteam/.venv/bin/pip install -r redteam/requirements.txt
-redteam/.venv/bin/python -m redteam.run --label mine
-redteam/.venv/bin/python -m redteam.report
-```
+The launcher looks for Ollama on this machine. If it finds the model, it switches the language model on and warms it, then prints "Language model: on". If not, it prints why it stays off. Set `FIREWALL_LLM=0` to force it off.
 
-Optional environment variables for corroboration: `GITHUB_TOKEN` (raises the GitHub rate limit from 60 to 5,000 requests an hour) and `SEMANTIC_SCHOLAR_API_KEY`.
+## Known limits and open items
 
-## Verified
+- DAST has not been independently verified. A third party must run and accept it. One scan was run by us by mistake and is not counted.
+- The role profile formats for ICAI, ACCA, CFA, SEBI and patent numbers are our assumptions. No real registry lookups exist yet.
+- The LinkedIn export parser was tested only on synthetic layouts. Real exports use columns and wrapped lines.
+- Name search and corroboration have only been tested with fakes. They have not been run against the live services.
+- Passive name search needs a consent flag and is limited to scores 41 to 69.
+- Face, voice and video checks are not built.
+- A cold model load can pass the 5 second timeout and the first request then falls back to the rules.
+- Every figure above is synthetic and partly circular.
+- Round 3 was not rebuilt and has not been checked against these changes.
 
-| Check | Result |
-|---|---|
-| Core, resume, ATS, enrichment and adaptive tests | 72, 24, 13, 40 and 18 passed |
-| Evaluation and red-team tests | 4 and 18 passed |
-| Every test directory run from inside this folder | 189 passed in total |
-| Comments and docstrings in the Python and JavaScript sources | None |
-
-## Known limitations
-
-- The corroboration connectors and the adaptive modules are tested on their own but are not yet wired into the API. A live decision does not use them yet.
-- The ablation table only zeroes reason-code weights. Hard-escalation rules still fire, so use it as a rough indication.
-- The rotation signal needs a person to use several devices. One device with many applications is handled by the velocity limits, and paraphrased copies still evade 60% of the time.
-- A multi-paper claim can exceed the per-connector time budget because the scholarly sources are tried one after another.
-- Evaluation data is synthetic, so the metrics are partly circular.
-
-The incremental plan for this round is in [PLAN.md](PLAN.md).
+The step by step status is in [PLAN.md](PLAN.md).
 
 License: MIT.

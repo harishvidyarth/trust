@@ -91,7 +91,8 @@ def test_weight_scaling_unknown_codes_and_bonus_cap() -> None:
             signal("GITHUB_CORROBORATED", polarity="positive"),
         ]
     )
-    assert reasons == [
-        {"code": "GITHUB_DATES_MISMATCH", "severity": "medium", "detail": "Generic verification result.", "weight": 12}
-    ]
+    assert len(reasons) == 1
+    assert reasons[0]["code"] == "GITHUB_DATES_MISMATCH"
+    assert reasons[0]["weight"] == 12
+    assert reasons[0]["detail"].startswith("Generic verification result. Provenance: source=test;")
     assert bonus == 15

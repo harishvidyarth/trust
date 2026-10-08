@@ -27,6 +27,7 @@ class PaperClaim(BaseModel):
 class Claims(BaseModel):
 
     application_name: str | None = None
+    application_email: str | None = None
     github_username: str | None = None
     project_repos: list[ProjectRepoClaim] = Field(default_factory=list)
     dois: list[DoiClaim] = Field(default_factory=list)
@@ -35,6 +36,7 @@ class Claims(BaseModel):
     oidc_verified_name: str | None = None
     oidc_verified_email: str | None = None
     employers: list[str] = Field(default_factory=list)
+    employer_domains: list[str] = Field(default_factory=list)
 
 
 class EnrichmentSignal(BaseModel):
@@ -44,6 +46,7 @@ class EnrichmentSignal(BaseModel):
     confidence: float = Field(ge=0, le=1)
     source: str
     detail: str
+    matched_claim: str | None = None
     evidence_url: str | None = None
     fetched_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

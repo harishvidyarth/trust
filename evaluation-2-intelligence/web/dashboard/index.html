@@ -1,131 +1,30 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="light dark">
-    <title>Firewall Desk — Application Operations</title>
-    <link rel="stylesheet" href="./style.css">
-    <script type="module" src="./app.js"></script>
-  </head>
-  <body>
-    <a class="skip-link" href="#main-content">Skip to dashboard</a>
-
-    <header class="site-header">
-      <div class="brand-block">
-        <span class="brand-mark" aria-hidden="true">AF</span>
-        <div>
-          <p class="eyebrow">Recruiting integrity</p>
-          <h1>Firewall Desk</h1>
-        </div>
-      </div>
-      <div class="header-status" role="status" aria-live="polite" aria-label="Connection status">
-        <span class="status-dot" aria-hidden="true"></span>
-        <span id="connection-label">Connecting</span>
-        <span id="last-updated" class="muted"></span>
-      </div>
-    </header>
-
-    <div id="demo-banner" class="demo-banner" role="status" hidden>
-      <strong>Demo data</strong>
-      <span>The API is unavailable. Showing a local sample while reconnection continues.</span>
-    </div>
-
-    <main id="main-content">
-      <section class="hero" aria-labelledby="overview-title">
-        <div>
-          <p class="eyebrow">Live application operations</p>
-          <h2 id="overview-title"><span id="filtered-count">0</span> applications kept out of the ATS queue</h2>
-          <p class="hero-copy">Risk signals inform routing; every final hiring decision stays with a recruiter.</p>
-        </div>
-        <div class="hero-metric" aria-label="Total applications received">
-          <span id="total-count">0</span>
-          <small>received</small>
-        </div>
-      </section>
-
-      <section class="panel funnel-panel" aria-labelledby="funnel-title">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Routing funnel</p>
-            <h2 id="funnel-title">From intake to review</h2>
-          </div>
-          <p class="section-note">Percent of all received applications</p>
-        </div>
-        <div id="funnel" class="funnel" aria-live="polite"></div>
-      </section>
-
-      <div class="dashboard-grid">
-        <section class="panel reasons-panel" aria-labelledby="reasons-title">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Signal mix</p>
-              <h2 id="reasons-title">Top reason codes</h2>
-            </div>
-          </div>
-          <div id="reason-chart" class="reason-chart"></div>
-        </section>
-
-        <aside class="panel policy-panel" aria-labelledby="policy-title">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Read-only policy</p>
-              <h2 id="policy-title">Routing thresholds</h2>
-            </div>
-            <span class="locked-pill">Locked</span>
-          </div>
-          <dl class="policy-list">
-            <div><dt>Pass to ATS</dt><dd>Score ≥ 70</dd></div>
-            <div><dt>Additional verification</dt><dd>Score 41–69</dd></div>
-            <div><dt>Manual review</dt><dd>Score ≤ 40</dd></div>
-            <div><dt>Fast submission</dt><dd>&lt; 30 seconds</dd></div>
-            <div><dt>Bulk paste</dt><dd>≥ 90%</dd></div>
-            <div><dt>Near duplicate</dt><dd>≥ 75%</dd></div>
-          </dl>
-          <p class="policy-footnote">Certain combined signals can escalate directly to manual review. Routes support triage; they do not make hiring decisions.</p>
-        </aside>
-      </div>
-
-      <section class="panel feed-panel" aria-labelledby="feed-title">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Newest first · refreshes every 2 seconds</p>
-            <h2 id="feed-title">Application feed</h2>
-          </div>
-          <button id="refresh-button" class="secondary-button" type="button">Refresh now</button>
-        </div>
-        <div class="table-scroll" tabindex="0" aria-label="Scrollable application feed">
-          <table>
-            <caption class="sr-only">Applications and their current firewall routing status</caption>
-            <thead>
-              <tr>
-                <th scope="col">Candidate</th>
-                <th scope="col">Submitted</th>
-                <th scope="col">Score</th>
-                <th scope="col">Route</th>
-                <th scope="col">Verification</th>
-                <th scope="col">Recruiter action</th>
-                <th scope="col"><span class="sr-only">Details</span></th>
-              </tr>
-            </thead>
-            <tbody id="feed-body"></tbody>
-          </table>
-        </div>
-        <p id="empty-feed" class="empty-state" hidden>No applications have arrived yet.</p>
-      </section>
-
-      <section id="application-detail" class="panel detail-panel" aria-label="Application detail" tabindex="-1">
-        <div id="detail-empty" class="detail-empty">
-          <p class="eyebrow">Application detail</p>
-          <h2 id="detail-title">Select an application to inspect its signals</h2>
-          <p>The trust score, reason weights, verification state, and recruiter controls will appear here.</p>
-        </div>
-        <div id="detail-content" hidden></div>
-      </section>
-    </main>
-
-    <footer>
-      <p>AI Application Firewall · Human-governed recruiting operations</p>
-    </footer>
-  </body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta http-equiv="refresh" content="3; url=../console/#recruiter">
+<title>TR∩ST has moved</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<style>
+body { margin: 0; background: var(--bg); color: var(--text); font: 1rem / 1.6 var(--font); }
+main { max-width: 560px; margin: 12vh auto; padding: 0 16px; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+h1 { font-family: var(--serif); font-size: 1.625rem; margin: 0 0 12px; }
+.mark { display: inline-grid; place-items: center; width: 28px; height: 28px; background: var(--accent); color: var(--accent-contrast); border-radius: var(--radius); margin-right: 8px; }
+a.go { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; background: var(--accent); color: var(--accent-contrast); border-radius: var(--radius); font-weight: 600; text-decoration: none; }
+a.go:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main id="main">
+  <div class="panel">
+    <h1><span class="mark" aria-hidden="true">∩</span>TR∩ST has moved</h1>
+    <p>The dashboard is now part of the console. Sign in there to see the overview, the queue and every application in full.</p>
+    <p>You will be taken there in 3 seconds. If nothing happens, use the link below.</p>
+    <p><a class="go" href="../console/#recruiter">Open the console</a></p>
+  </div>
+</main>
+</body>
 </html>

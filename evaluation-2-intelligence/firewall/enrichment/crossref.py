@@ -36,6 +36,7 @@ class CrossrefConnector(HttpConnector):
                         confidence=0.95,
                         source=self.name,
                         detail="The specifically claimed DOI was not found in the scholarly registry.",
+                        matched_claim=f"{doi} | {claim.claimed_title}",
                         evidence_url=evidence_url,
                     )
                 )
@@ -58,6 +59,7 @@ class CrossrefConnector(HttpConnector):
                         confidence=min(0.98, 1.0 - ratio / 2),
                         source=self.name,
                         detail="The registered publication title materially differs from the supplied title.",
+                        matched_claim=f"{doi} | {claim.claimed_title}",
                         evidence_url=evidence_url,
                     )
                 )
@@ -70,6 +72,7 @@ class CrossrefConnector(HttpConnector):
                         confidence=max(0.7, ratio),
                         source=self.name,
                         detail="The DOI exists and its registered title is consistent with the supplied title.",
+                        matched_claim=f"{doi} | {claim.claimed_title}",
                         evidence_url=evidence_url,
                     )
                 )

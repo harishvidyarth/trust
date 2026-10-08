@@ -156,8 +156,14 @@ def to_reasons(
     for signal in signals:
         if signal.polarity == "negative" and signal.code in configured:
             weight = int(max(0, configured[signal.code]) * signal.confidence)
+            fetched_at = signal.fetched_at.isoformat()
+            matched_claim = signal.matched_claim or "unspecified"
+            detail = (
+                f"{signal.detail} Provenance: source={signal.source}; "
+                f"fetched_at={fetched_at}; matched_claim={matched_claim}."
+            )
             reasons.append(
-                {"code": signal.code, "severity": signal.severity, "detail": signal.detail, "weight": weight}
+                {"code": signal.code, "severity": signal.severity, "detail": detail, "weight": weight}
             )
         elif signal.polarity == "positive":
             trust += POSITIVE_BONUSES.get(signal.code, 0) * signal.confidence

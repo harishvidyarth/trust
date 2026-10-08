@@ -17,7 +17,7 @@ analysis = analyze_resume(file_bytes, "resume.pdf", JobRequirements(
 
 `ResumeAnalysis` contains the parsed `Candidate`, reason dictionaries, human-visible text, the full naive-ATS text view, hidden spans, and `parsed_ok`. Extraction supports PDF, DOCX, and UTF-8 text. Invalid, empty, unsupported, corrupt, and password-protected inputs produce `parsed_ok=False` rather than raising from `analyze_resume`.
 
-The optional Ollama structuring path is enabled with `FIREWALL_LLM=1` and uses `FIREWALL_LLM_MODEL` (default `llama3.2`) at `http://localhost:11434` with a five-second timeout. It only structures visible resume facts. Integrity rules and scores remain deterministic, and any Ollama failure silently falls back to heuristics.
+The optional Ollama structuring path is enabled with `FIREWALL_LLM=1` and uses `FIREWALL_LLM_MODEL` (default `qwen2.5:7b-instruct`) at `OLLAMA_HOST` (default `http://localhost:11434`) with a five-second timeout. It runs only when the rule parser finds neither skills nor experience, accepts only schema-valid values grounded in visible resume text, and silently falls back to the rule result on any failure.
 
 ## Intended upload contract
 

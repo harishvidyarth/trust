@@ -1,0 +1,967 @@
+{
+  "dataset": {
+    "seed": 20261008,
+    "count": 45,
+    "count_per_class": 15,
+    "construction": "Deterministic templates and rules; no LLM generated or assigned labels."
+  },
+  "class_counts": {
+    "human": 15,
+    "ai_polished": 15,
+    "ai_generated": 15
+  },
+  "modes": {
+    "heuristic": {
+      "status": "measured",
+      "precision": 1.0,
+      "recall": 0.5,
+      "false_positives": 0,
+      "false_positive_rate": 0.0,
+      "confusion_matrix": {
+        "human": {
+          "human": 15
+        },
+        "ai_polished": {
+          "human": 15
+        },
+        "ai_generated": {
+          "ai_generated": 15
+        }
+      }
+    },
+    "hybrid": {
+      "status": "measured",
+      "model": "qwen2.5:7b-instruct",
+      "valid_judgments": 45,
+      "fallbacks": 0,
+      "precision": 0.9667,
+      "recall": 0.9667,
+      "false_positives": 1,
+      "false_positive_rate": 0.0667,
+      "confusion_matrix": {
+        "human": {
+          "ai_polished": 1,
+          "human": 14
+        },
+        "ai_polished": {
+          "ai_polished": 14,
+          "human": 1
+        },
+        "ai_generated": {
+          "ai_generated": 15
+        }
+      }
+    }
+  },
+  "heuristic_predictions": [
+    {
+      "id": "human-09",
+      "actual": "human",
+      "predicted": "human",
+      "score": 18
+    },
+    {
+      "id": "human-05",
+      "actual": "human",
+      "predicted": "human",
+      "score": 20
+    },
+    {
+      "id": "human-04",
+      "actual": "human",
+      "predicted": "human",
+      "score": 21
+    },
+    {
+      "id": "ai_polished-02",
+      "actual": "ai_polished",
+      "predicted": "human",
+      "score": 20
+    },
+    {
+      "id": "ai_polished-09",
+      "actual": "ai_polished",
+      "predicted": "human",
+      "score": 21
+    },
+    {
+      "id": "human-11",
+      "actual": "human",
+      "predicted": "human",
+      "score": 21
+    },
+    {
+      "id": "ai_polished-08",
+      "actual": "ai_polished",
+      "predicted": "human",
+      "score": 18
+    },
+    {
+      "id": "ai_polished-06",
+      "actual": "ai_polished",
+      "predicted": "human",
+      "score": 20
+    },
+    {
+      "id": "ai_generated-06",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 76
+    },
+    {
+      "id": "ai_generated-03",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 76
+    },
+    {
+      "id": "ai_polished-13",
+      "actual": "ai_polished",
+      "predicted": "human",
+      "score": 20
+    },
+    {
+      "id": "ai_generated-15",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 76
+    },
+    {
+      "id": "ai_generated-09",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 76
+    },
+    {
+      "id": "ai_generated-07",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 77
+    },
+    {
+      "id": "human-01",
+      "actual": "human",
+      "predicted": "human",
+      "score": 21
+    },
+    {
+      "id": "ai_polished-10",
+      "actual": "ai_polished",
+      "predicted": "human",
+      "score": 19
+    },
+    {
+      "id": "ai_polished-07",
+      "actual": "ai_polished",
+      "predicted": "human",
+      "score": 21
+    },
+    {
+      "id": "ai_polished-11",
+      "actual": "ai_polished",
+      "predicted": "human",
+      "score": 18
+    },
+    {
+      "id": "ai_generated-12",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 76
+    },
+    {
+      "id": "ai_generated-01",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 77
+    },
+    {
+      "id": "ai_generated-05",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 76
+    },
+    {
+      "id": "ai_generated-10",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 77
+    },
+    {
+      "id": "ai_generated-14",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 76
+    },
+    {
+      "id": "human-07",
+      "actual": "human",
+      "predicted": "human",
+      "score": 20
+    },
+    {
+      "id": "ai_generated-02",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 76
+    },
+    {
+      "id": "human-15",
+      "actual": "human",
+      "predicted": "human",
+      "score": 18
+    },
+    {
+      "id": "ai_generated-11",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 76
+    },
+    {
+      "id": "ai_generated-13",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 77
+    },
+    {
+      "id": "ai_generated-04",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 77
+    },
+    {
+      "id": "human-12",
+      "actual": "human",
+      "predicted": "human",
+      "score": 18
+    },
+    {
+      "id": "human-13",
+      "actual": "human",
+      "predicted": "human",
+      "score": 19
+    },
+    {
+      "id": "human-02",
+      "actual": "human",
+      "predicted": "human",
+      "score": 16
+    },
+    {
+      "id": "ai_polished-15",
+      "actual": "ai_polished",
+      "predicted": "human",
+      "score": 21
+    },
+    {
+      "id": "human-08",
+      "actual": "human",
+      "predicted": "human",
+      "score": 21
+    },
+    {
+      "id": "ai_polished-12",
+      "actual": "ai_polished",
+      "predicted": "human",
+      "score": 20
+    },
+    {
+      "id": "ai_generated-08",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 76
+    },
+    {
+      "id": "ai_polished-05",
+      "actual": "ai_polished",
+      "predicted": "human",
+      "score": 19
+    },
+    {
+      "id": "human-14",
+      "actual": "human",
+      "predicted": "human",
+      "score": 19
+    },
+    {
+      "id": "human-06",
+      "actual": "human",
+      "predicted": "human",
+      "score": 18
+    },
+    {
+      "id": "ai_polished-03",
+      "actual": "ai_polished",
+      "predicted": "human",
+      "score": 18
+    },
+    {
+      "id": "human-10",
+      "actual": "human",
+      "predicted": "human",
+      "score": 19
+    },
+    {
+      "id": "ai_polished-01",
+      "actual": "ai_polished",
+      "predicted": "human",
+      "score": 20
+    },
+    {
+      "id": "ai_polished-14",
+      "actual": "ai_polished",
+      "predicted": "human",
+      "score": 18
+    },
+    {
+      "id": "human-03",
+      "actual": "human",
+      "predicted": "human",
+      "score": 20
+    },
+    {
+      "id": "ai_polished-04",
+      "actual": "ai_polished",
+      "predicted": "human",
+      "score": 22
+    }
+  ],
+  "limits": [
+    "The resumes are synthetic and template-written.",
+    "The dataset is small.",
+    "Labels are assigned by construction, not independent annotation.",
+    "The LLM judge may find patterns resembling its own writing easier to classify.",
+    "These measurements do not support a production accuracy claim."
+  ],
+  "hybrid_predictions": [
+    {
+      "id": "human-09",
+      "actual": "human",
+      "predicted": "ai_polished",
+      "score": 43,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "I have worked mostly with Go, plus Kafka 3.6 when the project called for it.",
+        "Fixed the duplicate retry path after it affected 39 customer records. That one needed a data repair script and a slightly awkward Monday call.",
+        "Side project: a bus reminder bot for my family. It runs on an old mini PC."
+      ]
+    },
+    {
+      "id": "human-05",
+      "actual": "human",
+      "predicted": "human",
+      "score": 8,
+      "mode": "hybrid",
+      "llm_label": "human",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "I have worked mostly with Python, plus FastAPI when the project called for it.",
+        "Fixed the duplicate retry path after it affected 11 customer records. That one needed a data repair script and a slightly awkward Monday call.",
+        "Side project: a bus reminder bot for my family. It runs on an old mini PC."
+      ]
+    },
+    {
+      "id": "human-04",
+      "actual": "human",
+      "predicted": "human",
+      "score": 8,
+      "mode": "hybrid",
+      "llm_label": "human",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "I have worked mostly with TypeScript, plus Node.js 20 when the project called for it.",
+        "Fixed the duplicate retry path after it affected 32 customer records. That one needed a data repair script and a slightly awkward Monday call.",
+        "Side project: a bus reminder bot for my family. It runs on an old mini PC."
+      ]
+    },
+    {
+      "id": "ai_polished-02",
+      "actual": "ai_polished",
+      "predicted": "ai_polished",
+      "score": 44,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Built Go services with Kafka 3.6 and Redis 7, improving median response time by 33%.",
+        "Partnered with product and support teams to translate recurring customer issues into engineering work.",
+        "Created runbooks for on-call handoffs and coached two graduate developers through their first releases."
+      ]
+    },
+    {
+      "id": "ai_polished-09",
+      "actual": "ai_polished",
+      "predicted": "ai_polished",
+      "score": 44,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Built Python services with FastAPI and PostgreSQL 15, improving median response time by 18%.",
+        "Partnered with product and support teams to translate recurring customer issues into engineering work.",
+        "Created runbooks for on-call handoffs and coached two graduate developers through their first releases."
+      ]
+    },
+    {
+      "id": "human-11",
+      "actual": "human",
+      "predicted": "human",
+      "score": 8,
+      "mode": "hybrid",
+      "llm_label": "human",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "I have worked mostly with Python, plus FastAPI when the project called for it.",
+        "Fixed the duplicate retry path after it affected 40 customer records. That one needed a data repair script and a slightly awkward Monday call.",
+        "Side project: a bus reminder bot for my family. It runs on an old mini PC."
+      ]
+    },
+    {
+      "id": "ai_polished-08",
+      "actual": "ai_polished",
+      "predicted": "ai_polished",
+      "score": 43,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Built Java services with Spring Boot 3.1 and MySQL 8, improving median response time by 18%.",
+        "Reworked deployment checks at Riverline Tech, reducing repeat incidents by 29%.",
+        "Created runbooks for on-call handoffs and coached two graduate developers through their first releases."
+      ]
+    },
+    {
+      "id": "ai_polished-06",
+      "actual": "ai_polished",
+      "predicted": "human",
+      "score": 8,
+      "mode": "hybrid",
+      "llm_label": "human",
+      "llm_confidence": 0.95,
+      "verified_quotes": [
+        "Platform Developer focused on dependable services and clear collaboration.",
+        "Partnered with product and support teams to translate recurring customer issues into engineering work.",
+        "Improved test coverage around payment and notification workflows while keeping changes easy to review."
+      ]
+    },
+    {
+      "id": "ai_generated-06",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 66,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Spearheaded strategic initiatives at Northstar Labs, streamlining robust workflows and increasing efficiency by 50%.",
+        "Leveraged best-in-class technologies to foster seamless collaboration and improve productivity by 45%.",
+        "Facilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+      ]
+    },
+    {
+      "id": "ai_generated-03",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 66,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Spearheaded strategic initiatives at Pine Systems, streamlining robust workflows and increasing efficiency by 30%.",
+        "Leveraged best-in-class technologies to foster seamless collaboration and improve productivity by 25%.",
+        "Facilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+      ]
+    },
+    {
+      "id": "ai_polished-13",
+      "actual": "ai_polished",
+      "predicted": "ai_polished",
+      "score": 44,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Built Go services with Kafka 3.6 and Redis 7, improving median response time by 18%.",
+        "Reworked deployment checks at Pine Systems, reducing repeat incidents by 21%.",
+        "Partnered with product and support teams to translate recurring customer issues into engineering work."
+      ]
+    },
+    {
+      "id": "ai_generated-15",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 66,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Spearheaded strategic initiatives at Northstar Labs, streamlining robust workflows and increasing efficiency by 30%.",
+        "Leveraged best-in-class technologies to foster seamless collaboration and improve productivity by 40%.",
+        "Facilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+      ]
+    },
+    {
+      "id": "ai_generated-09",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 66,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Spearheaded strategic initiatives at Northstar Labs, streamlining robust workflows and increasing efficiency by 50%.",
+        "Leveraged best-in-class technologies to foster seamless collaboration and improve productivity by 35%.",
+        "Facilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+      ]
+    },
+    {
+      "id": "ai_generated-07",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 67,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Spearheaded strategic initiatives at MapleWorks, streamlining robust workflows and increasing efficiency by 45%.",
+        "Leveraged best-in-class technologies to foster seamless collaboration and improve productivity by 25%.",
+        "Orchestrated cross-functional stakeholders, championed agile practices, and elevated delivery quality by 50%."
+      ]
+    },
+    {
+      "id": "human-01",
+      "actual": "human",
+      "predicted": "human",
+      "score": 8,
+      "mode": "hybrid",
+      "llm_label": "human",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "I have worked mostly with TypeScript, plus Node.js 20 when the project called for it.",
+        "Fixed the duplicate retry path after it affected 26 customer records. That one needed a data repair script and a slightly awkward Monday call.",
+        "Side project: a bus reminder bot for my family. It runs on an old mini PC."
+      ]
+    },
+    {
+      "id": "ai_polished-10",
+      "actual": "ai_polished",
+      "predicted": "ai_polished",
+      "score": 44,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Built Java services with Spring Boot 3.1 and MySQL 8, improving median response time by 18%.",
+        "Reworked deployment checks at MapleWorks, reducing repeat incidents by 36%.",
+        "Created runbooks for on-call handoffs and coached two graduate developers through their first releases."
+      ]
+    },
+    {
+      "id": "ai_polished-07",
+      "actual": "ai_polished",
+      "predicted": "ai_polished",
+      "score": 44,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Built TypeScript services with Node.js 20 and MongoDB 7, improving median response time by 33%.",
+        "Reworked deployment checks at Riverline Tech, reducing repeat incidents by 43%.",
+        "Created runbooks for on-call handoffs and coached two graduate developers through their first releases."
+      ]
+    },
+    {
+      "id": "ai_polished-11",
+      "actual": "ai_polished",
+      "predicted": "ai_polished",
+      "score": 43,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Built Java services with Spring Boot 3.1 and MySQL 8, improving median response time by 22%.",
+        "Partnered with product and support teams to translate recurring customer issues into engineering work.",
+        "Created runbooks for on-call handoffs and coached two graduate developers through their first releases."
+      ]
+    },
+    {
+      "id": "ai_generated-12",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 66,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Spearheaded strategic initiatives at Riverline Tech, streamlining robust workflows and increasing efficiency by 25%.",
+        "Leveraged best-in-class technologies to foster seamless collaboration and improve productivity by 35%.",
+        "Orchestrated cross-functional stakeholders, championed agile practices, and elevated delivery quality by 45%."
+      ]
+    },
+    {
+      "id": "ai_generated-01",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 67,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Spearheaded strategic initiatives at MapleWorks, streamlining robust workflows and increasing efficiency by 35%.",
+        "Leveraged best-in-class technologies to foster seamless collaboration and improve productivity by 40%.",
+        "Facilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+      ]
+    },
+    {
+      "id": "ai_generated-05",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 66,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Spearheaded strategic initiatives at Riverline Tech, streamlining robust workflows and increasing efficiency by 30%.",
+        "Leveraged best-in-class technologies to foster seamless collaboration and improve productivity by 50%.",
+        "Facilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+      ]
+    },
+    {
+      "id": "ai_generated-10",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 67,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Spearheaded strategic initiatives at MapleWorks, streamlining robust workflows and increasing efficiency by 45%.",
+        "Leveraged best-in-class technologies to foster seamless collaboration and improve productivity by 25%.",
+        "Orchestrated cross-functional stakeholders, championed agile practices, and elevated delivery quality by 35%."
+      ]
+    },
+    {
+      "id": "ai_generated-14",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 66,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Spearheaded strategic initiatives at Riverline Tech, streamlining robust workflows and increasing efficiency by 45%.",
+        "Leveraged best-in-class technologies to foster seamless collaboration and improve productivity by 35%.",
+        "Facilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+      ]
+    },
+    {
+      "id": "human-07",
+      "actual": "human",
+      "predicted": "human",
+      "score": 8,
+      "mode": "hybrid",
+      "llm_label": "human",
+      "llm_confidence": 0.95,
+      "verified_quotes": [
+        "I have worked mostly with TypeScript, plus Node.js 20 when the project called for it.",
+        "Fixed the duplicate retry path after it affected 43 customer records. That one needed a data repair script and a slightly awkward Monday call.",
+        "Side project: a bus reminder bot for my family. It runs on an old mini PC."
+      ]
+    },
+    {
+      "id": "ai_generated-02",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 66,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Spearheaded strategic initiatives at Northstar Labs, streamlining robust workflows and increasing efficiency by 50%.",
+        "Leveraged best-in-class technologies to foster seamless collaboration and improve productivity by 30%.",
+        "Facilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+      ]
+    },
+    {
+      "id": "human-15",
+      "actual": "human",
+      "predicted": "human",
+      "score": 7,
+      "mode": "hybrid",
+      "llm_label": "human",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "I have worked mostly with Java, plus Spring Boot 3.1 when the project called for it.",
+        "Fixed the duplicate retry path after it affected 14 customer records. That one needed a data repair script and a slightly awkward Monday call.",
+        "Side project: a bus reminder bot for my family. It runs on an old mini PC."
+      ]
+    },
+    {
+      "id": "ai_generated-11",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 66,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Spearheaded strategic initiatives at Pine Systems, streamlining robust workflows and increasing efficiency by 50%.",
+        "Leveraged best-in-class technologies to foster seamless collaboration and improve productivity by 40%.",
+        "Facilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+      ]
+    },
+    {
+      "id": "ai_generated-13",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 67,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Spearheaded strategic initiatives at MapleWorks, streamlining robust workflows and increasing efficiency by 45%.",
+        "Leveraged best-in-class technologies to foster seamless collaboration and improve productivity by 50%.",
+        "Facilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+      ]
+    },
+    {
+      "id": "ai_generated-04",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 67,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Spearheaded strategic initiatives at MapleWorks, streamlining robust workflows and increasing efficiency by 50%.",
+        "Leveraged best-in-class technologies to foster seamless collaboration and improve productivity by 35%.",
+        "Facilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+      ]
+    },
+    {
+      "id": "human-12",
+      "actual": "human",
+      "predicted": "human",
+      "score": 7,
+      "mode": "hybrid",
+      "llm_label": "human",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "I have worked mostly with Java, plus Spring Boot 3.1 when the project called for it.",
+        "Fixed the duplicate retry path after it affected 41 customer records. That one needed a data repair script and a slightly awkward Monday call.",
+        "Side project: a bus reminder bot for my family. It runs on an old mini PC."
+      ]
+    },
+    {
+      "id": "human-13",
+      "actual": "human",
+      "predicted": "human",
+      "score": 8,
+      "mode": "hybrid",
+      "llm_label": "human",
+      "llm_confidence": 0.9,
+      "verified_quotes": [
+        "I have worked mostly with Java, plus Spring Boot 3.1 when the project called for it.",
+        "Fixed the duplicate retry path after it affected 41 customer records. That one needed a data repair script and a slightly awkward Monday call.",
+        "Side project: a bus reminder bot for my family. It runs on an old mini PC."
+      ]
+    },
+    {
+      "id": "human-02",
+      "actual": "human",
+      "predicted": "human",
+      "score": 6,
+      "mode": "hybrid",
+      "llm_label": "human",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "I have worked mostly with Java, plus Spring Boot 3.1 when the project called for it.",
+        "Fixed the duplicate retry path after it affected 32 customer records. That one needed a data repair script and a slightly awkward Monday call.",
+        "Side project: a bus reminder bot for my family. It runs on an old mini PC."
+      ]
+    },
+    {
+      "id": "ai_polished-15",
+      "actual": "ai_polished",
+      "predicted": "ai_polished",
+      "score": 44,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Built TypeScript services with Node.js 20 and MongoDB 7, improving median response time by 33%.",
+        "Reworked deployment checks at Northstar Labs, reducing repeat incidents by 21%.",
+        "Created runbooks for on-call handoffs and coached two graduate developers through their first releases."
+      ]
+    },
+    {
+      "id": "human-08",
+      "actual": "human",
+      "predicted": "human",
+      "score": 8,
+      "mode": "hybrid",
+      "llm_label": "human",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "I have worked mostly with TypeScript, plus Node.js 20 when the project called for it.",
+        "Fixed the duplicate retry path after it affected 41 customer records. That one needed a data repair script and a slightly awkward Monday call.",
+        "Side project: a bus reminder bot for my family. It runs on an old mini PC."
+      ]
+    },
+    {
+      "id": "ai_polished-12",
+      "actual": "ai_polished",
+      "predicted": "ai_polished",
+      "score": 44,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Built Go services with Kafka 3.6 and Redis 7, improving median response time by 22%.",
+        "Partnered with product and support teams to translate recurring customer issues into engineering work.",
+        "Created runbooks for on-call handoffs and coached two graduate developers through their first releases."
+      ]
+    },
+    {
+      "id": "ai_generated-08",
+      "actual": "ai_generated",
+      "predicted": "ai_generated",
+      "score": 66,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Spearheaded strategic initiatives at Northstar Labs, streamlining robust workflows and increasing efficiency by 35%.",
+        "Leveraged best-in-class technologies to foster seamless collaboration and improve productivity by 45%.",
+        "Facilitated a world-class culture of synergy, continuous improvement, and exceptional value-add outcomes."
+      ]
+    },
+    {
+      "id": "ai_polished-05",
+      "actual": "ai_polished",
+      "predicted": "ai_polished",
+      "score": 44,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Built Java services with Spring Boot 3.1 and MySQL 8, improving median response time by 22%.",
+        "Reworked deployment checks at MapleWorks, reducing repeat incidents by 21%.",
+        "Created runbooks for on-call handoffs and coached two graduate developers through their first releases."
+      ]
+    },
+    {
+      "id": "human-14",
+      "actual": "human",
+      "predicted": "human",
+      "score": 8,
+      "mode": "hybrid",
+      "llm_label": "human",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "I have worked mostly with TypeScript, plus Node.js 20 when the project called for it.",
+        "Fixed the duplicate retry path after it affected 36 customer records. That one needed a data repair script and a slightly awkward Monday call.",
+        "Side project: a bus reminder bot for my family. It runs on an old mini PC."
+      ]
+    },
+    {
+      "id": "human-06",
+      "actual": "human",
+      "predicted": "human",
+      "score": 7,
+      "mode": "hybrid",
+      "llm_label": "human",
+      "llm_confidence": 0.95,
+      "verified_quotes": [
+        "I have worked mostly with Go, plus Kafka 3.6 when the project called for it.",
+        "Fixed the duplicate retry path after it affected 41 customer records. That one needed a data repair script and a slightly awkward Monday call.",
+        "Side project: a bus reminder bot for my family. It runs on an old mini PC."
+      ]
+    },
+    {
+      "id": "ai_polished-03",
+      "actual": "ai_polished",
+      "predicted": "ai_polished",
+      "score": 43,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Built Java services with Spring Boot 3.1 and MySQL 8, improving median response time by 22%.",
+        "Partnered with product and support teams to translate recurring customer issues into engineering work.",
+        "Created runbooks for on-call handoffs and coached two graduate developers through their first releases."
+      ]
+    },
+    {
+      "id": "human-10",
+      "actual": "human",
+      "predicted": "human",
+      "score": 8,
+      "mode": "hybrid",
+      "llm_label": "human",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "I have worked mostly with TypeScript, plus Node.js 20 when the project called for it.",
+        "Fixed the duplicate retry path after it affected 22 customer records. That one needed a data repair script and a slightly awkward Monday call.",
+        "Side project: a bus reminder bot for my family. It runs on an old mini PC."
+      ]
+    },
+    {
+      "id": "ai_polished-01",
+      "actual": "ai_polished",
+      "predicted": "ai_polished",
+      "score": 44,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Built Go services with Kafka 3.6 and Redis 7, improving median response time by 18%.",
+        "Reworked deployment checks at Pine Systems, reducing repeat incidents by 21%.",
+        "Created runbooks for on-call handoffs and coached two graduate developers through their first releases."
+      ]
+    },
+    {
+      "id": "ai_polished-14",
+      "actual": "ai_polished",
+      "predicted": "ai_polished",
+      "score": 43,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Backend Engineer focused on dependable services and clear collaboration.",
+        "Partnered with product and support teams to translate recurring customer issues into engineering work.",
+        "Improved test coverage around payment and notification workflows while keeping changes easy to review."
+      ]
+    },
+    {
+      "id": "human-03",
+      "actual": "human",
+      "predicted": "human",
+      "score": 8,
+      "mode": "hybrid",
+      "llm_label": "human",
+      "llm_confidence": 0.95,
+      "verified_quotes": [
+        "I have worked mostly with Python, plus FastAPI when the project called for it.",
+        "Fixed the duplicate retry path after it affected 27 customer records. That one needed a data repair script and a slightly awkward Monday call.",
+        "Side project: a bus reminder bot for my family. It runs on an old mini PC."
+      ]
+    },
+    {
+      "id": "ai_polished-04",
+      "actual": "ai_polished",
+      "predicted": "ai_polished",
+      "score": 45,
+      "mode": "hybrid",
+      "llm_label": "ai_polished",
+      "llm_confidence": 0.8,
+      "verified_quotes": [
+        "Built TypeScript services with Node.js 20 and MongoDB 7, improving median response time by 27%.",
+        "Partnered with product and support teams to translate recurring customer issues into engineering work.",
+        "Created runbooks for on-call handoffs and coached two graduate developers through their first releases."
+      ]
+    }
+  ]
+}

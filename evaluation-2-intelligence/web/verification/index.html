@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TR∩ST Verification</title>
+<style>
+:root{color-scheme:light;--bg:#fbfaf7;--ink:#1c1c1a;--muted:#66645c;--rule:#dcd8cc;--navy:#1f3556;--ok:#1d6a3a;--warn:#8a5a00;--serif:"Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+main{max-width:980px;margin:0 auto;padding:40px 24px 80px}
+h1,h2{font-family:var(--serif)}
+h1{font-size:2rem;margin:0 0 8px}
+p.lead{color:var(--muted);margin:0 0 24px}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--rule);margin:12px 0 28px}
+th,td{padding:10px 12px;border-bottom:1px solid var(--rule);text-align:left;vertical-align:top}
+th{background:#f4f2ea;color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em}
+.yes{color:var(--ok);font-weight:600}.note{color:var(--warn);font-weight:600}
+a{color:var(--navy)}
+</style>
+</head>
+<body>
+<main>
+<h1>TR∩ST verification</h1>
+<p class="lead">The language model never changes a route or a weight. Four sample resumes were sent to three servers on 8 October 2026: model off, model on, and model on but unreachable. Data is synthetic and the numbers were measured on this machine.</p>
+
+<h2>Scores, routes and weights</h2>
+<table>
+<tr><th>Sample</th><th>Model off</th><th>Model on</th><th>Model unreachable</th><th>Same route and weights</th></tr>
+<tr><td>Clean senior resume</td><td>100, pass</td><td>100, pass</td><td>100, pass</td><td class="yes">Yes</td></tr>
+<tr><td>Hidden injection attack</td><td>51, manual review</td><td>51, manual review</td><td>51, manual review</td><td class="yes">Yes</td></tr>
+<tr><td>Generic AI style resume</td><td>95, pass</td><td>95, pass</td><td>95, pass</td><td class="yes">Yes</td></tr>
+<tr><td>Messy resume the rules cannot read</td><td>45, additional verification</td><td>65, additional verification</td><td>45, additional verification</td><td class="note">Route same, score differs</td></tr>
+</table>
+<p>On the messy resume the model finds skills that appear word for word in the text, so a false missing skill penalty is lifted. The route did not change. When the model is unreachable the result equals the rules result.</p>
+
+<h2>What the model adds</h2>
+<table>
+<tr><th>Feature</th><th>Off</th><th>On</th></tr>
+<tr><td>Writing style estimate</td><td>Rules only</td><td>Hybrid, with 3 verified quotes copied from the resume</td></tr>
+<tr><td>Time per resume</td><td>About 0.1 seconds</td><td>3 to 13 seconds</td></tr>
+<tr><td>Effect on route</td><td colspan="2" class="yes">None. The model never decides a route.</td></tr>
+</table>
+
+<h2>Where to see it live</h2>
+<p><a href="../console/">Open the console</a>, sign in, and the live app shows model status for recruiters and admins. The same numbers are in the Round 2 README.</p>
+</main>
+</body>
+</html>

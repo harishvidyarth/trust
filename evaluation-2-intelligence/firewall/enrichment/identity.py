@@ -40,6 +40,7 @@ class IdentityConnector:
                         confidence=min(0.98, 1.0 - similarity / 2),
                         source=self.name,
                         detail="The OIDC-verified name materially differs from the application name.",
+                        matched_claim=claims.application_name,
                     )
                 )
             else:
@@ -51,10 +52,11 @@ class IdentityConnector:
                         confidence=max(0.7, similarity),
                         source=self.name,
                         detail="The OIDC-verified identity is consistent with the application name.",
+                        matched_claim=claims.application_name,
                     )
                 )
 
-        email = (claims.oidc_verified_email or "").strip().casefold()
+        email = (claims.oidc_verified_email or claims.application_email or "").strip().casefold()
         if email.count("@") == 1:
             domain = email.rsplit("@", 1)[1].rstrip(".")
             if domain in self.disposable_domains:
@@ -65,7 +67,8 @@ class IdentityConnector:
                         severity="low",
                         confidence=0.9,
                         source=self.name,
-                        detail="The verified email uses a known disposable-email provider.",
+                        detail="The supplied email uses a known disposable-email provider.",
+                        matched_claim=claims.oidc_verified_email or claims.application_email,
                     )
                 )
         return signals

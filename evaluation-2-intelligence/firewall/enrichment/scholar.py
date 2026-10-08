@@ -118,6 +118,7 @@ class ScholarConnector(HttpConnector):
                     confidence=similarity,
                     source=source,
                     detail="A scholarly source corroborates the supplied publication claim.",
+                    matched_claim=claim.title,
                     evidence_url=candidate.evidence_url,
                 )
             source_mismatch = self._author_mismatch(claim, application_name, candidates)
@@ -134,6 +135,7 @@ class ScholarConnector(HttpConnector):
             confidence=min(0.5, similarity / 2),
             source=source,
             detail="A strong title match lists authors inconsistent with the supplied publication claim.",
+            matched_claim=claim.title,
             evidence_url=candidate.evidence_url,
         )
 
@@ -339,4 +341,3 @@ class ScholarConnector(HttpConnector):
                 _Candidate(title, tuple(authors), _year(info.get("year")), _first_string(info.get("venue")), evidence_url)
             )
         return candidates
-

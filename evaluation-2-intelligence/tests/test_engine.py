@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 
 from firewall.config import DEFAULT_WEIGHTS, Config
-from firewall.engine import evaluate
-from firewall.models import Experience, Project, Route
+from firewall.engine import evaluate, score_and_route
+from firewall.models import Experience, Project, Reason, Route
 from firewall.signals.duplicates import normalize_email, normalize_phone
 from firewall.signals.qualification import canonical_skill
 from firewall.store import InMemoryApplicationStore
@@ -130,11 +130,12 @@ def test_same_job_reapply_flagged(application_factory, job_factory):
     assert decision.route == Route.MANUAL_REVIEW
 
 
-def test_missing_must_have_lowers_route(application_factory, job_factory):
+def test_missing_must_have_is_noted_but_does_not_block(application_factory, job_factory):
     application = application_factory(skills=["Python"])
     decision = evaluate(application, job_factory(), InMemoryApplicationStore(), Config())
-    assert decision.route == Route.MANUAL_REVIEW
+    assert decision.route == Route.PASS_TO_ATS
     assert "QUAL_MISSING_MUST_HAVE" in codes(decision)
+    assert decision.score >= Config().pass_min
 
 
 @pytest.mark.parametrize(
@@ -160,10 +161,10 @@ def test_missing_must_have_penalty_scales_with_missing_fraction(
 
 @pytest.mark.parametrize(
     ("skills_present", "expected_route"),
-    [(6, Route.PASS_TO_ATS), (5, Route.MANUAL_REVIEW)],
-    ids=["coverage-at-threshold", "coverage-below-threshold"],
+    [(5, Route.PASS_TO_ATS), (0, Route.ADDITIONAL_VERIFICATION)],
+    ids=["half-the-skills-still-passes", "no-skills-needs-verification"],
 )
-def test_qualification_only_route_uses_coverage(application_factory, job_factory, skills_present, expected_route):
+def test_qualification_only_route_follows_the_score(application_factory, job_factory, skills_present, expected_route):
     required = [f"skill-{index}" for index in range(10)]
     decision = evaluate(
         application_factory(skills=required[:skills_present]),
@@ -366,7 +367,6 @@ def test_normalizers():
 def test_config_new_safety_defaults():
     config = Config()
     assert config.min_shingles_for_similarity == 8
-    assert config.qual_pass_coverage == 0.6
     assert config.max_future_end_months == 12
     assert config.identity_velocity_limit == 6
 
@@ -386,3 +386,81 @@ def test_config_copies_and_freezes_weights():
     assert config.weights["DUP_EMAIL"] == DEFAULT_WEIGHTS["DUP_EMAIL"]
     with pytest.raises(TypeError):
         config.weights["DUP_EMAIL"] = 999
+
+
+def test_resume_family_penalty_is_capped() -> None:
+    reasons = [
+        Reason(code="RESUME_HIDDEN_NEAR_WHITE", severity="medium", detail="one", weight=20),
+        Reason(code="RESUME_HIDDEN_TINY_FONT", severity="medium", detail="two", weight=15),
+        Reason(code="RESUME_DIVERGENCE_LOW", severity="low", detail="three", weight=6),
+    ]
+
+    score, route = score_and_route(reasons, Config(family_cap={"HIDDEN": 25, "DIVERGENCE": 20}))
+
+    assert score == 69
+    assert route == Route.ADDITIONAL_VERIFICATION
+
+
+def test_resume_family_cap_can_be_configured() -> None:
+    reasons = [
+        Reason(code="RESUME_STUFFING_OVERALL_DENSITY", severity="medium", detail="one", weight=8),
+        Reason(code="RESUME_STUFFING_CONCENTRATED_LINE", severity="medium", detail="two", weight=7),
+    ]
+
+    score, _ = score_and_route(reasons, Config(family_cap={"STUFFING": 10}))
+
+    assert score == 90
+
+
+@pytest.mark.parametrize(
+    ("family", "codes"),
+    [
+        ("HIDDEN", ("RESUME_HIDDEN_NEAR_WHITE", "RESUME_HIDDEN_TINY_FONT")),
+        ("INJECTION", ("RESUME_INJECTION_IGNORE_PREVIOUS", "RESUME_INJECTION_INSTRUCTION_PHRASE")),
+        ("STUFFING", ("RESUME_STUFFING_OVERALL_DENSITY", "RESUME_STUFFING_CONCENTRATED_LINE")),
+        ("DIVERGENCE", ("RESUME_DIVERGENCE_MEDIUM", "RESUME_DIVERGENCE_HIGH")),
+    ],
+)
+def test_each_resume_family_obeys_its_cap(family: str, codes: tuple[str, str]) -> None:
+    reasons = [Reason(code=code, severity="high", detail=code, weight=20) for code in codes]
+
+    score, _ = score_and_route(reasons, Config(family_cap={family: 13}))
+
+    assert score == 87
+
+
+def test_hidden_injection_pair_forces_manual_review() -> None:
+    reasons = [
+        Reason(code="RESUME_HIDDEN_TEXT", severity="info", detail="hidden alias", weight=0),
+        Reason(code="RESUME_PROMPT_INJECTION", severity="info", detail="injection alias", weight=0),
+        Reason(code="RESUME_HIDDEN_NEAR_WHITE", severity="medium", detail="hidden", weight=8),
+        Reason(code="RESUME_INJECTION_IGNORE_PREVIOUS", severity="critical", detail="injection", weight=15),
+    ]
+
+    score, route = score_and_route(reasons, Config())
+
+    assert score == 77
+    assert route == Route.MANUAL_REVIEW
+
+
+@pytest.mark.parametrize("invalid_cap", [-1, 1.5, "20", True])
+def test_config_rejects_invalid_family_caps(invalid_cap) -> None:
+    with pytest.raises(ValueError, match="family caps"):
+        Config(family_cap={"HIDDEN": invalid_cap})
+
+
+def test_config_copies_and_freezes_family_caps() -> None:
+    supplied = {"HIDDEN": 12}
+    config = Config(family_cap=supplied)
+    supplied["HIDDEN"] = 99
+
+    assert config.family_cap["HIDDEN"] == 12
+    with pytest.raises(TypeError):
+        config.family_cap["HIDDEN"] = 99
+
+
+def test_config_from_dict_merges_partial_family_caps() -> None:
+    config = Config.from_dict({"family_cap": {"HIDDEN": 12}})
+
+    assert config.family_cap["HIDDEN"] == 12
+    assert config.family_cap["INJECTION"] == 35

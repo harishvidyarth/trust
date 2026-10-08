@@ -52,6 +52,7 @@ class GitHubConnector(HttpConnector):
                     confidence=0.45,
                     source=self.name,
                     detail="The public account timeline is unusually recent relative to the supplied project timeline.",
+                    matched_claim=username,
                     evidence_url=user_url,
                 )
             )
@@ -74,6 +75,7 @@ class GitHubConnector(HttpConnector):
                         confidence=0.85,
                         source=self.name,
                         detail="A specifically claimed public repository was not found under the authorized account.",
+                        matched_claim=f"https://github.com/{username}/{repo_name}",
                         evidence_url=evidence_url,
                     )
                 )
@@ -108,6 +110,7 @@ class GitHubConnector(HttpConnector):
                         confidence=0.9,
                         source=self.name,
                         detail="The earliest public repository activity materially postdates the supplied project timeline.",
+                        matched_claim=f"https://github.com/{username}/{repo_name}",
                         evidence_url=evidence_url,
                     )
                 )
@@ -120,6 +123,7 @@ class GitHubConnector(HttpConnector):
                         confidence=0.8,
                         source=self.name,
                         detail="Public repository metadata is consistent with the supplied project timeline.",
+                        matched_claim=f"https://github.com/{username}/{repo_name}",
                         evidence_url=evidence_url,
                     )
                 )

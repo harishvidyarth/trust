@@ -26,7 +26,7 @@ Each folder is self-contained and runnable. A later folder includes everything i
 | Folder | Theme | Status |
 |---|---|---|
 | [`evaluation-1-foundation`](evaluation-1-foundation) | A working pre-ATS firewall: engine, API, resume integrity, Resume X-ray with 23 samples, ATS connectors, security scans | Complete, 117 tests passing |
-| [`evaluation-2-intelligence`](evaluation-2-intelligence) | Measurement and depth: evaluation harness, red-team, rotation signal, claim corroboration, adaptive learning | Complete, 189 tests passing |
+| [`evaluation-2-intelligence`](evaluation-2-intelligence) | AI reasoning and measurement: many small checks, model assisted parsing that never decides a route, login and roles, optional Redis, one console | Complete, 932 tests passing (4 skipped) |
 | [`evaluation-3-network`](evaluation-3-network) | Cross-employer memory: federated fingerprints with signed reports and a three-node demo | Complete, 216 tests passing |
 
 Rounds 2 and 3 are older snapshots that predate the latest Round 1 changes. They are being rebuilt on top of the final Round 1. Start with [`evaluation-1-foundation/README.md`](evaluation-1-foundation/README.md). Every folder has a `PLAN.md` describing its incremental steps and what was verified.
@@ -39,7 +39,7 @@ Rounds 2 and 3 are older snapshots that predate the latest Round 1 changes. They
 | Firewall on that resume | Four integrity flags, score 0, Manual Review, never reaches the ATS |
 | Honest AI-polished resume | No flags, passes |
 | Engine throughput | 5,000 applications in 1.75 s on one laptop, engine only |
-| Held-out evaluation (synthetic) | Precision 100.0%, recall 83.5%, honest candidates flagged 0.0% |
+| Held-out evaluation (synthetic) | Precision 100.0%, recall 87.7% (83.5% at the start of Round 2), honest candidates flagged 0.0% |
 | Red-team: rotating-identity attack reaching the ATS | 100% before, 21.4% after the device-rotation signal |
 | Federation demo (three nodes, one machine) | Bot caught at employer A is confirmed at employer C in about 90 ms, with no raw personal data shared and a lone rogue report kept advisory |
 | OWASP ZAP API scan | 118 rules passed, 0 failed |

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from firewall.config import Config
 from firewall.engine import evaluate
-from firewall.models import Decision, Route
+from firewall.models import Decision, Experience, Project, Route
+from firewall.signals import identity_links
 from firewall.store import InMemoryApplicationStore
 
 
@@ -69,3 +70,46 @@ def test_engine_uses_index_queries_not_full_application_scan(application_factory
 
     decision = evaluate(application_factory(), job_factory(), IndexedOnlyStore(), Config())
     assert decision.route == Route.PASS_TO_ATS
+
+
+def test_unrelated_applications_are_never_compared(application_factory, job_factory, monkeypatch):
+    compared = []
+    real_similarity = identity_links.name_similarity
+    real_claims = identity_links.extract_link_claims
+
+    def counting_similarity(first, second):
+        compared.append((first, second))
+        return real_similarity(first, second)
+
+    claim_calls = []
+
+    def counting_claims(application):
+        claim_calls.append(application.application_id)
+        return real_claims(application)
+
+    monkeypatch.setattr(identity_links, "name_similarity", counting_similarity)
+    monkeypatch.setattr(identity_links, "extract_link_claims", counting_claims)
+
+    def build(application_id, name, company, text, index):
+        application = application_factory(
+            application_id=application_id,
+            name=name,
+            email=f"user{index}@example.com",
+            phone=f"90000{index:05d}",
+            projects=[Project(name="Portfolio", description=text)],
+        )
+        application.candidate.experience = [Experience(company=company, title="Engineer", start="2022-07", end="2025-01")]
+        return application
+
+    store = InMemoryApplicationStore()
+    for index in range(200):
+        store.save(build(f"noise-{index}", f"Person{index} Surname{index}", f"Firm {index}", f"Studied at nowhere {index}", index), stored_decision(f"noise-{index}"))
+    store.save(build("twin", "Priya Raman", "Analytical Engines", "https://github.com/shared-dev B.Tech from Rajalakshmi Engineering College, graduated 2022", 900), stored_decision("twin"))
+    claim_calls.clear()
+    current = build("current", "Raman Priya", "Analytical Engines", "https://github.com/shared-dev B.Tech from Rajalakshmi Engineering College, graduated 2022", 901)
+    decision = evaluate(current, job_factory(), store, Config())
+    codes = {item.code for item in decision.reasons}
+    assert {"LINK_REUSE", "FUZZY_IDENTITY"} <= codes
+    assert {pair[1] for pair in compared} == {"Priya Raman"}
+    assert set(claim_calls) - {"current"} == {"twin"}
+

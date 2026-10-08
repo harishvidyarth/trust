@@ -8,105 +8,252 @@
 <style>
 :root {
   color-scheme: light;
-  --bg: #f3f5f0; --surface: #ffffff; --ink: #17231c; --muted: #56635b; --line: #ccd4ce;
-  --accent: #145c3d; --accent-strong: #0b452d; --accent-soft: #dcece3;
-  --pass: #176b43; --pass-soft: #d7eee1; --verify: #855100; --verify-soft: #f8e9bd;
-  --review: #9c2f28; --review-soft: #f6dbd8; --shadow: 0 12px 36px rgba(22, 40, 30, 0.08);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bg: #fbfaf7; --surface: #ffffff; --ink: #1c1c1a; --muted: #66645c; --rule: #dcd8cc;
+  --navy: #1f3556; --navy-dark: #15253f;
+  --pass: #1d6a3a; --verify: #8a5a00; --review: #b3261e;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --serif: Georgia, "Times New Roman", serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.5; }
-header { background: var(--surface); border-bottom: 1px solid var(--line); padding: 18px 24px; display: flex; gap: 16px; align-items: center; justify-content: space-between; }
-header h1 { margin: 0; font-size: 1.1rem; }
-header a { color: var(--accent); font-weight: 600; }
-main { max-width: 1180px; margin: 0 auto; padding: 32px 24px 64px; }
-h2 { font-size: 1.9rem; margin: 0 0 6px; letter-spacing: -0.01em; }
-.lede { color: var(--muted); margin: 0 0 24px; max-width: 70ch; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 22px; margin-bottom: 20px; }
-.grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; }
-input[type=text], input[type=number], input[type=file] { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; font: inherit; background: #fff; color: var(--ink); }
-input:focus-visible, button:focus-visible { outline: 3px solid #7fc4a0; outline-offset: 2px; }
-.actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
-button { font: inherit; font-weight: 700; padding: 11px 18px; border-radius: 10px; border: 1px solid var(--accent); cursor: pointer; background: #fff; color: var(--accent); }
-button.primary { background: var(--accent); color: #fff; }
-button:disabled { opacity: 0.55; cursor: not-allowed; }
-.status { margin-top: 12px; min-height: 1.4em; color: var(--muted); }
+body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.6; font-size: 16px; }
+a { color: var(--navy); }
+:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+.bar-top { border-bottom: 1px solid var(--rule); background: var(--surface); }
+.bar-top > div { max-width: 980px; margin: 0 auto; padding: 14px 24px; display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+.bar-top strong { font-family: var(--serif); font-size: 1.15rem; }
+.bar-top span { color: var(--muted); font-size: 0.85rem; margin-left: 10px; }
+main { max-width: 980px; margin: 0 auto; padding: 40px 24px 80px; }
+.hero h1 { font-family: var(--serif); font-weight: 700; font-size: clamp(1.8rem, 3.6vw, 2.5rem); line-height: 1.18; margin: 0 0 12px; max-width: 24ch; }
+.hero p { margin: 0; color: var(--muted); max-width: 64ch; }
+.steps { display: flex; gap: 28px; margin: 30px 0 6px; padding: 0 0 0; list-style: none; border-bottom: 1px solid var(--rule); }
+.steps li { padding: 0 0 10px; color: var(--muted); font-size: 0.9rem; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: default; }
+.steps li b { font-family: var(--mono); font-weight: 500; margin-right: 8px; }
+.steps li.active { color: var(--ink); border-bottom-color: var(--navy); font-weight: 600; }
+.steps li.done, .steps li.reach { cursor: pointer; color: var(--navy); }
+.status { margin: 12px 0 22px; color: var(--muted); font-size: 0.9rem; min-height: 1.4em; }
 .status.error { color: var(--review); font-weight: 600; }
-.cols { display: grid; gap: 18px; grid-template-columns: 1fr 1fr; }
-@media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
-.pane h3 { margin: 0 0 4px; font-size: 1rem; }
-.pane p.sub { margin: 0 0 10px; color: var(--muted); font-size: 0.88rem; }
-pre { margin: 0; white-space: pre-wrap; word-break: break-word; font: 0.84rem/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; background: #fbfcf8; border: 1px solid var(--line); border-radius: 12px; padding: 14px; max-height: 360px; overflow: auto; }
-mark.hidden { background: var(--review-soft); color: var(--review); border-radius: 4px; padding: 0 2px; font-weight: 700; }
-.bars { display: grid; gap: 14px; }
-.bar-row { display: grid; grid-template-columns: 220px 1fr 56px; gap: 12px; align-items: center; }
-@media (max-width: 640px) { .bar-row { grid-template-columns: 1fr; } }
-.track { background: #e8eee9; border-radius: 999px; height: 16px; overflow: hidden; }
-.fill { height: 100%; border-radius: 999px; background: var(--review); }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 22px; margin-bottom: 18px; }
+.panel h2 { font-family: var(--serif); font-size: 1.25rem; margin: 0 0 4px; }
+.panel .sub { margin: 0 0 18px; color: var(--muted); font-size: 0.92rem; }
+.label { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.upload-grid { display: grid; gap: 22px; grid-template-columns: 1.25fr 1fr; align-items: stretch; }
+@media (max-width: 820px) { .upload-grid { grid-template-columns: 1fr; } }
+.left { display: flex; flex-direction: column; gap: 16px; }
+.drop { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; flex: 1; min-height: 190px; border: 1px dashed #a9a597; border-radius: 4px; background: var(--bg); padding: 24px 20px; text-align: center; cursor: pointer; }
+.drop:hover, .drop.over { border-color: var(--navy); background: #f3f5f9; }
+.drop strong { display: block; font-weight: 600; }
+.drop .hint { color: var(--muted); font-size: 0.88rem; margin-top: 4px; }
+.drop .file { margin-top: 12px; font-family: var(--mono); font-size: 0.82rem; color: var(--navy); border-bottom: 1px solid var(--navy); }
+.drop input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.chip-btn { font: inherit; font-size: 0.86rem; padding: 7px 12px; border: 1px solid var(--rule); border-radius: 4px; background: var(--surface); color: var(--ink); cursor: pointer; }
+.chip-btn:hover { border-color: var(--navy); color: var(--navy); }
+.chip-btn.bad:hover { border-color: var(--review); color: var(--review); }
+.fields { display: flex; flex-direction: column; gap: 14px; border: 1px solid var(--rule); border-radius: 4px; padding: 18px; background: var(--bg); }
+.field { display: flex; flex-direction: column; gap: 5px; }
+label { font-size: 0.82rem; font-weight: 600; }
+input[type=text], input[type=number] { width: 100%; padding: 9px 10px; border: 1px solid var(--rule); border-radius: 4px; font: inherit; background: var(--surface); color: var(--ink); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.style-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin-bottom: 10px; }
+.style-label { font-family: var(--serif); font-size: 1.4rem; font-weight: 700; }
+.style-list { margin: 6px 0; font-size: 0.9rem; }
+.style-list ul { margin: 4px 0 0; padding-left: 18px; }
+.style-list .muted { color: var(--muted); }
+.style-note { margin: 10px 0 0; color: var(--muted); font-size: 0.84rem; border-top: 1px solid var(--rule); padding-top: 10px; }
+.top-right { display: flex; align-items: baseline; gap: 18px; }
+.mini { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-family: var(--mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); cursor: pointer; }
+.mini input { width: auto; margin: 0; accent-color: var(--navy); }
+button.primary, button.secondary { font: inherit; font-weight: 600; padding: 10px 18px; border-radius: 4px; border: 1px solid var(--navy); cursor: pointer; }
+button.primary { background: var(--navy); color: #fff; }
+button.primary:hover:not(:disabled) { background: var(--navy-dark); }
+button.secondary { background: var(--surface); color: var(--navy); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+.note { border: 1px solid var(--rule); border-left: 3px solid var(--navy); background: var(--surface); padding: 12px 16px; margin-bottom: 18px; border-radius: 4px; }
+.note.alert { border-left-color: var(--review); }
+.note.ok { border-left-color: var(--pass); }
+.compare { display: grid; gap: 26px; grid-template-columns: 1fr 1fr; }
+@media (max-width: 760px) { .compare { grid-template-columns: 1fr; } }
+.meter-block h3 { margin: 0; font-size: 0.95rem; }
+.meter-block p { margin: 0 0 10px; color: var(--muted); font-size: 0.85rem; }
+.meter { display: flex; align-items: center; gap: 14px; }
+.track { flex: 1; height: 8px; background: #ebe8de; border-radius: 2px; overflow: hidden; }
+.fill { height: 100%; width: 0; transition: width 0.6s ease; background: var(--navy); }
+.fill.ats { background: var(--review); }
 .fill.human { background: var(--pass); }
-.chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-.chip { background: var(--review-soft); color: var(--review); border-radius: 999px; padding: 5px 12px; font-size: 0.8rem; font-weight: 700; }
-.badge { display: inline-block; padding: 6px 14px; border-radius: 999px; font-weight: 800; font-size: 0.9rem; }
-.badge.PASS_TO_ATS { background: var(--pass-soft); color: var(--pass); }
-.badge.ADDITIONAL_VERIFICATION { background: var(--verify-soft); color: var(--verify); }
-.badge.MANUAL_REVIEW { background: var(--review-soft); color: var(--review); }
-.reason { border-top: 1px solid var(--line); padding: 10px 0; }
-.reason strong { font-size: 0.85rem; }
-.reason span { display: block; color: var(--muted); font-size: 0.88rem; }
+.meter strong { font-family: var(--serif); font-size: 1.8rem; min-width: 3.4ch; text-align: right; }
+.panes { display: grid; gap: 18px; grid-template-columns: 1fr 1fr; }
+@media (max-width: 860px) { .panes { grid-template-columns: 1fr; } }
+.panes .panel { display: flex; flex-direction: column; margin-bottom: 18px; }
+.pane-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 10px; min-height: 28px; }
+.pane-head .label { white-space: nowrap; }
+.pane-head h3 { margin: 0; font-size: 1rem; }
+.tag.hidden { color: var(--review); }
+pre { margin: 0; flex: 1; white-space: pre-wrap; word-break: break-word; font: 0.8rem/1.65 var(--mono); background: var(--bg); border: 1px solid var(--rule); border-radius: 4px; padding: 14px; min-height: 240px; max-height: 360px; overflow: auto; }
+mark.hidden { background: #f6d9d5; color: #8a1d16; padding: 0 2px; }
+.decision-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 14px 28px; }
+.route { font-family: var(--serif); font-size: 1.9rem; font-weight: 700; }
+.route.PASS_TO_ATS { color: var(--pass); }
+.route.ADDITIONAL_VERIFICATION { color: var(--verify); }
+.route.MANUAL_REVIEW { color: var(--review); }
+.score-line { font-family: var(--mono); color: var(--muted); }
+.score-line b { color: var(--ink); font-size: 1.3rem; }
+.scorebar { height: 8px; background: #ebe8de; border-radius: 2px; overflow: hidden; margin: 14px 0 10px; }
+.scorebar .fill { transition: width 0.8s ease; }
+.outcome { font-weight: 600; margin: 0 0 4px; }
+.summary { color: var(--muted); margin: 0 0 8px; font-size: 0.92rem; }
+.reasons { margin-top: 14px; border-top: 1px solid var(--rule); }
+.reason { padding: 14px 0; border-bottom: 1px solid var(--rule); display: grid; grid-template-columns: 1fr auto; gap: 4px 18px; }
+.reason code { font-family: var(--mono); font-weight: 600; font-size: 0.84rem; }
+.reason .w { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); text-align: right; }
+.reason .sev-high, .reason .sev-critical { color: var(--review); }
+.reason .sev-medium { color: var(--verify); }
+.reason .sev-low { color: var(--navy); }
+.reason p { grid-column: 1 / -1; margin: 0; font-size: 0.92rem; }
+.reason .why { color: var(--muted); }
+button, .chip-btn, .drop, .steps li, input { transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease; }
+button:active:not(:disabled), .chip-btn:active { transform: scale(0.98); }
+.chip-btn:hover, button.secondary:hover:not(:disabled) { box-shadow: 0 1px 0 rgba(28, 28, 26, 0.08); }
+input:focus { border-color: var(--navy); }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes slide { from { left: -35%; } to { left: 100%; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.enter { animation: rise 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.reason { animation: rise 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.busy { position: relative; height: 3px; background: var(--rule); overflow: hidden; margin: 0 0 18px; border-radius: 2px; }
+.busy::after { content: ""; position: absolute; top: 0; bottom: 0; width: 35%; background: var(--navy); animation: slide 0.9s ease-in-out infinite; }
+.is-busy::before { content: ""; display: inline-block; width: 12px; height: 12px; margin-right: 8px; vertical-align: -2px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; }
+.samples { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; max-height: 280px; overflow-y: auto; padding-right: 4px; }
+.sample-group .group-name { display: block; font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.sample-group .chips { margin-top: 5px; }
+.sample-note { margin: 10px 0 0; padding: 8px 12px; border-left: 3px solid var(--navy); background: var(--surface); font-size: 0.86rem; color: var(--muted); }
+.chip-btn.picked { border-color: var(--navy); color: var(--navy); background: #f3f5f9; }
+.drop.has-file { border-style: solid; border-color: var(--navy); background: #f3f5f9; }
+[tabindex="-1"]:focus { outline: none; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 [hidden] { display: none !important; }
+footer { color: var(--muted); font-size: 0.82rem; margin-top: 12px; }
 </style>
 </head>
 <body>
-<header>
-  <h1>Resume X-ray</h1>
-  <a href="../dashboard/index.html">Open recruiter dashboard</a>
+<header class="bar-top">
+  <div>
+    <p style="margin:0"><strong>Resume X-ray</strong><span>pre-ATS application firewall</span></p>
+    <div class="top-right">
+      <label class="mini" for="testMode" title="On: the resume is checked against stored applications but not remembered, so repeat tests stay clean. Off: it is stored, and a repeat is flagged as a duplicate."><input id="testMode" type="checkbox" checked>Test mode</label>
+    </div>
+  </div>
 </header>
 <main>
-  <h2>What a human sees is not always what an ATS reads.</h2>
-  <p class="lede">Upload a resume. We read it the way a keyword-ranking ATS parser does, then the way a person does, and show the difference. Anything hidden from people but visible to the parser is highlighted.</p>
+  <section class="hero" id="hero">
+    <h1>What a person sees is not always what an ATS reads.</h1>
+    <p>Upload a resume. We read it the way a keyword-ranking ATS parser does, then the way a person does, and list every difference before the application reaches a recruiter.</p>
+  </section>
 
-  <section class="card" aria-labelledby="job-title">
-    <h3 id="job-title" style="margin-top:0">Job requirements and resume</h3>
-    <div class="grid">
-      <div><label for="must">Must-have skills (comma separated)</label><input id="must" type="text" value="python, sql, docker"></div>
-      <div><label for="nice">Nice-to-have skills</label><input id="nice" type="text" value="kubernetes, aws"></div>
-      <div><label for="years">Minimum years of experience</label><input id="years" type="number" min="0" step="0.5" value="2"></div>
-      <div><label for="file">Resume file (PDF, DOCX or TXT, up to 5 MB)</label><input id="file" type="file" accept=".pdf,.docx,.txt"></div>
+  <ol class="steps" aria-label="Progress">
+    <li id="s1" class="active" tabindex="0"><b>1</b>Upload</li>
+    <li id="s2" tabindex="0"><b>2</b>X-ray</li>
+    <li id="s3" tabindex="0"><b>3</b>Decision</li>
+  </ol>
+  <div id="busy" class="busy" hidden></div>
+  <div id="status" class="status" role="status" aria-live="polite">Choose a file or a sample to begin.</div>
+
+  <section class="panel" id="step1" aria-labelledby="up-title">
+    <h2 id="up-title">Choose a resume</h2>
+    <p class="sub">PDF, DOCX or TXT, up to 5 MB. Use sample or made-up resumes only.</p>
+    <div class="upload-grid">
+      <div class="left">
+        <label class="drop" id="drop" for="file" tabindex="0">
+          <strong>Drop a resume here, or choose a file</strong>
+          <span class="hint">The text layer and the visible layout are both read</span>
+          <span class="file" id="fileName" hidden></span>
+          <input id="file" type="file" accept=".pdf,.docx,.txt">
+        </label>
+        <div>
+          <span class="label">Or try a sample</span>
+          <div id="samples" class="samples"></div>
+          <p id="sampleNote" class="sample-note" hidden></p>
+        </div>
+      </div>
+      <div class="fields">
+        <span class="label">Job requirements</span>
+        <div class="field"><label for="must">Must-have skills, comma separated</label><input id="must" type="text" value="python, sql, docker"></div>
+        <div class="field"><label for="nice">Nice-to-have skills</label><input id="nice" type="text" value="kubernetes, aws"></div>
+        <div class="field"><label for="years">Minimum years of experience</label><input id="years" type="number" min="0" step="0.5" value="2"></div>
+      </div>
     </div>
     <div class="actions">
-      <button id="inspect" class="primary" type="button">Inspect resume</button>
-      <button id="submit" type="button" disabled>Send through the firewall</button>
+      <button id="inspect" class="primary" type="button" disabled>Inspect resume</button>
+      <button id="reset" class="secondary" type="button">Start over</button>
     </div>
-    <div id="status" class="status" role="status" aria-live="polite"></div>
   </section>
 
-  <section id="results" hidden>
-    <div class="card">
-      <h3 style="margin-top:0">Naive ATS ranking score</h3>
-      <div class="bars">
-        <div class="bar-row"><span>What the ATS parser reads</span><div class="track"><div id="atsFill" class="fill"></div></div><strong id="atsScore"></strong></div>
-        <div class="bar-row"><span>What a human reads</span><div class="track"><div id="humanFill" class="fill human"></div></div><strong id="humanScore"></strong></div>
+  <section id="results" hidden aria-live="polite">
+    <div id="banner" class="note" hidden></div>
+    <div class="panel">
+      <h2>How a keyword-matching ATS would rank it</h2>
+      <p class="sub">A simple ATS counts job keywords anywhere in the text layer. Hidden text counts too.</p>
+      <div class="compare">
+        <div class="meter-block"><h3>What the ATS parser reads</h3><p>Everything in the file</p><div class="meter"><div class="track"><div id="atsFill" class="fill ats"></div></div><strong id="atsScore">0</strong></div></div>
+        <div class="meter-block"><h3>What a person reads</h3><p>Only what is visible on the page</p><div class="meter"><div class="track"><div id="humanFill" class="fill human"></div></div><strong id="humanScore">0</strong></div></div>
       </div>
-      <div id="chips" class="chips" aria-label="Integrity findings"></div>
     </div>
-    <div class="cols">
-      <div class="card pane"><h3>What a human sees</h3><p class="sub">Visible text only.</p><pre id="human"></pre></div>
-      <div class="card pane"><h3>What the ATS parser reads</h3><p class="sub">Everything in the text layer. Hidden content is highlighted.</p><pre id="ats"></pre></div>
+    <div class="panel" id="styleCard">
+      <div class="pane-head"><h3>Writing-style context</h3><span class="label">Not part of the decision</span></div>
+      <div class="style-head"><span id="styleLabel" class="style-label"></span><span id="styleMeta" class="score-line"></span></div>
+      <div id="stylePatterns" class="style-list"></div>
+      <div id="styleHuman" class="style-list"></div>
+      <p class="style-note" id="styleNote"></p>
+    </div>
+    <div class="panes">
+      <div class="panel"><div class="pane-head"><h3>What a person sees</h3><span class="label">Visible text</span></div><pre id="human" tabindex="0"></pre></div>
+      <div class="panel"><div class="pane-head"><h3>What the ATS parser reads</h3><span class="label tag" id="parserTag">Full text layer</span></div><pre id="ats" tabindex="0"></pre></div>
+    </div>
+    <div class="actions" style="margin: 0 0 20px">
+      <button id="back2" class="secondary" type="button">Back</button>
+      <button id="submit" class="primary" type="button" disabled>Send through the firewall</button>
     </div>
   </section>
 
-  <section id="decision" class="card" hidden aria-live="polite">
-    <h3 style="margin-top:0">Firewall decision</h3>
-    <p><span id="route" class="badge"></span> &nbsp; Trust score <strong id="score"></strong>/100</p>
-    <p id="summary" class="lede" style="margin-bottom:8px"></p>
-    <div id="reasons"></div>
+  <section id="decision" class="panel" hidden aria-live="polite">
+    <span class="label">Firewall decision</span>
+    <div class="decision-head" style="margin-top:6px">
+      <span id="route" class="route"></span>
+      <span class="score-line"><b id="score">0</b> / 100 trust score</span>
+    </div>
+    <div class="scorebar"><div id="scoreFill" class="fill"></div></div>
+    <p id="outcome" class="outcome"></p>
+    <p id="summary" class="summary"></p>
+    <div id="reasons" class="reasons"></div>
+    <div class="actions">
+      <button id="back3" class="secondary" type="button">Back to X-ray</button>
+      <button id="again" class="primary" type="button">Check another resume</button>
+    </div>
   </section>
+
+  <footer>Runs against your local firewall API. Nothing is rejected automatically; held-back applications go to a person with the reasons shown.</footer>
 </main>
 <script>
 const API = "http://localhost:8000";
 const $ = (id) => document.getElementById(id);
 const ROUTES = { PASS_TO_ATS: "Pass to ATS", ADDITIONAL_VERIFICATION: "Additional verification", MANUAL_REVIEW: "Manual review" };
+const COLORS = { PASS_TO_ATS: "#1d6a3a", ADDITIONAL_VERIFICATION: "#8a5a00", MANUAL_REVIEW: "#b3261e" };
+const WHY = {
+  RESUME_HIDDEN_TEXT: "Text is hidden from people (for example near-white or tiny) but a parser still reads it.",
+  RESUME_PROMPT_INJECTION: "The resume contains instructions aimed at an AI screener, such as asking to be ranked first.",
+  RESUME_KEYWORD_STUFFING: "Job keywords repeat far more often than real experience would explain.",
+  RESUME_PARSE_DIVERGENCE: "A meaningful part of what the ATS reads cannot be seen on the page.",
+  QUAL_MISSING_MUST_HAVE: "Some required skills are not listed. This is a fit signal, not evidence of fraud.",
+  QUAL_UNDER_EXPERIENCE: "Stated experience is below the minimum. This is a fit signal, not evidence of fraud.",
+  TIMELINE_INVALID: "A date is impossible or inconsistent, for example an end before a start.",
+  TIMELINE_OVERLAP: "Two full-time roles overlap for a long stretch.",
+  DUP_EMAIL: "The same email, ignoring dots and plus tags, appeared in an earlier application.",
+  DUP_PHONE: "The same phone number appeared in an earlier application.",
+  DUP_SAME_JOB: "The same person already applied to this job.",
+  DUP_RESUME_NEAR: "The resume is a near copy of one from a different person."
+};
+const SAMPLE_TYPES = { pdf: "application/pdf", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", txt: "text/plain" };
+const state = { file: null, inspected: false, decided: false, step: 1, reach: 1, available: 1 };
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -121,6 +268,52 @@ function jobJson() {
 function setStatus(message, isError) {
   $("status").textContent = message;
   $("status").className = isError ? "status error" : "status";
+}
+function showStep(active) {
+  state.step = active;
+  state.reach = Math.max(state.reach, active);
+  $("hero").hidden = active !== 1;
+  $("step1").hidden = active !== 1;
+  $("results").hidden = active !== 2;
+  $("decision").hidden = active !== 3;
+  ["s1", "s2", "s3"].forEach((id, index) => {
+    const item = $(id);
+    const number = index + 1;
+    if (number === active) item.className = "active";
+    else if (number < active) item.className = "done";
+    else item.className = number <= state.reach && number <= state.available ? "reach" : "";
+  });
+  window.scrollTo(0, 0);
+  requestAnimationFrame(() => window.scrollTo(0, 0));
+  const shown = [$("step1"), $("results"), $("decision")][active - 1];
+  shown.classList.remove("enter");
+  void shown.offsetWidth;
+  shown.classList.add("enter");
+  shown.setAttribute("tabindex", "-1");
+  shown.focus({ preventScroll: true });
+}
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function setBusy(on, button) {
+  $("busy").hidden = !on;
+  if (button) {
+    button.classList.toggle("is-busy", on);
+    button.setAttribute("aria-busy", on ? "true" : "false");
+  }
+  document.querySelectorAll("[data-sample]").forEach((chip) => { chip.disabled = on; });
+}
+function goStep(number) {
+  if (number === 1 || (number === 2 && state.inspected) || (number === 3 && state.decided)) showStep(number);
+}
+function percent(value) { return Math.max(0, Math.min(100, value)); }
+function animateNumber(node, target, decimals) {
+  const start = performance.now();
+  const duration = 600;
+  function tick(now) {
+    const progress = Math.min(1, (now - start) / duration);
+    node.textContent = (target * progress).toFixed(decimals);
+    if (progress < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
 }
 function highlight(container, text, spans) {
   container.textContent = "";
@@ -149,6 +342,38 @@ function highlight(container, text, spans) {
     position = end;
   }
   if (position < text.length) container.append(document.createTextNode(text.slice(position)));
+  return merged.length;
+}
+function renderStyle(style) {
+  const label = $("styleLabel");
+  const patterns = $("stylePatterns");
+  const human = $("styleHuman");
+  patterns.textContent = "";
+  human.textContent = "";
+  if (!style || style.score === null) {
+    label.textContent = "AI-writing likelihood unavailable";
+    $("styleMeta").textContent = "";
+    $("styleNote").textContent = "Not enough text to estimate. This never affects the decision.";
+    return;
+  }
+  label.textContent = "AI-writing likelihood: " + style.label + " (" + style.score + ")";
+  $("styleMeta").textContent = "confidence " + style.confidence + " · " + style.word_count + " words · contribution to trust score: 0";
+  if (style.patterns_found.length) {
+    patterns.append(el("strong", "", "Patterns found"));
+    const list = el("ul");
+    for (const item of style.patterns_found) list.append(el("li", "", item.name + ": " + item.detail));
+    patterns.append(list);
+  } else {
+    patterns.append(el("span", "muted", "No strong writing-style patterns found."));
+  }
+  if (style.human_like_signals.length) {
+    human.append(el("strong", "", "Human-like signals"));
+    const list = el("ul");
+    for (const item of style.human_like_signals) list.append(el("li", "", item));
+    human.append(list);
+  }
+  const short = style.confidence === "low" ? " Confidence is low because the text is short." : "";
+  $("styleNote").textContent = style.disclaimer + short + " Polishing a resume with AI is acceptable. This is shown for recruiter context only and never changes the route.";
 }
 function formFor(file) {
   const data = new FormData();
@@ -157,80 +382,203 @@ function formFor(file) {
   return data;
 }
 async function call(path, data) {
-  const response = await fetch(API + path, { method: "POST", body: data });
+  let response;
+  try {
+    response = await fetch(API + path, { method: "POST", body: data });
+  } catch (error) {
+    throw new Error("The firewall API is not reachable at " + API + ". Start it and try again.");
+  }
   if (!response.ok) {
-    let detail = "request failed (" + response.status + ")";
+    let detail = "Request failed (" + response.status + ")";
     try {
       const body = await response.json();
       if (typeof body.detail === "string") detail = body.detail;
     } catch (error) {
-      detail = "request failed (" + response.status + ")";
+      detail = "Request failed (" + response.status + ")";
     }
     throw new Error(detail);
   }
   return response.json();
 }
-function percent(value) { return Math.max(0, Math.min(100, value)); }
-
-$("inspect").addEventListener("click", async () => {
-  const file = $("file").files[0];
-  if (!file) { setStatus("Choose a resume file first.", true); return; }
+function chooseFile(file) {
+  state.file = file;
+  state.inspected = false;
+  state.decided = false;
+  state.reach = 1;
+  state.available = 1;
+  $("fileName").textContent = file.name;
+  $("fileName").hidden = false;
+  $("drop").classList.add("has-file");
+  document.querySelectorAll("[data-sample]").forEach((chip) => chip.classList.toggle("picked", chip.dataset.sample === file.name));
+  $("inspect").disabled = false;
+  showStep(1);
+  setStatus("Inspecting " + file.name + "...");
+  runInspect();
+}
+async function runInspect() {
+  if (!state.file) { setStatus("Choose a file or a sample first.", true); return; }
   $("inspect").disabled = true;
+  setBusy(true, $("inspect"));
   setStatus("Reading the resume both ways...");
+  const started = performance.now();
   try {
-    const result = await call("/v1/resume/inspect", formFor(file));
-    $("atsFill").style.width = percent(result.naive_ats_score) + "%";
-    $("humanFill").style.width = percent(result.human_view_ats_score) + "%";
-    $("atsScore").textContent = result.naive_ats_score.toFixed(1);
-    $("humanScore").textContent = result.human_view_ats_score.toFixed(1);
+    const result = await call("/v1/resume/inspect", formFor(state.file));
+    await sleep(Math.max(0, 700 - (performance.now() - started)));
+    const ats = result.naive_ats_score;
+    const human = result.human_view_ats_score;
+    const gap = ats - human;
+    $("atsFill").style.width = percent(ats) + "%";
+    $("humanFill").style.width = percent(human) + "%";
+    animateNumber($("atsScore"), ats, 1);
+    animateNumber($("humanScore"), human, 1);
+    renderStyle(result.ai_writing);
     highlight($("human"), result.human_view, []);
-    highlight($("ats"), result.ats_view, result.hidden_spans);
-    const chips = $("chips");
-    chips.textContent = "";
-    if (result.reasons.length === 0) chips.append(el("span", "badge PASS_TO_ATS", "No resume integrity flags"));
-    for (const reason of result.reasons) chips.append(el("span", "chip", reason.code));
-    $("results").hidden = false;
-    $("decision").hidden = true;
+    const hiddenCount = highlight($("ats"), result.ats_view, result.hidden_spans);
+    $("parserTag").className = hiddenCount > 0 ? "label tag hidden" : "label tag";
+    $("parserTag").textContent = hiddenCount > 0 ? "Hidden text found" : "Full text layer";
+    const banner = $("banner");
+    banner.hidden = false;
+    banner.textContent = "";
+    if (gap > 5 || hiddenCount > 0) {
+      banner.className = "note alert";
+      banner.append(el("strong", "", "Gap found. "), document.createTextNode("A keyword-matching ATS would score this resume " + ats.toFixed(1) + ", but a person would score it " + human.toFixed(1) + ". Some content is hidden from people."));
+    } else {
+      banner.className = "note ok";
+      banner.append(el("strong", "", "No gap. "), document.createTextNode("Both views match, so nothing is hidden from a person."));
+    }
+    state.inspected = true;
+    state.available = 2;
     $("submit").disabled = false;
-    setStatus("Done. Compare the two views, then send it through the firewall.");
+    showStep(2);
+    setStatus("Compare the two views, then send the resume through the firewall.");
   } catch (error) {
-    setStatus("Could not inspect: " + error.message, true);
+    setStatus(error.message, true);
   } finally {
+    setBusy(false, $("inspect"));
     $("inspect").disabled = false;
   }
-});
-
-$("submit").addEventListener("click", async () => {
-  const file = $("file").files[0];
-  if (!file) return;
+}
+async function runSubmit() {
+  if (!state.file || !state.inspected) return;
   $("submit").disabled = true;
+  setBusy(true, $("submit"));
   setStatus("Sending through the firewall...");
+  const started = performance.now();
   try {
-    const data = formFor(file);
+    const data = formFor(state.file);
     data.append("device_id", "xray-" + Math.random().toString(36).slice(2, 10));
     data.append("application_id", "xray-" + Date.now());
     data.append("session_seconds", "120");
+    data.append("dry_run", $("testMode").checked ? "true" : "false");
     const decision = await call("/v1/applications/upload", data);
-    $("route").className = "badge " + decision.route;
+    await sleep(Math.max(0, 700 - (performance.now() - started)));
+    const color = COLORS[decision.route] || "#1f3556";
+    const fill = $("scoreFill");
+    fill.style.background = color;
+    fill.style.width = percent(decision.score) + "%";
+    animateNumber($("score"), decision.score, 0);
+    $("route").className = "route " + decision.route;
     $("route").textContent = ROUTES[decision.route] || decision.route;
-    $("score").textContent = decision.score;
+    $("outcome").textContent = decision.route === "PASS_TO_ATS" ? "Delivered to the ATS." : "Held back from the ATS for a person to review.";
     $("summary").textContent = decision.summary;
     const list = $("reasons");
     list.textContent = "";
-    for (const reason of decision.reasons) {
+    if (decision.reasons.length === 0) list.append(el("p", "summary", "No concerns were found."));
+    decision.reasons.forEach((reason, index) => {
       const row = el("div", "reason");
-      row.append(el("strong", "", reason.code + " (weight " + reason.weight + ")"));
-      row.append(el("span", "", reason.detail));
+      row.style.animationDelay = 120 + index * 70 + "ms";
+      row.append(el("code", "sev-" + reason.severity, reason.code), el("span", "w", "weight " + reason.weight), el("p", "", reason.detail));
+      if (WHY[reason.code]) row.append(el("p", "why", WHY[reason.code]));
       list.append(row);
-    }
-    $("decision").hidden = false;
-    setStatus(decision.route === "PASS_TO_ATS" ? "Passed to the ATS." : "Held back from the ATS for a person to review.");
+    });
+    state.decided = true;
+    state.available = 3;
+    showStep(3);
+    setStatus(decision.route === "PASS_TO_ATS" ? "Passed to the ATS." : "Held back for review.");
   } catch (error) {
-    setStatus("Could not submit: " + error.message, true);
+    setStatus(error.message, true);
   } finally {
+    setBusy(false, $("submit"));
     $("submit").disabled = false;
   }
+}
+function reset() {
+  state.file = null;
+  state.inspected = false;
+  state.decided = false;
+  state.reach = 1;
+  state.available = 1;
+  $("file").value = "";
+  $("fileName").hidden = true;
+  $("drop").classList.remove("has-file");
+  document.querySelectorAll("[data-sample]").forEach((chip) => chip.classList.remove("picked"));
+  $("inspect").disabled = true;
+  showStep(1);
+  setStatus("Choose a file or a sample to begin.");
+}
+
+$("file").addEventListener("change", (event) => { if (event.target.files[0]) chooseFile(event.target.files[0]); });
+$("drop").addEventListener("dragover", (event) => { event.preventDefault(); $("drop").classList.add("over"); });
+$("drop").addEventListener("dragleave", () => $("drop").classList.remove("over"));
+$("drop").addEventListener("drop", (event) => {
+  event.preventDefault();
+  $("drop").classList.remove("over");
+  if (event.dataTransfer.files[0]) chooseFile(event.dataTransfer.files[0]);
 });
+$("drop").addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); $("file").click(); } });
+async function loadSample(name, note) {
+  setStatus("Loading sample...");
+  try {
+    const response = await fetch("./samples/" + name);
+    if (!response.ok) throw new Error("sample missing");
+    const blob = await response.blob();
+    const noteBox = $("sampleNote");
+    noteBox.textContent = note ? "Expect: " + note : "";
+    noteBox.hidden = !note;
+    chooseFile(new File([blob], name, { type: SAMPLE_TYPES[name.split(".").pop()] || "application/octet-stream" }));
+  } catch (error) {
+    setStatus("Could not load the sample file.", true);
+  }
+}
+function labelFor(name) {
+  return name.replace(/\.[a-z]+$/, "").replace(/_/g, " ");
+}
+async function buildSamples() {
+  const box = $("samples");
+  try {
+    const response = await fetch("./samples/index.json");
+    if (!response.ok) throw new Error("no index");
+    const groups = await response.json();
+    for (const group of groups) {
+      const section = el("div", "sample-group");
+      section.append(el("span", "group-name", group.group));
+      const chips = el("div", "chips");
+      for (const item of group.samples) {
+        const chip = el("button", "chip-btn", labelFor(item.file));
+        chip.type = "button";
+        chip.dataset.sample = item.file;
+        chip.addEventListener("click", () => loadSample(item.file, item.note));
+        chips.append(chip);
+      }
+      section.append(chips);
+      box.append(section);
+    }
+  } catch (error) {
+    box.append(el("p", "sub", "Sample resumes are unavailable. Upload your own file instead."));
+  }
+}
+buildSamples();
+$("inspect").addEventListener("click", runInspect);
+$("submit").addEventListener("click", runSubmit);
+$("reset").addEventListener("click", reset);
+$("again").addEventListener("click", reset);
+$("back2").addEventListener("click", () => showStep(1));
+$("back3").addEventListener("click", () => showStep(2));
+["s1", "s2", "s3"].forEach((id, index) => {
+  $(id).addEventListener("click", () => goStep(index + 1));
+  $(id).addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); goStep(index + 1); } });
+});
+showStep(1);
 </script>
 </body>
 </html>
