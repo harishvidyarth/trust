@@ -1,0 +1,13 @@
+.venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+.pytest_cache/
+**/.pytest_cache/
+*.py[cod]
+.DS_Store
+.env
+.env.*
+*.log
+node_modules/
+eval/data/*.jsonl

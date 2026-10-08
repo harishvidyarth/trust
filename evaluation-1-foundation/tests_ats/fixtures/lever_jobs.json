@@ -1,0 +1,17 @@
+[
+  {
+    "id": "posting-201",
+    "text": "Full Stack Engineer",
+    "descriptionPlain": "We build reliable products.",
+    "lists": [
+      {
+        "text": "What you need",
+        "content": "<ul><li>3-5 years using TypeScript and React</li><li>Strong SQL skills</li></ul>"
+      },
+      {
+        "text": "Bonus points",
+        "content": "<ul><li>Experience with GraphQL or AWS</li></ul>"
+      }
+    ]
+  }
+]
