@@ -15,6 +15,35 @@ DOI_RE = re.compile(
     r"(?:https?://(?:dx\.)?doi\.org/|\bdoi\s*:\s*)(?P<doi>10\.\d{4,9}/[-._;()/:A-Z0-9]+)",
     re.IGNORECASE,
 )
+CODE_LINK_RE = re.compile(
+    r"(?<![A-Za-z0-9.-])(?:https?://)?(?:[A-Za-z0-9-]+\.)*github[A-Za-z0-9-]*(?:\.[A-Za-z0-9-]+)+(?:/[^\s<>|,;)]*)?",
+    re.IGNORECASE,
+)
+LABELED_CODE_RE = re.compile(r"^\s*(?:github|git\s*hub)\s*(?:profile|link|url)?\s*[:\-]\s*(?P<value>\S+)", re.IGNORECASE | re.MULTILINE)
+REAL_CODE_HOSTS = {"github.com", "www.github.com"}
+REAL_CODE_SUFFIXES = (".github.io", ".githubusercontent.com", ".github.dev")
+
+
+def _is_real_code_host(host: str) -> bool:
+    return host in REAL_CODE_HOSTS or host == "github.io" or host.endswith(REAL_CODE_SUFFIXES)
+
+
+def find_invalid_code_links(source: str) -> list[str]:
+    found: list[str] = []
+    for match in CODE_LINK_RE.finditer(source):
+        text = match.group(0).rstrip(".,;:)]}")
+        host = re.sub(r"^https?://", "", text, flags=re.IGNORECASE).split("/")[0].lower()
+        if not _is_real_code_host(host) and text not in found:
+            found.append(text)
+    for match in LABELED_CODE_RE.finditer(source):
+        value = match.group("value").rstrip(".,;:)]}")
+        looks_like_link = "/" in value or "." in value
+        host = re.sub(r"^https?://", "", value, flags=re.IGNORECASE).split("/")[0].lower()
+        if looks_like_link and not _is_real_code_host(host) and value not in found:
+            found.append(value)
+    return found[:5]
+
+
 URL_RE = re.compile(r"https?://[^\s<>]+", re.IGNORECASE)
 PORTFOLIO_RE = re.compile(
     r"\b(?:portfolio|personal\s+(?:site|website)|website)\s*[:\-]\s*(?P<url>https?://[^\s<>]+)",
@@ -135,4 +164,5 @@ def extract_claims(text: str, candidate: Candidate) -> Claims:
         portfolio_url=portfolio_url,
         employers=list(dict.fromkeys(employers)),
         employer_domains=employer_domains,
+        invalid_code_links=find_invalid_code_links(source),
     )

@@ -26,7 +26,7 @@ Each folder is self-contained and runnable. A later folder includes everything i
 | Folder | Theme | Status |
 |---|---|---|
 | [`evaluation-1-foundation`](evaluation-1-foundation) | A working pre-ATS firewall: engine, API, resume integrity, Resume X-ray with 23 samples, ATS connectors, security scans | Complete, 117 tests passing |
-| [`evaluation-2-intelligence`](evaluation-2-intelligence) | AI reasoning and measurement: many small checks, model assisted parsing that never decides a route, login and roles, optional Redis, one console | Complete, 1,038 tests passing (4 skipped) |
+| [`evaluation-2-intelligence`](evaluation-2-intelligence) | AI reasoning and measurement: many small checks, model assisted parsing that never decides a route, login and roles, optional Redis, one console | Complete, 1,171 tests passing (4 skipped) |
 | [`evaluation-3-network`](evaluation-3-network) | Cross-employer memory: federated fingerprints with signed reports and a three-node demo | Complete, 216 tests passing |
 
 Rounds 2 and 3 are older snapshots that predate the latest Round 1 changes. They are being rebuilt on top of the final Round 1. Start with [`evaluation-1-foundation/README.md`](evaluation-1-foundation/README.md). Every folder has a `PLAN.md` describing its incremental steps and what was verified.

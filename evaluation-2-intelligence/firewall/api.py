@@ -16,13 +16,27 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from firewall.auth import bind_application, overrides_for
+from firewall.auth.records import OUTCOME_TTL_S, OutcomeStore
 from firewall.auth.deps import Principal
 from firewall.auth.service import get_service
 from firewall.auth_routes import build_auth_router
+from firewall.applicant_routes import (
+    ApplicantService,
+    apply_typed,
+    build_applicant_router,
+    context_block,
+    has_typed_values,
+    parse_typed_form,
+    require_identity,
+    status_for,
+    synthesize_resume,
+)
 from firewall.candidate_routes import build_candidate_router, build_replace_links
 from firewall.config import load_config
 from firewall.connectors.greenhouse import GreenhouseWebhook, adapt
 from firewall.connectors.mock_ats import MockATS
+from firewall.check_routes import build_check_router
+from firewall.claim_routes import build_claim_router
 from firewall.delivery import build_delivery_from_env
 from firewall.delivery_routes import build_delivery_router, build_inbox_router
 from firewall.guards import application_access, auth_enforced, guard, session_cookie_present
@@ -46,6 +60,8 @@ from firewall.resume.style import analyze_style
 from firewall.enrichment import runner as enrichment_runner
 from firewall.redis_layer import (
     JsonCache,
+    link_from_env,
+    build_cache,
     build_counter,
     build_intake_repository,
     build_llm_client,
@@ -54,6 +70,7 @@ from firewall.redis_layer import (
     build_store,
     redis_status,
 )
+from firewall.redis_layer.cache import RedisJsonCache
 from firewall.webhooks import build_router
 
 
@@ -72,6 +89,10 @@ MAX_WEBHOOK_BYTES = 1_048_576
 MAX_UPLOAD_BYTES = 5_242_880
 UPLOAD_SUFFIXES = frozenset({".pdf", ".docx", ".txt"})
 REPLACE_LINKS = build_replace_links()
+UPLOAD_COUNTER = build_counter()
+UPLOAD_LIMIT = 20
+UPLOAD_WINDOW_S = 3600
+FORM_TTL_S = 90 * 24 * 3600
 OPEN_PATHS = frozenset({"/healthz"})
 UNKNOWN_IPS = frozenset({"", "0.0.0.0", "unknown"})
 
@@ -143,7 +164,17 @@ def _remember(application: Application, resume_text: str | None) -> None:
 
 def _resume_text_for(application_id: str) -> str:
     context = CONTEXT.get(f"ctx:{application_id}")
-    return str(context["resume_text"]) if context else ""
+    text = str(context["resume_text"]) if context else ""
+    if text.strip():
+        return text
+    record = APPLICANTS.record(application_id)
+    fields = record.get("fields") if record else None
+    if not isinstance(fields, dict):
+        return text
+    try:
+        return "\n".join(part for part in (synthesize_resume(fields), context_block(fields)) if part)
+    except (KeyError, TypeError):
+        return text
 
 
 def _candidate_for(application_id: str) -> Candidate | None:
@@ -175,6 +206,7 @@ def _evaluate_and_forward(
     dry_run: bool = False,
     resume_text: str | None = None,
     ignore_application_ids: tuple[str, ...] = (),
+    context_text: str | None = None,
 ) -> Decision:
     already_decided = STORE.get_decision(application.application_id) is not None
     decision = evaluate(
@@ -190,7 +222,7 @@ def _evaluate_and_forward(
     )
     if dry_run:
         return decision
-    _remember(application, resume_text)
+    _remember(application, context_text if context_text is not None else resume_text)
     if not already_decided:
         try:
             DELIVERY.deliver(decision.route, application)
@@ -253,35 +285,121 @@ def _parse_job(job_json: str) -> JobRequirements:
         raise RequestValidationError(error.errors()) from error
 
 
-@app.post("/v1/applications/upload", response_model=Decision)
+def _form_cache() -> JsonCache:
+    link = link_from_env()
+    if link is not None:
+        return RedisJsonCache(link, "applicant_form", default_ttl_s=FORM_TTL_S)
+    return JsonCache(max_entries=100_000, default_ttl_s=FORM_TTL_S)
+
+
+FORM_CACHE = _form_cache()
+CLAIM_CACHE = build_cache("claimcheck")
+OUTCOMES = OutcomeStore(build_cache("outcomes", default_ttl_s=OUTCOME_TTL_S), time.time)
+APPLICANTS = ApplicantService(
+    form_cache=FORM_CACHE,
+    claim_cache=CLAIM_CACHE,
+    decision_for=STORE.get_decision,
+    text_for=_resume_text_for,
+    candidate_for=_candidate_for,
+    owner_of=lambda application_id: get_service().ownership.owner(application_id),
+    audit=lambda: get_service().audit,
+    closed=OUTCOMES.is_rejected,
+)
+
+
+def _candidate_reply(application_id: str, decision: Decision) -> dict[str, object]:
+    return {
+        "application_id": application_id,
+        **status_for(decision.route.value),
+        "follow_up": APPLICANTS.follow_up(application_id, decision),
+    }
+
+
+@app.post("/v1/applications/upload", response_model=None)
 async def upload_application(
     request: Request,
-    file: Annotated[UploadFile, File()],
     job_json: Annotated[str, Form()],
     device_id: Annotated[str, Form(min_length=1, max_length=128)],
+    file: Annotated[UploadFile | None, File()] = None,
     application_id: Annotated[str | None, Form(max_length=128)] = None,
     job_id: Annotated[str, Form(max_length=128)] = "job",
     session_seconds: Annotated[float, Form(ge=0)] = 60.0,
     paste_char_ratio: Annotated[float, Form(ge=0, le=1)] = 0.0,
     dry_run: Annotated[bool, Form()] = False,
     replaces: Annotated[str | None, Form(max_length=128)] = None,
+    applicant_name: Annotated[str | None, Form()] = None,
+    applicant_email: Annotated[str | None, Form()] = None,
+    applicant_phone: Annotated[str | None, Form()] = None,
+    role_title: Annotated[str | None, Form()] = None,
+    current_employer: Annotated[str | None, Form()] = None,
+    education: Annotated[str | None, Form()] = None,
+    github_url: Annotated[str | None, Form()] = None,
+    linkedin_url: Annotated[str | None, Form()] = None,
+    portfolio_url: Annotated[str | None, Form()] = None,
+    papers: Annotated[str | None, Form()] = None,
+    certificate_ids: Annotated[str | None, Form()] = None,
+    years_experience: Annotated[str | None, Form()] = None,
+    extra_skills: Annotated[str | None, Form()] = None,
+    about_project: Annotated[str | None, Form()] = None,
+    consent: Annotated[bool, Form()] = False,
     principal: Principal = Depends(guard("service", "candidate", "recruiter", "admin")),
-) -> Decision:
-    data = await _read_upload(file)
-    _check_upload(data, file.filename or "resume")
+) -> dict[str, object] | Decision:
+    is_candidate = principal.role == "candidate"
+    if is_candidate:
+        if UPLOAD_COUNTER.hit(f"upload:{principal.username}", UPLOAD_WINDOW_S) > UPLOAD_LIMIT:
+            raise HTTPException(status_code=429, detail="You have sent a lot of applications in the last hour. Please try again later.")
+        if not consent:
+            raise HTTPException(status_code=400, detail="Please agree to share your details with the hiring team before you send your application.")
+        dry_run = False
+    fields = parse_typed_form(
+        {
+            "applicant_name": applicant_name,
+            "applicant_email": applicant_email,
+            "applicant_phone": applicant_phone,
+            "role_title": role_title,
+            "current_employer": current_employer,
+            "education": education,
+            "github_url": github_url,
+            "linkedin_url": linkedin_url,
+            "portfolio_url": portfolio_url,
+            "papers": papers,
+            "certificate_ids": certificate_ids,
+            "years_experience": years_experience,
+            "extra_skills": extra_skills,
+            "about_project": about_project,
+        }
+    )
+    data = b""
+    filename = "resume"
+    if file is not None and (file.filename or ""):
+        data = await _read_upload(file)
+        filename = file.filename or "resume"
+        _check_upload(data, filename)
+    if not data:
+        require_identity(fields)
+        data = synthesize_resume(fields).encode()
+        filename = "application.txt"
+        typed_only = True
+    else:
+        typed_only = False
     previous_id = _check_replaces(principal, replaces, application_id)
     job = _parse_job(job_json)
-    analysis = analyze_resume(data, file.filename or "resume", job)
+    analysis = analyze_resume(data, filename, job)
     if not analysis.parsed_ok:
         raise HTTPException(
             status_code=400,
             detail="We could not read that file. Please save it again as a normal PDF, Word file or text file and try again.",
         )
     hidden_intent = classify_hidden_intents(analysis.hidden_spans, job)
+    candidate = apply_typed(analysis.candidate, fields)
+    context_text = analysis.visible_text
+    extra_block = context_block(fields)
+    if extra_block and not typed_only:
+        context_text = f"{analysis.visible_text}\n\n{extra_block}"
     application = Application(
         application_id=application_id or uuid.uuid4().hex,
         job_id=job_id,
-        candidate=analysis.candidate,
+        candidate=candidate,
         signals=SubmissionSignals(
             device_id=device_id,
             ip=request.client.host if request.client is not None else "unknown",
@@ -301,11 +419,16 @@ async def upload_application(
         dry_run=dry_run,
         resume_text=analysis.visible_text,
         ignore_application_ids=(previous_id,) if previous_id and _same_person(previous_id, application) else (),
+        context_text=context_text,
     )
-    if (principal.role == "candidate" or principal.via == "open") and not dry_run:
+    if (is_candidate or principal.via == "open") and not dry_run:
         bind_application(application.application_id, principal.username)
         if previous_id is not None:
             REPLACE_LINKS.link(application.application_id, previous_id)
+    if not dry_run and (is_candidate or has_typed_values(fields)):
+        APPLICANTS.store_submission(application.application_id, {**fields, "consent": consent}, application.signals.submitted_at)
+    if is_candidate:
+        return _candidate_reply(application.application_id, decision)
     return decision.model_copy(update={"hidden_intent": hidden_intent, "agreement": analysis.agreement})
 
 
@@ -345,8 +468,12 @@ def list_decisions(
         if decision is None:
             continue
         history = overrides_for(application.application_id)
+        rejection = OUTCOMES.last_rejection(application.application_id)
         items.append(
             {
+                "outcome": "rejected" if rejection else None,
+                "outcome_by": rejection["by"] if rejection else None,
+                "outcome_at": rejection["at"] if rejection else None,
                 "application_id": application.application_id,
                 "job_id": application.job_id,
                 "candidate_name": application.candidate.name,
@@ -355,6 +482,8 @@ def list_decisions(
                 "decision": decision.model_dump(mode="json"),
                 "override": history[-1].public() if history else None,
                 "consent_id": INTAKE_REPO.consent_for_application(application.application_id),
+                "applicant_form_present": APPLICANTS.record(application.application_id) is not None,
+                "follow_up_open": APPLICANTS.open_count(application.application_id),
             }
         )
     return items
@@ -428,6 +557,7 @@ def get_stats(principal: Principal = Depends(guard("recruiter", "admin"))) -> di
         "language_model": {"enabled": os.getenv("FIREWALL_LLM") == "1", "model": os.getenv("FIREWALL_LLM_MODEL", "qwen2.5:7b-instruct")},
         "total_received": len(decisions),
         "counts_per_route": {route.value: route_counts[route.value] for route in Route},
+        "rejected": sum(1 for decision in decisions if OUTCOMES.is_rejected(decision.application_id)),
         "top_reason_codes": [
             {"code": code, "count": count}
             for code, count in sorted(reason_counts.items(), key=lambda item: (-item[1], item[0]))
@@ -446,7 +576,7 @@ def healthcheck() -> dict[str, str]:
 
 
 app.include_router(build_router(_evaluate_and_forward, _sanitize))
-app.include_router(build_auth_router(STORE.get_decision))
+app.include_router(build_auth_router(STORE.get_decision, outcomes=OUTCOMES))
 app.include_router(
     build_intake_router(
         intel=RealIntelService(_candidate_for, _score_for, CONFIG),
@@ -459,6 +589,52 @@ app.include_router(
         audit=lambda: get_service().audit,
     )
 )
-app.include_router(build_candidate_router(STORE, REPLACE_LINKS, guard("candidate"), guard("candidate", "recruiter", "admin")))
+app.include_router(build_candidate_router(STORE, REPLACE_LINKS, guard("candidate"), guard("candidate", "recruiter", "admin"), APPLICANTS))
 app.include_router(build_delivery_router(DELIVERY, guard=guard("admin"), audit=lambda: get_service().audit))
-app.include_router(build_inbox_router(DELIVERY, guard=guard("recruiter", "admin")))
+def _restored_inboxes() -> dict[str, list[dict[str, object]]]:
+    boxes: dict[str, list[dict[str, object]]] = {}
+    for application in STORE.applications():
+        decision = STORE.get_decision(application.application_id)
+        if decision is None or decision.route == Route.PASS_TO_ATS:
+            continue
+        for name in DELIVERY.route_names.get(decision.route.value, []):
+            boxes.setdefault(name, []).insert(
+                0,
+                {
+                    "application_id": application.application_id,
+                    "job_id": application.job_id,
+                    "candidate_name": application.candidate.name,
+                },
+            )
+    return boxes
+
+
+app.include_router(
+    build_check_router(
+        runner_guard=guard("recruiter", "admin"),
+        reader_guard=guard("recruiter", "admin"),
+        decision_for=STORE.get_decision,
+        text_for=_resume_text_for,
+        candidate_for=_candidate_for,
+        owner_of=lambda application_id: get_service().ownership.owner(application_id),
+        cache=build_cache("checks"),
+        audit=lambda: get_service().audit,
+    )
+)
+app.include_router(
+    build_claim_router(
+        candidate_guard=guard("candidate"),
+        reader_guard=guard("candidate", "recruiter", "admin"),
+        decision_for=STORE.get_decision,
+        text_for=_resume_text_for,
+        candidate_for=_candidate_for,
+        owner_of=lambda application_id: get_service().ownership.owner(application_id),
+        cache=CLAIM_CACHE,
+        audit=lambda: get_service().audit,
+        closed=OUTCOMES.is_rejected,
+    )
+)
+app.include_router(build_inbox_router(DELIVERY, guard=guard("recruiter", "admin"), restore=_restored_inboxes, exclude=OUTCOMES.is_rejected))
+app.include_router(
+    build_applicant_router(APPLICANTS, candidate_guard=guard("candidate"), recruiter_guard=guard("recruiter", "admin"))
+)

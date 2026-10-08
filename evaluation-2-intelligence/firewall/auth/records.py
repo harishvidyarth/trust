@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Any, Protocol
 
 from firewall.auth.limits import Clock
 
@@ -93,3 +93,51 @@ def build_override(
         original_route=original_route,
         original_score=original_score,
     )
+
+
+OUTCOME_TTL_S = 400 * 24 * 3600
+MAX_OUTCOME_HISTORY = 100
+
+
+class OutcomeConflict(Exception):
+    pass
+
+
+class OutcomeStore:
+    def __init__(self, cache: Any, clock: Clock) -> None:
+        self._cache = cache
+        self._clock = clock
+        self._lock = threading.Lock()
+
+    @staticmethod
+    def _key(application_id: str) -> str:
+        return f"outcome:{application_id}"
+
+    def get(self, application_id: str) -> dict[str, Any] | None:
+        value = self._cache.get(self._key(application_id))
+        return value if isinstance(value, dict) else None
+
+    def is_rejected(self, application_id: str) -> bool:
+        record = self.get(application_id)
+        return record is not None and record.get("state") == "rejected"
+
+    def last_rejection(self, application_id: str) -> dict[str, Any] | None:
+        record = self.get(application_id)
+        if record is None or record.get("state") != "rejected":
+            return None
+        return record["history"][-1]
+
+    def change(self, application_id: str, target: str, reason: str, by: str) -> dict[str, Any]:
+        with self._lock:
+            record = self.get(application_id) or {"state": "open", "history": []}
+            if (target == "rejected") == (record["state"] == "rejected"):
+                raise OutcomeConflict(target)
+            entry = {
+                "outcome": "REJECTED" if target == "rejected" else "REOPENED",
+                "reason": reason,
+                "by": by,
+                "at": self._clock(),
+            }
+            history = (record["history"] + [entry])[-MAX_OUTCOME_HISTORY:]
+            self._cache.set(self._key(application_id), {"state": target, "history": history}, OUTCOME_TTL_S)
+            return entry

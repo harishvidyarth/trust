@@ -147,12 +147,31 @@
             type: "button",
             class: "btn " + (action.kind || ""),
             text: action.label,
-            onclick: function () {
+            onclick: async function (event) {
+              var button = event.currentTarget;
+              errorBox.hidden = true;
               if (action.validate) {
                 var problem = action.validate();
                 if (problem) {
                   errorBox.textContent = problem;
                   errorBox.hidden = false;
+                  return;
+                }
+              }
+              if (action.run) {
+                var buttons = actions.querySelectorAll("button");
+                buttons.forEach(function (b) { b.disabled = true; });
+                var failure = null;
+                try {
+                  failure = await action.run();
+                } catch (error) {
+                  failure = "Something went wrong. Please try again.";
+                }
+                buttons.forEach(function (b) { b.disabled = false; });
+                if (failure) {
+                  errorBox.textContent = failure;
+                  errorBox.hidden = false;
+                  button.focus();
                   return;
                 }
               }
@@ -181,6 +200,7 @@
       ["j / k", "Next or previous application in the queue"],
       ["Enter", "Open the highlighted application"],
       ["o", "Override the open decision"],
+      ["x", "Reject the highlighted application"],
       ["/", "Search the queue"],
       ["Esc", "Close the detail panel or a dialog"]
     ];
@@ -247,7 +267,7 @@
   };
 
   var NAV = {
-    candidate: [["candidate", "New application"], ["myapps", "My applications"]],
+    candidate: [["candidate", "Apply"], ["myapps", "My applications"]],
     recruiter: [["recruiter", "Applications"]],
     admin: [["admin", "Admin"], ["recruiter", "Applications"]]
   };
@@ -288,9 +308,10 @@
       var data = await C.api("GET", "/v1/me/summary");
       var node = C.$("summaryChip");
       if (!node) return;
-      if (data && data.best_score !== null && data.best_score !== undefined && Number(data.applications) > 0) {
-        node.textContent = "Best score " + Math.round(Number(data.best_score));
-        node.title = Number(data.applications) + (Number(data.applications) === 1 ? " saved application" : " saved applications");
+      var count = data ? Number(data.applications) : 0;
+      if (count > 0) {
+        node.textContent = count === 1 ? "1 application" : count + " applications";
+        node.title = data.latest_status ? "Latest status " + String(data.latest_status).replace(/_/g, " ") : "";
         node.hidden = false;
       } else {
         node.hidden = true;
@@ -383,14 +404,19 @@
     C.keys = null;
     var mode = "signin";
     var card = h("div", { class: "card" });
-    var wrap = h("div", { class: "login-wrap" }, card);
+    var hero = h("div", { class: "login-hero" },
+      h("p", { class: "login-mark", "aria-hidden": "true", text: "\u2229" }),
+      h("p", { class: "login-brand", text: "TR\u2229ST" }),
+      h("p", { class: "login-tag", text: "A fair first look at every application, with a person making every decision." })
+    );
+    var wrap = h("div", { class: "login-wrap" }, hero, card);
     root.appendChild(wrap);
 
     function draw() {
       C.clear(card);
       var tabs = h("div", { class: "tabs-inline", role: "tablist", "aria-label": "Account" },
         h("button", { type: "button", role: "tab", id: "tabSignin", "aria-selected": mode === "signin" ? "true" : "false", text: "Sign in" }),
-        h("button", { type: "button", role: "tab", id: "tabSignup", "aria-selected": mode === "signup" ? "true" : "false", text: "Create candidate account" })
+        h("button", { type: "button", role: "tab", id: "tabSignup", "aria-selected": mode === "signup" ? "true" : "false", text: "New account" })
       );
       tabs.querySelector("#tabSignin").addEventListener("click", function () { mode = "signin"; draw(); });
       tabs.querySelector("#tabSignup").addEventListener("click", function () { mode = "signup"; draw(); });
@@ -417,12 +443,12 @@
       var user = h("input", { type: "text", id: "lgUser", value: C.state.lastUser || "", autocomplete: "username", required: true, spellcheck: "false", autocapitalize: "none" });
       var pass = h("input", { type: "password", id: "lgPass", autocomplete: mode === "signin" ? "current-password" : "new-password", required: true });
       var form = h("form", { novalidate: true },
-        h("h1", { text: mode === "signin" ? "Sign in" : "Create a candidate account" }),
-        h("p", { class: "muted", text: mode === "signin" ? "Candidates, recruiters and admins sign in here." : "Candidate accounts let you check your resume and see why a decision was made." }),
+        h("h1", { class: "login-title", text: mode === "signin" ? "Welcome back" : "Create a candidate account" }),
+        h("p", { class: "muted", text: mode === "signin" ? "Sign in with the username you were given." : "Candidate accounts let you send an application and see how it is going." }),
         alertBox,
         h("label", { class: "field", for: "lgUser" }, "Username", user),
         h("label", { class: "field", for: "lgPass" }, "Password", pass, mode === "signup" ? h("span", { class: "hint", text: "At least 8 characters." }) : null),
-        h("button", { type: "submit", class: "btn primary", style: "width:100%", text: mode === "signin" ? "Sign in" : "Create account" })
+        h("button", { type: "submit", class: "btn primary login-submit", text: mode === "signin" ? "Sign in" : "Create account" })
       );
       form.addEventListener("submit", async function (event) {
         event.preventDefault();
@@ -446,7 +472,7 @@
       });
       var demoToggle = h("label", { class: "check" },
         h("input", { type: "checkbox", id: "demoToggle", checked: C.state.demo }),
-        h("span", null, "Use demo data. Everything on the screen is sample data and no server is contacted.")
+        h("span", null, "Try it with sample data. Nothing is sent to a server.")
       );
       demoToggle.querySelector("input").addEventListener("change", function (event) {
         if (event.target.checked) C.enterDemo("");

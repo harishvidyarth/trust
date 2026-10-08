@@ -37,6 +37,7 @@ class Claims(BaseModel):
     oidc_verified_email: str | None = None
     employers: list[str] = Field(default_factory=list)
     employer_domains: list[str] = Field(default_factory=list)
+    invalid_code_links: list[str] = Field(default_factory=list)
 
 
 class EnrichmentSignal(BaseModel):

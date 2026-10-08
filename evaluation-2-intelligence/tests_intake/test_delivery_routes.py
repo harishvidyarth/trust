@@ -90,3 +90,23 @@ def test_inbox_lists_each_waiting_application():
     body = TestClient(app).get("/v1/delivery/inbox").json()
     assert body["inboxes"][0]["name"] == "box"
     assert body["inboxes"][0]["items"][0]["application_id"] == "w-1"
+
+
+def test_inbox_comes_back_after_a_restart():
+    from firewall.models import Route
+    from tests.conftest import make_application
+
+    delivery = Delivery(
+        {
+            "destinations": {"ats": {"type": "mock"}, "box": {"type": "queue"}},
+            "routes": {"PASS_TO_ATS": ["ats"], "ADDITIONAL_VERIFICATION": ["box"], "MANUAL_REVIEW": ["box"]},
+        },
+        MockATS(),
+        environ={},
+    )
+    saved = {"box": [{"application_id": "old-1", "job_id": "job", "candidate_name": "Earlier Person"}]}
+    app = FastAPI()
+    app.include_router(build_inbox_router(delivery, guard=allow, restore=lambda: saved))
+    body = TestClient(app).get("/v1/delivery/inbox").json()
+    assert [item["application_id"] for item in body["inboxes"][0]["items"]] == ["old-1"]
+    assert body["inboxes"][0]["count"] == 1

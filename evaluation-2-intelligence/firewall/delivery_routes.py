@@ -49,7 +49,12 @@ def build_delivery_router(
     return router
 
 
-def build_inbox_router(delivery: Any, guard: Callable[..., Any] | None = None) -> APIRouter:
+def build_inbox_router(
+    delivery: Any,
+    guard: Callable[..., Any] | None = None,
+    restore: Callable[[], dict[str, list[dict[str, Any]]]] | None = None,
+    exclude: Callable[[str], bool] | None = None,
+) -> APIRouter:
     router = APIRouter(dependencies=[Depends(guard or _deny)])
 
     @router.get("/v1/delivery/status")
@@ -59,6 +64,17 @@ def build_inbox_router(delivery: Any, guard: Callable[..., Any] | None = None) -
     @router.get("/v1/delivery/inbox")
     def delivery_inbox() -> dict[str, Any]:
         reader = getattr(delivery, "inboxes", None)
-        return {"inboxes": reader() if reader is not None else []}
+        boxes = reader() if reader is not None else []
+        saved = restore() if restore is not None else {}
+        for box in boxes:
+            known = {item["application_id"] for item in box["items"]}
+            extra = [item for item in saved.get(box["name"], []) if item["application_id"] not in known]
+            box["items"] = (box["items"] + extra)[:200]
+            box["count"] = max(box["count"], len(known) + len(extra))
+            if exclude is not None:
+                kept = [item for item in box["items"] if not exclude(item["application_id"])]
+                box["count"] = max(0, box["count"] - (len(box["items"]) - len(kept)))
+                box["items"] = kept
+        return {"inboxes": boxes}
 
     return router

@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
-from firewall.api import app
+from firewall.api import STORE, _resume_text_for, app
 from firewall.auth import get_service
 from firewall.auth.users import ADMIN, CANDIDATE, RECRUITER, make_user
 from firewall.models import JobRequirements
@@ -51,20 +51,29 @@ class Session:
         self.headers = {"X-CSRF-Token": response.json()["csrf_token"]}
         self.counter = 0
 
-    def upload(self, content: bytes, filename: str = "resume.pdf", **extra: str):
+    def base_data(self, extra: dict[str, str]) -> dict[str, str]:
         self.counter += 1
-        data = {
+        return {
             "job_json": JobRequirements(must_have_skills=["Python", "FastAPI", "PostgreSQL", "Docker"], min_years=2).model_dump_json(),
             "device_id": f"dev-{self.username}-{self.counter}",
             "job_id": "job-candidate-tests",
+            "consent": "true",
             **extra,
         }
+
+    def upload(self, content: bytes, filename: str = "resume.pdf", **extra: str):
         return self.client.post(
             "/v1/applications/upload",
             files={"file": (filename, content, "application/pdf")},
-            data=data,
+            data=self.base_data(extra),
             headers=self.headers,
         )
+
+    def upload_form(self, **extra: str):
+        return self.client.post("/v1/applications/upload", data=self.base_data(extra), headers=self.headers)
+
+    def post(self, path: str, body: dict):
+        return self.client.post(path, json=body, headers=self.headers)
 
     def get(self, path: str):
         return self.client.get(path)
@@ -100,3 +109,29 @@ def admin() -> Session:
 @pytest.fixture
 def make_pdf():
     return pdf_bytes
+
+
+def stored_decision(application_id: str):
+    decision = STORE.get_decision(application_id)
+    assert decision is not None
+    return decision
+
+
+def stored_text(application_id: str) -> str:
+    return _resume_text_for(application_id)
+
+
+def form_fields(**override: str) -> dict[str, str]:
+    base = {
+        "applicant_name": "Maya Raman",
+        "applicant_email": f"m{uuid.uuid4().hex[:8]}@example.com",
+        "applicant_phone": "+91 90000 12345",
+        "role_title": "Backend Engineer",
+        "current_employer": "Example Labs",
+        "education": "BTech Computer Science",
+        "extra_skills": "Python, FastAPI, PostgreSQL, Docker",
+        "years_experience": "3",
+        "about_project": "I built an employee management API using FastAPI and PostgreSQL.",
+    }
+    base.update(override)
+    return base

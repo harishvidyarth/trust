@@ -2,6 +2,33 @@
   var C = window.C;
   var h = C.h;
 
+  C.meter = function (config) {
+    var value = Math.max(0, Math.min(100, Number(config.value) || 0));
+    var fill = h("div", { class: "meter-fill " + (config.tone || "") });
+    fill.style.width = value + "%";
+    return h("div", { class: "meter" },
+      h("div", { class: "meter-head" }, h("span", { id: config.id + "Label", text: config.label }), h("span", { class: "meter-value", text: value.toFixed(config.decimals === undefined ? 0 : config.decimals) })),
+      h("div", { class: "meter-track", role: "meter", "aria-labelledby": config.id + "Label", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": String(value), "aria-valuetext": config.valuetext || value + " out of 100" }, fill),
+      config.sub ? h("div", { class: "meter-sub", text: config.sub }) : null
+    );
+  };
+
+  function badgesFor(row) {
+    var open = Number(row.follow_up_open) || 0;
+    var list = [];
+    if (row.outcome === "rejected") list.push(C.tag("Rejected", "dark", true));
+    if (row.applicant_form_present) list.push(C.tag("Form", "info", true));
+    if (open > 0) list.push(C.tag(open + (open === 1 ? " open request" : " open requests"), "", true));
+    return list;
+  }
+
+  var FORM_LABELS = [
+    ["applicant_name", "Full name"], ["applicant_email", "Email"], ["applicant_phone", "Phone"], ["role_title", "Role"],
+    ["years_experience", "Years of experience"], ["current_employer", "Current or latest employer"], ["education", "Education"],
+    ["skills", "Skills"], ["extra_skills", "Other skills"], ["github_url", "GitHub"], ["linkedin_url", "LinkedIn"], ["portfolio_url", "Portfolio"],
+    ["papers", "Research papers or DOIs"], ["certificate_ids", "Certificate IDs"]
+  ];
+
   var ROUTE_LIST = ["PASS_TO_ATS", "ADDITIONAL_VERIFICATION", "MANUAL_REVIEW"];
   var INTENT_LABELS = {
     keyword_stuffing: "Keywords hidden from readers",
@@ -47,7 +74,7 @@
   }
 
   C.views.recruiter = async function (root) {
-    var S = { rows: [], stats: null, dest: null, destError: "", destLoading: false, tab: C.params && (C.params.tab === "queue" || C.params.tab === "destinations") ? C.params.tab : "overview", route: "ALL", query: "", sort: "score_asc", selected: null, opener: null, loaded: false };
+    var S = { outcomes: {}, rows: [], stats: null, dest: null, destError: "", destLoading: false, tab: C.params && (C.params.tab === "queue" || C.params.tab === "destinations") ? C.params.tab : "overview", route: "ALL", query: "", sort: "score_asc", selected: null, opener: null, loaded: false };
     C.status("Loading applications...");
 
     var head = h("div", { class: "page-head" },
@@ -145,9 +172,12 @@
 
     function destItems(route) {
       if (route === "PASS_TO_ATS") {
-        return S.rows.filter(function (r) { return routeOf(r) === "PASS_TO_ATS"; }).map(function (r) { return { application_id: r.application_id, job_id: r.job_id, candidate_name: r.candidate_name, at: r.submitted_at, score: scoreOf(r) }; });
+        return S.rows.filter(function (r) { return routeOf(r) === "PASS_TO_ATS"; }).map(function (r) { return { application_id: r.application_id, job_id: r.job_id, candidate_name: r.candidate_name, at: r.submitted_at, score: scoreOf(r), rejected: r.outcome === "rejected" }; });
       }
-      return inboxItems(inboxNameFor(route)).map(function (item) {
+      return inboxItems(inboxNameFor(route)).filter(function (item) {
+        var known = rowById(item.application_id);
+        return !(known && known.outcome === "rejected");
+      }).map(function (item) {
         var row = rowById(item.application_id);
         return { application_id: item.application_id, job_id: item.job_id || (row && row.job_id), candidate_name: item.candidate_name || (row && row.candidate_name), at: row && row.submitted_at, score: row ? scoreOf(row) : null };
       });
@@ -230,7 +260,8 @@
                 h("div", { class: "dest-who" },
                   h("strong", { text: item.candidate_name || "Unknown candidate" }),
                   h("small", { class: "muted", text: (item.job_id || "No job set") + (Number.isFinite(item.score) ? ", score " + item.score : "") }),
-                  h("small", { class: "muted", text: when(item.at) })
+                  h("small", { class: "muted", text: when(item.at) }),
+                  item.rejected ? h("span", { class: "badge-line" }, C.tag("Rejected", "dark", true)) : null
                 ),
                 view
               );
@@ -281,6 +312,8 @@
       C.clear(panelOverview);
       var c = counts();
       var cards = [["Received", c.total, "received"], ["Passed to ATS", c.PASS_TO_ATS, "pass"], ["Needs verification", c.ADDITIONAL_VERIFICATION, "verify"], ["Manual review", c.MANUAL_REVIEW, "review"]];
+      var rejectedCount = S.stats && S.stats.rejected !== undefined && S.stats.rejected !== null ? Number(S.stats.rejected) : NaN;
+      if (Number.isFinite(rejectedCount)) cards.push(["Rejected", rejectedCount, "rejected"]);
       var funnel = h("div", { class: "funnel", "aria-label": "Routing funnel" }, cards.map(function (card) {
         return h("article", { class: "funnel-card " + card[2] }, h("span", { class: "funnel-label", text: card[0] }), h("strong", { text: String(card[1]) }), h("span", { class: "funnel-share", text: pct(card[1], c.total) + "% of received" }));
       }));
@@ -312,7 +345,7 @@
         view.addEventListener("click", function () { openDetail(row.application_id, view); });
         var o = overrideRoute(row);
         return h("tr", { "aria-current": S.selected === row.application_id ? "true" : false },
-          h("td", { class: "candidate-cell" }, h("strong", { text: row.candidate_name || "Unknown candidate" }), h("small", { text: row.candidate_email_masked || "Email not shown" })),
+          h("td", { class: "candidate-cell" }, h("strong", { text: row.candidate_name || "Unknown candidate" }), h("small", { text: row.candidate_email_masked || "Email not shown" }), badgesFor(row).length ? h("span", { class: "badge-line" }, badgesFor(row)) : null),
           h("td", { text: when(row.submitted_at) }),
           h("td", { class: "num", text: scoreOf(row) + " / 100" }),
           h("td", null, C.routeTag(routeOf(row))),
@@ -343,7 +376,7 @@
       );
     }
 
-    var TABS = [["ALL", "All"], ["PASS_TO_ATS", "Pass"], ["ADDITIONAL_VERIFICATION", "Verify"], ["MANUAL_REVIEW", "Manual"]];
+    var TABS = [["ALL", "All"], ["PASS_TO_ATS", "Pass"], ["ADDITIONAL_VERIFICATION", "Verify"], ["MANUAL_REVIEW", "Manual"], ["REJECTED", "Rejected"]];
     var search = h("input", { type: "search", id: "q", placeholder: "Name, job or application ID", "aria-label": "Search the queue", autocomplete: "off" });
     var sort = h("select", { id: "sort", "aria-label": "Sort queue" },
       h("option", { value: "score_asc", text: "Lowest trust score first" }),
@@ -356,14 +389,15 @@
       h("div", { class: "card queue-card" },
         h("div", { class: "queue-tools" }, search, sort),
         routeTabs, list,
-        h("p", { class: "kbd-hint" }, h("kbd", { text: "j" }), " ", h("kbd", { text: "k" }), " move, ", h("kbd", { text: "Enter" }), " open, ", h("kbd", { text: "o" }), " override, ", h("kbd", { text: "Esc" }), " close, ", h("kbd", { text: "?" }), " help")
+        h("p", { class: "kbd-hint" }, h("kbd", { text: "j" }), " ", h("kbd", { text: "k" }), " move, ", h("kbd", { text: "Enter" }), " open, ", h("kbd", { text: "o" }), " override, ", h("kbd", { text: "x" }), " reject, ", h("kbd", { text: "Esc" }), " close, ", h("kbd", { text: "?" }), " help")
       )
     );
 
     function filtered() {
       var q = S.query.trim().toLowerCase();
       var rows = S.rows.filter(function (row) {
-        if (S.route !== "ALL" && routeOf(row) !== S.route) return false;
+        if (S.route === "REJECTED") { if (row.outcome !== "rejected") return false; }
+        else if (S.route !== "ALL" && routeOf(row) !== S.route) return false;
         if (!q) return true;
         return [row.candidate_name, row.job_id, row.application_id].join(" ").toLowerCase().indexOf(q) >= 0;
       });
@@ -378,7 +412,7 @@
     function drawRouteTabs() {
       C.clear(routeTabs);
       TABS.forEach(function (tab) {
-        var count = S.rows.filter(function (row) { return tab[0] === "ALL" || routeOf(row) === tab[0]; }).length;
+        var count = S.rows.filter(function (row) { return tab[0] === "ALL" || (tab[0] === "REJECTED" ? row.outcome === "rejected" : routeOf(row) === tab[0]); }).length;
         var button = h("button", { type: "button", "aria-pressed": S.route === tab[0] ? "true" : "false", "data-route": tab[0] }, tab[1], h("span", { class: "count", text: String(count) }));
         button.addEventListener("click", function () { S.route = tab[0]; drawRouteTabs(); drawList(); });
         routeTabs.appendChild(button);
@@ -397,7 +431,7 @@
         var button = h("button", { type: "button", class: "queue-item", "data-id": row.application_id, "aria-current": S.selected === row.application_id ? "true" : false },
           h("span", { class: "name", text: row.candidate_name || row.application_id }),
           h("span", { class: "score", "aria-label": "Trust score " + scoreOf(row), text: String(scoreOf(row)) }),
-          h("span", { class: "meta" }, C.tag(C.ROUTES[route] || route, C.ROUTE_TONE[route] || ""), h("span", { text: row.job_id }), h("span", { text: when(row.submitted_at) }))
+          h("span", { class: "meta" }, C.tag(C.ROUTES[route] || route, C.ROUTE_TONE[route] || ""), h("span", { text: row.job_id }), h("span", { text: when(row.submitted_at) }), badgesFor(row))
         );
         button.addEventListener("click", function () { openDetail(row.application_id, button); });
         list.appendChild(h("li", null, button));
@@ -520,6 +554,9 @@
       summary.body.append(h("p", { text: d.summary || "No summary is available." }));
       if (d.recruiter_summary) summary.body.append(h("h4", { text: "For the reviewer" }), h("p", { text: d.recruiter_summary }));
 
+      var formSec = section("Applicant form", "dsForm");
+      formSec.body.append(h("p", { class: "muted", text: "Loading the form..." }));
+
       var evidence = section("Reasons (" + reasons.length + ")", "dsReasons");
       if (reasons.length) {
         reasons.forEach(function (reason) {
@@ -564,6 +601,12 @@
       var intakeBody = intake.body;
       intakeBody.append(h("p", { class: "muted", text: consentId ? "Loading what the candidate added..." : "The candidate has not given consent for any extra checks." }));
 
+      var claimSec = section("Candidate answer check", "dsClaim");
+      claimSec.body.append(h("p", { class: "muted", text: "Loading..." }));
+
+      var checksSec = section("Claim checks", "dsChecks");
+      checksSec.body.append(C.checks.panel(id, { who: "recruiter", bare: true, isStale: function () { return stale(id); } }));
+
       var delivery = section("Delivery", "dsDelivery");
       delivery.body.append(h("p", { class: "muted", text: "Loading delivery status..." }));
 
@@ -571,16 +614,232 @@
       history.body.append(h("p", { class: "muted", text: "Loading history..." }));
 
       var form = overrideForm(row, history);
+      var bannerBox = h("div", { class: "outcome-slot" });
+      drawBanner(row, bannerBox);
+      var decisionCard = outcomeCard(row);
 
-      drawer.append(header, h("div", { class: "drawer-scroll" }, summary.card, evidence.card, intent.card, agree.card, fixCard.card, cf.card, intake.card, delivery.card, history.card, form));
+      drawer.append(header, h("div", { class: "drawer-scroll" }, bannerBox, summary.card, formSec.card, evidence.card, intent.card, agree.card, fixCard.card, cf.card, intake.card, claimSec.card, checksSec.card, delivery.card, history.card, decisionCard, form));
+
+      loadForm(id, formSec.body);
+      C.claim.recruiterLoad(id, claimSec.body, function () { return stale(id); });
 
       if (consentId) loadIntake(id, consentId, intakeBody);
       loadDelivery(id, row, delivery.body);
       loadHistory(id, history.body);
+      if (row.outcome === "rejected" && !S.outcomes[id]) loadOutcome(row, bannerBox);
+    }
+
+    function drawBanner(row, box) {
+      C.clear(box);
+      if (row.outcome !== "rejected") return;
+      var info = S.outcomes[row.application_id] || {};
+      var by = row.outcome_by || info.by;
+      var at = row.outcome_at || info.at;
+      box.append(h("section", { class: "outcome-banner", id: "rejectedBanner", "aria-labelledby": "rejectedTitle" },
+        h("h3", { id: "rejectedTitle", text: "Rejected" }),
+        h("p", { class: "small", style: "margin:0", text: "Rejected by " + (by || "a reviewer") + " on " + (at ? when(at) : "an unknown date") }),
+        info.reason ? h("blockquote", { class: "evidence", text: info.reason }) : null
+      ));
+    }
+
+    async function loadOutcome(row, box) {
+      var id = row.application_id;
+      try {
+        var data = await C.api("GET", "/v1/decisions/" + encodeURIComponent(id) + "/outcome");
+        if (stale(id)) return;
+        var history = data && Array.isArray(data.history) ? data.history : [];
+        var last = history.filter(function (e) { return e && e.outcome === "REJECTED"; }).sort(function (a, b) { return seconds(b.at) - seconds(a.at); })[0];
+        if (last) S.outcomes[id] = { reason: last.reason, by: last.by, at: last.at };
+        drawBanner(row, box);
+      } catch (error) {
+        if (stale(id) || C.authError(error)) return;
+      }
+    }
+
+    function outcomeCard(row) {
+      var id = row.application_id;
+      var rejected = row.outcome === "rejected";
+      var trigger = h("button", { type: "button", class: rejected ? "btn" : "btn danger", id: rejected ? "reopenBtn" : "rejectBtn", text: rejected ? "Reopen application" : "Reject application" });
+      trigger.addEventListener("click", function () { promptOutcome(row, rejected ? "reopen" : "reject", trigger); });
+      return h("section", { class: "drawer-card", "aria-labelledby": "dsOutcome" },
+        h("h3", { id: "dsOutcome", text: rejected ? "Reopen this application" : "Reject this application" }),
+        h("p", { class: "muted small", text: rejected ? "This application is closed. Reopen it to review it again." : "Only a person can reject an application. Nothing is rejected automatically." }),
+        h("div", { class: "row" }, trigger)
+      );
+    }
+
+    async function promptOutcome(row, kind, opener) {
+      var id = row.application_id;
+      var rejecting = kind === "reject";
+      if (rejecting && row.outcome === "rejected") { C.status("This application is already rejected.", true); return; }
+      if (!rejecting && row.outcome !== "rejected") { C.status("This application is not rejected.", true); return; }
+      var reason = h("textarea", { id: "outReason", maxlength: "500", "aria-describedby": "outHint", placeholder: "Write why you are making this decision." });
+      var hint = h("span", { id: "outHint", class: "hint", text: "0 of 500 characters. Use at least 10." });
+      reason.addEventListener("input", function () { hint.textContent = reason.value.trim().length + " of 500 characters. Use at least 10."; });
+      var result = null;
+      var answer = await C.dialog({
+        title: rejecting ? "Reject this application" : "Reopen this application",
+        body: h("div", null,
+          h("p", { class: "muted", text: rejecting ? "The candidate will see a polite closed message. They will not see your reason. You can reopen this later." : "The application goes back to your review list and the candidate sees their usual status again. Your reason is kept in the record." }),
+          h("label", { class: "field", for: "outReason" }, "Reason", reason, hint)
+        ),
+        actions: [
+          { label: "Cancel", value: null },
+          {
+            label: rejecting ? "Reject application" : "Reopen application",
+            kind: rejecting ? "danger" : "primary",
+            value: "go",
+            validate: function () {
+              var n = reason.value.trim().length;
+              return n < 10 || n > 500 ? "The reason needs 10 to 500 characters." : null;
+            },
+            run: async function () {
+              try {
+                result = await C.api("POST", "/v1/decisions/" + encodeURIComponent(id) + "/" + kind, { json: { reason: reason.value.trim() } });
+                return null;
+              } catch (error) {
+                if (C.authError(error)) return "Your session has ended. Please sign in again.";
+                if (error.status === 409) return rejecting ? "This application is already rejected." : "This application is not rejected.";
+                if (error.status === 404) return "This service cannot record that decision yet.";
+                if (error.status === 403) return "Your account does not have permission to do that.";
+                return C.friendly(error);
+              }
+            }
+          }
+        ]
+      });
+      if (answer !== "go") return;
+      var at = result && result.at ? result.at : Math.floor(Date.now() / 1000);
+      var by = (result && result.by) || (C.state.me && C.state.me.username);
+      var delta = 0;
+      if (rejecting) {
+        row.outcome = "rejected";
+        row.outcome_by = by;
+        row.outcome_at = at;
+        S.outcomes[id] = { reason: (result && result.reason) || reason.value.trim(), by: by, at: at };
+        delta = 1;
+      } else {
+        row.outcome = null;
+        row.outcome_by = null;
+        row.outcome_at = null;
+        delete S.outcomes[id];
+        delta = -1;
+      }
+      if (S.stats && Number.isFinite(Number(S.stats.rejected))) S.stats.rejected = Math.max(0, Number(S.stats.rejected) + delta);
+      C.status(rejecting ? (row.candidate_name || id) + " was rejected." : (row.candidate_name || id) + " was reopened.");
+      redraw();
+      if (S.selected === id && !drawer.hidden) {
+        drawDetail(row);
+        var title = C.$("detailTitle");
+        if (title) title.focus();
+      } else if (opener && document.contains(opener)) {
+        var again = list.querySelector('.queue-item[data-id="' + id + '"]');
+        if (again) again.focus();
+      }
     }
 
     function stale(id) {
       return S.selected !== id || drawer.hidden;
+    }
+
+    function httpsLink(value) {
+      var url = String(value || "").trim();
+      if (/^https:\/\/[^\s]+$/i.test(url)) return h("a", { href: url, target: "_blank", rel: "noopener noreferrer", text: url });
+      return h("span", { text: url });
+    }
+
+    function requestStatusNode(r) {
+      var answer = r.answer || r.answer_text || r.text || "";
+      var waiting = !(r.answered || r.status === "answered" || answer);
+      return waiting ? C.tag("Waiting", "", true) : h("blockquote", { class: "evidence", style: "white-space:pre-wrap", text: answer || "Answered" });
+    }
+
+    async function loadForm(id, body) {
+      try {
+        var data = await C.api("GET", "/v1/applications/" + encodeURIComponent(id) + "/form");
+        if (stale(id)) return;
+        C.clear(body);
+        var f = (data && data.fields && typeof data.fields === "object") ? data.fields : (data || {});
+        var kv = h("dl", { class: "kv" });
+        FORM_LABELS.forEach(function (pair) {
+          var value = f[pair[0]];
+          if (Array.isArray(value)) value = value.join(pair[0] === "skills" ? ", " : "\n");
+          if (value === undefined || value === null || String(value).trim() === "") return;
+          var cell;
+          if (/_url$/.test(pair[0])) cell = httpsLink(value);
+          else if (pair[0] === "papers" || pair[0] === "certificate_ids") cell = h("span", { style: "white-space:pre-line", text: String(value) });
+          else cell = h("span", { text: String(value) });
+          kv.append(h("dt", { text: pair[1] }), h("dd", null, cell));
+        });
+        body.append(kv.children.length ? kv : h("p", { class: "muted", text: "The form has no typed details." }));
+        var about = f.about_project || data.about_project;
+        body.append(h("h4", { text: "About the work" }), about ? h("p", { style: "white-space:pre-wrap", text: about }) : h("p", { class: "muted", text: "Nothing was written." }));
+        var notes = data.extra_detail_notes || data.extra_details || data.notes || [];
+        notes = Array.isArray(notes) ? notes : (notes ? [notes] : []);
+        body.append(h("h4", { text: "Extra detail notes from the candidate" }));
+        if (!notes.length) body.append(h("p", { class: "muted", text: "The candidate has not added any notes." }));
+        notes.forEach(function (note) {
+          var textValue = typeof note === "string" ? note : (note.text || note.answer || "");
+          var label = typeof note === "string" ? "" : (note.label || "");
+          body.append(h("div", { class: "history-item" }, label ? h("p", { class: "small muted", style: "margin:0 0 4px", text: label }) : null, h("p", { style: "margin:0;white-space:pre-wrap", text: textValue })));
+        });
+        var requests = data.requests || data.follow_up || data.request_items || [];
+        requests = Array.isArray(requests) ? requests.filter(function (r) { return !r.kind || r.kind === "request"; }) : [];
+        body.append(askBlock(id, requests));
+      } catch (error) {
+        if (stale(id) || C.authError(error)) return;
+        C.clear(body);
+        body.append(h("p", { class: "muted", text: error.status === 404 ? "This applicant did not use the form." : C.friendly(error) }));
+      }
+    }
+
+    function askBlock(id, requests) {
+      var wrap = h("div", { class: "ask-block" });
+      var input = h("input", { type: "text", id: "askLabel", maxlength: "200", placeholder: "For example Which part of the project did you build yourself", "aria-describedby": "askHint askMsg" });
+      var hint = h("span", { class: "hint", id: "askHint", text: "Write between 3 and 200 characters." });
+      var message = h("p", { class: "small", id: "askMsg", role: "status", "aria-live": "polite" });
+      var send = h("button", { type: "button", class: "btn", id: "askSend", text: "Send request" });
+      var list = h("ul", { class: "req-list", "aria-label": "Requests sent to the candidate" });
+      function drawList() {
+        C.clear(list);
+        if (!requests.length) {
+          list.append(h("li", { class: "muted", text: "No requests have been sent." }));
+          return;
+        }
+        requests.forEach(function (r) {
+          list.append(h("li", null, h("p", { style: "margin:0 0 4px;font-weight:600", text: r.label || "" }), requestStatusNode(r)));
+        });
+      }
+      send.addEventListener("click", async function () {
+        var label = input.value.trim();
+        message.className = "small";
+        if (label.length < 3 || label.length > 200) {
+          message.textContent = "The request needs 3 to 200 characters.";
+          message.className = "small err";
+          input.focus();
+          return;
+        }
+        send.disabled = true;
+        message.textContent = "Sending...";
+        try {
+          var res = await C.api("POST", "/v1/applications/" + encodeURIComponent(id) + "/requests", { json: { label: label } });
+          requests.push({ id: res && res.id, label: label, status: "waiting" });
+          input.value = "";
+          message.textContent = (res && res.message) || "The request was sent to the candidate.";
+          drawList();
+          var row = rowById(id);
+          if (row) { row.follow_up_open = (Number(row.follow_up_open) || 0) + 1; redraw(); }
+        } catch (error) {
+          if (C.authError(error)) return;
+          message.textContent = error.status === 400 || error.status === 404 || error.status === 422 || error.status === 429 ? error.message : C.friendly(error);
+          message.className = "small err";
+        } finally {
+          send.disabled = false;
+        }
+      });
+      drawList();
+      wrap.append(h("h4", { text: "Ask the candidate for details" }), h("label", { class: "field", for: "askLabel" }, "What would you like to know", input, hint), h("div", { class: "row" }, send), message, list);
+      return wrap;
     }
 
     async function loadIntake(id, consentId, body) {
@@ -596,7 +855,7 @@
           recheck.addEventListener("click", function () { recheckFinding(id, consentId, index, finding, body); });
           body.append(h("div", { class: "finding" },
             h("div", null,
-              h("div", { class: "row" }, h("strong", { text: finding.source }), C.tag(String(finding.status || "").replace(/_/g, " "), FINDING_TONE[finding.status] || "info")),
+              h("div", { class: "row" }, h("strong", { text: finding.source }), C.tag(finding.status === "verified" ? "Matches the resume" : String(finding.status || "").replace(/_/g, " "), FINDING_TONE[finding.status] || "info")),
               h("p", { style: "margin:4px 0 0", text: finding.fact }),
               finding.evidence ? h("blockquote", { class: "evidence", text: finding.evidence }) : null
             ),
@@ -703,6 +962,7 @@
         select.value = "MANUAL_REVIEW";
         reason.focus();
       });
+      var closedRow = row.outcome === "rejected";
       var form = h("form", { class: "drawer-card override-form", id: "overrideForm", novalidate: true, "aria-labelledby": "dsOverride" },
         h("h3", { id: "dsOverride", text: "Override this decision" }),
         h("p", { class: "muted small", text: "The product never rejects anyone on its own. Your change is saved with your name in the audit log." }),
@@ -711,6 +971,13 @@
         message,
         h("div", { class: "row" }, submit, manual)
       );
+      if (closedRow) {
+        select.disabled = true;
+        reason.disabled = true;
+        submit.disabled = true;
+        manual.disabled = true;
+        message.textContent = "Reopen the application first.";
+      }
       form.addEventListener("submit", async function (event) {
         event.preventDefault();
         message.className = "small";
@@ -762,6 +1029,13 @@
           openDetail(target.application_id, index >= 0 ? all[index] : null);
           var f = C.$("ovReason");
           if (f) f.focus();
+        }
+      } else if (event.key === "x") {
+        var pick = index >= 0 ? rowById(all[index].dataset.id) : rowById(S.selected);
+        if (pick) {
+          event.preventDefault();
+          if (pick.outcome === "rejected") { C.status("This application is already rejected.", true); return; }
+          promptOutcome(pick, "reject", index >= 0 ? all[index] : null);
         }
       } else if (event.key === "/") {
         event.preventDefault();

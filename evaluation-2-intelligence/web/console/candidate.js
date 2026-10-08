@@ -2,83 +2,36 @@
   var C = window.C;
   var h = C.h;
 
-  function splitList(value) {
-    return String(value || "").split(/[\n,]+/).map(function (item) { return item.trim(); }).filter(Boolean);
+  var DRAFT_KEY = "trust-apply-draft";
+  var FORMS_KEY = "trust-apply-sent";
+  var DEVICE_KEY = "trust-device-id";
+  var MAX_BYTES = 5 * 1024 * 1024;
+  var ABOUT_MAX = 2000;
+  var ANSWER_MAX = 4000;
+  var FALLBACK_ROLES = ["Backend engineer", "Data analyst", "Frontend developer", "DevOps engineer", "Machine learning engineer"];
+  var OTHER = "__other__";
+
+  var STATUS_TEXT = { sent: "Sent", more_details: "More details needed", in_review: "In review" };
+
+  C.cand = C.cand || { replaces: null, replacesRole: "" };
+
+  function readJson(key, fallback) {
+    try {
+      var value = JSON.parse(C.safeStore.get(key) || "null");
+      return value && typeof value === "object" ? value : fallback;
+    } catch (error) {
+      return fallback;
+    }
   }
 
-  C.meter = function (config) {
-    var value = Math.max(0, Math.min(100, Number(config.value) || 0));
-    var fill = h("div", { class: "meter-fill " + (config.tone || "") });
-    fill.style.width = value + "%";
-    return h("div", { class: "meter" },
-      h("div", { class: "meter-head" }, h("span", { id: config.id + "Label", text: config.label }), h("span", { class: "meter-value", text: value.toFixed(config.decimals === undefined ? 0 : config.decimals) })),
-      h("div", { class: "meter-track", role: "meter", "aria-labelledby": config.id + "Label", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": String(value), "aria-valuetext": config.valuetext || value + " out of 100" }, fill),
-      config.sub ? h("div", { class: "meter-sub", text: config.sub }) : null
-    );
-  };
-
-  function toneFor(score) {
-    return score >= 80 ? "ok" : score >= 50 ? "warn" : "danger";
+  function deviceId() {
+    var id = C.safeStore.get(DEVICE_KEY);
+    if (!id) {
+      id = "console-" + Math.random().toString(36).slice(2, 12);
+      C.safeStore.set(DEVICE_KEY, id);
+    }
+    return id;
   }
-
-  var SVGNS = "http://www.w3.org/2000/svg";
-  C.cand = C.cand || { replaces: null, replacesNote: "" };
-  C.gauge = function (score, small) {
-    var value = Math.max(0, Math.min(100, Number(score) || 0));
-    var size = small ? 64 : 132;
-    var stroke = small ? 7 : 12;
-    var radius = (size - stroke) / 2;
-    var circumference = 2 * Math.PI * radius;
-    var svg = document.createElementNS(SVGNS, "svg");
-    svg.setAttribute("viewBox", "0 0 " + size + " " + size);
-    svg.setAttribute("width", String(size));
-    svg.setAttribute("height", String(size));
-    svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", "Trust score " + value + " out of 100");
-    var track = document.createElementNS(SVGNS, "circle");
-    var fill = document.createElementNS(SVGNS, "circle");
-    [track, fill].forEach(function (circle) {
-      circle.setAttribute("cx", String(size / 2));
-      circle.setAttribute("cy", String(size / 2));
-      circle.setAttribute("r", String(radius));
-      circle.setAttribute("fill", "none");
-      circle.setAttribute("stroke-width", String(stroke));
-    });
-    track.setAttribute("class", "gauge-track");
-    fill.setAttribute("class", "gauge-fill " + toneFor(value));
-    fill.setAttribute("stroke-dasharray", String((circumference * value) / 100) + " " + String(circumference));
-    fill.setAttribute("transform", "rotate(-90 " + size / 2 + " " + size / 2 + ")");
-    svg.append(track, fill);
-    var label = document.createElementNS(SVGNS, "text");
-    label.setAttribute("x", String(size / 2));
-    label.setAttribute("y", String(size / 2));
-    label.setAttribute("text-anchor", "middle");
-    label.setAttribute("dominant-baseline", "central");
-    label.setAttribute("class", "gauge-num");
-    label.setAttribute("font-size", small ? "20" : "38");
-    label.textContent = String(Math.round(value));
-    svg.appendChild(label);
-    return h("div", { class: "gauge" + (small ? " small" : "") }, svg);
-  };
-
-  var ROUTE_MEANING = {
-    PASS_TO_ATS: "Your resume can move on to the hiring system.",
-    ADDITIONAL_VERIFICATION: "A person will ask you for a little more proof before your resume moves on.",
-    MANUAL_REVIEW: "A person will read your resume before it moves on. Nothing is rejected automatically."
-  };
-  var ROUTE_MEAN_LONG = {
-    PASS_TO_ATS: "Your resume reads the same to a person and to a computer, so it can go on to the hiring team. You do not need to change anything, though the tips below can still help.",
-    ADDITIONAL_VERIFICATION: "Something in your resume needs a closer look. A person will check it and may ask you to confirm a few details. This is a normal step and it is not a rejection.",
-    MANUAL_REVIEW: "A person will read your resume with care before the hiring team sees it. Fixing the items under What you can fix and sending it again often gives a better result."
-  };
-
-  var BUILTIN_PRESETS = [
-    { name: "Backend engineer", must_have: ["Python", "PostgreSQL", "Kubernetes"], nice_to_have: ["Terraform", "AWS"], min_years: 3 },
-    { name: "Data analyst", must_have: ["SQL", "Python", "Excel"], nice_to_have: ["Tableau", "Statistics"], min_years: 2 },
-    { name: "Frontend developer", must_have: ["JavaScript", "React", "CSS"], nice_to_have: ["TypeScript", "Testing"], min_years: 2 },
-    { name: "DevOps engineer", must_have: ["Linux", "Docker", "CI/CD"], nice_to_have: ["Kubernetes", "Terraform"], min_years: 3 },
-    { name: "Machine learning engineer", must_have: ["Python", "PyTorch", "SQL"], nice_to_have: ["MLOps", "Spark"], min_years: 3 }
-  ];
 
   function toSeconds(value) {
     if (typeof value === "number") return value > 1e12 ? Math.floor(value / 1000) : value;
@@ -86,112 +39,583 @@
     return isNaN(parsed) ? 0 : Math.floor(parsed / 1000);
   }
 
+  function dateText(value) {
+    var seconds = toSeconds(value);
+    if (!seconds) return "Date not recorded";
+    return new Date(seconds * 1000).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
+
   function plural(count, one, many) {
     return count + " " + (count === 1 ? one : many);
   }
 
-  function fixText(fix) {
-    return typeof fix === "string" ? fix : (fix.fix || fix.detail || fix.text || fix.title || "");
+  function shortId(id) {
+    return String(id || "").replace(/^app-/, "").slice(0, 8).toUpperCase();
   }
 
-  function progressCard(delta) {
-    var change = Number(delta.score_change) || 0;
-    var changeText = change > 0 ? "Up by " + change : change < 0 ? "Down by " + Math.abs(change) : "No change";
-    var cleared = delta.cleared || [];
-    var added = delta.new || [];
-    function list(items, empty) {
-      return items.length
-        ? h("ul", null, items.map(function (item) { return h("li", null, h("strong", { text: item.title || "Concern" }), item.explanation ? h("span", { class: "muted", text: " " + item.explanation }) : null); }))
-        : h("p", { class: "muted", text: empty });
+  function splitLines(value) {
+    return String(value || "").split(/[\n,]+/).map(function (item) { return item.trim(); }).filter(Boolean);
+  }
+
+  function errorText(error) {
+    if (error && (error.status === 400 || error.status === 404 || error.status === 422 || error.status === 429) && error.message) return error.message;
+    return C.friendly(error);
+  }
+
+  function statusChip(status) {
+    return C.tag(STATUS_TEXT[status] || "Sent", "info", true);
+  }
+
+  function normaliseItems(list) {
+    return (Array.isArray(list) ? list : []).filter(Boolean).map(function (item, index) {
+      return {
+        id: item.id !== undefined && item.id !== null ? String(item.id) : "item-" + index,
+        kind: item.kind || "details",
+        label: item.label || "",
+        help: item.help || "",
+        required: Boolean(item.required),
+        answered: Boolean(item.answered),
+        attempts_left: typeof item.attempts_left === "number" ? item.attempts_left : null
+      };
+    });
+  }
+
+  C.cand.followPanel = function (applicationId, rawItems, hooks) {
+    var items = normaliseItems(rawItems);
+    var uid = "fu" + Math.random().toString(36).slice(2, 7);
+    var section = h("section", { class: "card follow-card", id: uid, "aria-labelledby": uid + "T" });
+
+    function attemptsNote(item) {
+      if (item.attempts_left === null) return null;
+      if (item.attempts_left <= 0) return h("p", { class: "small muted", text: "You cannot send more for this one right now." });
+      return h("p", { class: "small muted", text: "You can send " + plural(item.attempts_left, "more answer", "more answers") + " for this one." });
     }
-    return h("section", { class: "card progress-card", id: "progressCard", tabindex: "-1", "aria-labelledby": "progressT" },
-      h("h3", { id: "progressT", text: "Your progress" }),
-      h("div", { class: "progress-scores" },
-        h("div", null, h("div", { class: "muted small", text: "Score before" }), h("div", { class: "score-mid", text: String(delta.score_before) })),
-        h("div", { class: "progress-arrow", "aria-hidden": "true", text: "to" }),
-        h("div", null, h("div", { class: "muted small", text: "Score now" }), h("div", { class: "score-mid", text: String(delta.score_after) })),
-        h("div", null, C.tag(changeText, change > 0 ? "ok" : change < 0 ? "danger" : "info"))
-      ),
-      delta.message ? h("p", { text: delta.message }) : null,
-      h("div", { class: "grid-2" },
-        h("div", null, h("h4", { text: "Concerns cleared" }), list(cleared, "None cleared this time.")),
-        h("div", null, h("h4", { text: "New concerns" }), list(added, "No new concerns."))
-      ),
-      delta.unchanged_count ? h("p", { class: "small muted", text: plural(delta.unchanged_count, "concern is", "concerns are") + " still the same." }) : null
-    );
-  }
 
-  async function loadDelta(applicationId) {
-    try {
-      var delta = await C.api("GET", "/v1/me/applications/" + encodeURIComponent(applicationId) + "/delta");
-      return delta && delta.score_before !== undefined ? delta : null;
-    } catch (error) {
+    function itemBox(item, note, composing) {
+      var box = h("article", { class: "follow-item", "data-item-id": item.id, "aria-labelledby": uid + "L" + item.id });
+      var title = h("h3", { id: uid + "L" + item.id, class: "follow-label" + (item.kind === "question" ? " pre" : ""), text: item.label });
+      var head = h("div", { class: "row between follow-head" }, title, item.answered ? C.tag("Sent", "info", true) : (item.required ? C.tag("Needed", "info", true) : C.tag("Optional", "info", true)));
+      box.append(head);
+      if (item.help) box.append(h("p", { class: "muted small", text: item.help }));
+      if (note) box.append(h("p", { class: "follow-note", role: "status", text: note }));
+      if (item.answered && !composing) {
+        box.append(h("p", { class: "small", text: "Your answer was sent to the hiring team." }));
+        if (item.kind === "details" && (item.attempts_left === null || item.attempts_left > 0)) {
+          var more = h("button", { type: "button", class: "btn small", text: "Add more", "aria-label": "Add more to " + item.label });
+          more.addEventListener("click", function () {
+            var next = itemBox(item, "", true);
+            box.replaceWith(next);
+            var area = next.querySelector("textarea");
+            if (area) area.focus();
+          });
+          box.append(h("div", { class: "row" }, more));
+        }
+        return box;
+      }
+      if (item.attempts_left !== null && item.attempts_left <= 0) {
+        box.append(attemptsNote(item));
+        return box;
+      }
+      var areaId = uid + "A" + item.id;
+      var area = h("textarea", { id: areaId, rows: "5", maxlength: String(ANSWER_MAX), "aria-labelledby": uid + "L" + item.id, "aria-describedby": areaId + "C " + areaId + "E" });
+      var count = h("span", { id: areaId + "C", class: "small muted", text: "0 of " + ANSWER_MAX + " characters" });
+      var err = h("p", { class: "err-text", id: areaId + "E", role: "alert", hidden: true });
+      var send = h("button", { type: "button", class: "btn primary", text: "Send" });
+      area.addEventListener("input", function () {
+        count.textContent = area.value.length + " of " + ANSWER_MAX + " characters";
+      });
+      send.addEventListener("click", async function () {
+        var text = area.value.trim();
+        err.hidden = true;
+        if (!text) {
+          err.textContent = "Please write your answer before you send it.";
+          err.hidden = false;
+          area.setAttribute("aria-invalid", "true");
+          area.focus();
+          return;
+        }
+        if (text.length > ANSWER_MAX) {
+          err.textContent = "Your answer is too long. Please keep it under " + ANSWER_MAX + " characters.";
+          err.hidden = false;
+          area.focus();
+          return;
+        }
+        area.removeAttribute("aria-invalid");
+        send.disabled = true;
+        send.setAttribute("aria-busy", "true");
+        send.textContent = "Sending...";
+        try {
+          var res = await C.api("POST", "/v1/me/applications/" + encodeURIComponent(applicationId) + "/answers", { json: { item_id: item.id, text: text } });
+          item.answered = true;
+          if (res && typeof res.attempts_left === "number") item.attempts_left = res.attempts_left;
+          var message = (res && res.message) || "Thank you. Your answer was sent to the hiring team.";
+          var next = itemBox(item, message, false);
+          box.replaceWith(next);
+          C.status(message);
+          if (hooks && hooks.onAnswered) hooks.onAnswered(items);
+          var focusTarget = next.querySelector("button") || next.querySelector(".follow-note");
+          if (focusTarget) focusTarget.focus && focusTarget.focus();
+        } catch (error) {
+          if (C.authError(error)) return;
+          err.textContent = errorText(error);
+          err.hidden = false;
+          send.disabled = false;
+          send.removeAttribute("aria-busy");
+          send.textContent = "Send";
+        }
+      });
+      box.append(h("label", { class: "sr-only", for: areaId, text: "Your answer to " + item.label }), area, count, err, attemptsNote(item), h("div", { class: "row", style: "margin-top:8px" }, send));
+      return box;
+    }
+
+    section.append(h("h2", { id: uid + "T", text: "A few more details" }), h("p", { class: "muted", text: "The hiring team would like to know a little more. Please write your answers in your own words. You can send them now or come back later." }));
+    var open = items.filter(function (item) { return !item.answered; });
+    if (!items.length) {
+      section.append(h("p", { class: "muted", text: "Nothing more is needed from you right now." }));
+    }
+    items.forEach(function (item) { section.append(itemBox(item, "", false)); });
+    section.openCount = open.length;
+    return section;
+  };
+
+  C.views.candidate = function (root) {
+    var replaces = C.cand.replaces;
+    var memory = readJson(FORMS_KEY, {});
+    var draft = replaces && memory[replaces] ? memory[replaces] : readJson(DRAFT_KEY, {});
+    if (replaces && !memory[replaces] && C.cand.replacesRole) draft = Object.assign({}, draft, { role: C.cand.replacesRole });
+    var S = { file: null, sending: false };
+    var controls = {};
+    var errors = {};
+
+    var page = h("div", { class: "apply-page" });
+    root.append(page);
+
+    function field(name, label, control, o) {
+      var opts = o || {};
+      var id = "f" + name;
+      control.id = id;
+      control.name = name;
+      var described = [];
+      var hint = null;
+      if (opts.hint) {
+        hint = h("span", { class: "hint", id: id + "H", text: opts.hint });
+        described.push(id + "H");
+      }
+      var err = h("p", { class: "err-text", id: id + "E", hidden: true });
+      described.push(id + "E");
+      control.setAttribute("aria-describedby", described.join(" "));
+      if (opts.required) control.setAttribute("aria-required", "true");
+      if (draft[name] !== undefined && control.tagName !== "SELECT") control.value = draft[name];
+      controls[name] = control;
+      errors[name] = err;
+      control.addEventListener("input", function () {
+        clearError(name);
+        saveDraft();
+      });
+      control.addEventListener("change", function () {
+        clearError(name);
+        saveDraft();
+      });
+      var labelNode = h("label", { for: id, class: "form-label" }, label, opts.required ? h("span", { class: "req", text: " Required" }) : h("span", { class: "req", text: " Optional" }));
+      var wrap = h("div", { class: "form-field" }, labelNode, hint, control, err);
+      if (opts.extra) wrap.append(opts.extra);
+      return wrap;
+    }
+
+    function setError(name, message) {
+      errors[name].textContent = message;
+      errors[name].hidden = false;
+      controls[name].setAttribute("aria-invalid", "true");
+    }
+    function clearError(name) {
+      if (!errors[name]) return;
+      errors[name].hidden = true;
+      errors[name].textContent = "";
+      controls[name].removeAttribute("aria-invalid");
+    }
+
+    function text(type, attrs) {
+      return h("input", Object.assign({ type: type, autocomplete: "off", spellcheck: "false" }, attrs || {}));
+    }
+
+    var roleSelect = h("select", {}, h("option", { value: "", text: "Choose a role" }));
+    var roleOther = text("text", { placeholder: "For example Site reliability engineer", maxlength: "120" });
+    var roleOtherWrap = h("div", { class: "form-field", hidden: true }, roleOtherLabel(), roleOther);
+    function roleOtherLabel() { return h("label", { for: "froleOther", class: "form-label" }, "Role you want to apply for", h("span", { class: "req", text: " Required" })); }
+    roleOther.id = "froleOther";
+    roleOther.name = "roleOther";
+    var roleOtherErr = h("p", { class: "err-text", id: "froleOtherE", hidden: true });
+    roleOther.setAttribute("aria-describedby", "froleOtherE");
+    roleOtherWrap.append(roleOtherErr);
+    controls.roleOther = roleOther;
+    errors.roleOther = roleOtherErr;
+    roleOther.value = draft.roleOther || "";
+    roleOther.addEventListener("input", function () { clearError("roleOther"); saveDraft(); });
+
+    function addRoleOptions(names) {
+      while (roleSelect.options.length > 1) roleSelect.remove(1);
+      names.forEach(function (name) { roleSelect.append(h("option", { value: name, text: name })); });
+      roleSelect.append(h("option", { value: OTHER, text: "Other" }));
+      var want = draft.role || "";
+      if (want && Array.prototype.some.call(roleSelect.options, function (o) { return o.value === want; })) roleSelect.value = want;
+      syncOther();
+    }
+    function syncOther() {
+      roleOtherWrap.hidden = roleSelect.value !== OTHER;
+    }
+    roleSelect.addEventListener("change", syncOther);
+    addRoleOptions(FALLBACK_ROLES);
+    (async function () {
+      try {
+        var remote = await C.api("GET", "/v1/job-presets");
+        remote = Array.isArray(remote) ? remote : (remote && remote.presets) || [];
+        var names = remote.map(function (p) { return p && (p.name || p.title); }).filter(Boolean);
+        if (names.length) {
+          draft.role = roleSelect.value || draft.role;
+          addRoleOptions(names);
+        }
+      } catch (error) {
+        return;
+      }
+    })();
+
+    var years = text("number", { min: "0", max: "60", step: "1", inputmode: "numeric" });
+    var skills = text("text", { placeholder: "For example Python, SQL, Docker", maxlength: "400" });
+    var about = h("textarea", { rows: "7", maxlength: String(ABOUT_MAX) });
+    var aboutCount = h("span", { class: "small muted", id: "faboutC", text: "0 of " + ABOUT_MAX + " characters" });
+
+    var fileInput = h("input", { type: "file", id: "resumeFile", accept: ".pdf,.docx,.txt", "aria-describedby": "fileHelp fileError" });
+    var fileName = h("div", { class: "file-name", id: "fileName" });
+    var fileError = h("p", { class: "err-text", id: "fileError", role: "alert", hidden: true });
+    var drop = h("div", { class: "dropzone", id: "drop" },
+      h("label", { for: "resumeFile", class: "form-label" }, "Choose a file"),
+      fileInput,
+      h("p", { class: "small muted", id: "fileHelp", style: "margin:8px 0 0", text: "Or drop a file here. PDF, DOCX or TXT, up to 5 MB." }),
+      fileName,
+      fileError
+    );
+    var removeFile = h("button", { type: "button", class: "btn small", text: "Remove file", hidden: true });
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + " bytes";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+    }
+    function checkFile(file) {
+      var name = String(file.name || "");
+      if (!/\.(pdf|docx|txt)$/i.test(name)) return "That file type is not accepted. Please choose a PDF, DOCX or TXT file.";
+      if (file.size > MAX_BYTES) return "That file is " + formatSize(file.size) + ", which is more than the 5 MB limit. Please save a smaller copy.";
+      if (file.size === 0) return "That file is empty. Please choose a file that has your resume in it.";
       return null;
     }
-  }
+    function setFile(file) {
+      var problem = file ? checkFile(file) : null;
+      fileError.hidden = !problem;
+      fileError.textContent = problem || "";
+      fileInput.setAttribute("aria-invalid", problem ? "true" : "false");
+      if (problem || !file) {
+        S.file = null;
+        fileName.textContent = "";
+        removeFile.hidden = true;
+        fileInput.value = "";
+        if (problem) C.status(problem, true);
+        return;
+      }
+      S.file = file;
+      fileName.textContent = file.name + ", " + formatSize(file.size);
+      removeFile.hidden = false;
+      C.status("Selected " + file.name + ".");
+    }
+    fileInput.addEventListener("change", function () { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+    removeFile.addEventListener("click", function () { setFile(null); fileInput.focus(); });
+    drop.addEventListener("dragover", function (event) { event.preventDefault(); drop.classList.add("over"); });
+    drop.addEventListener("dragleave", function () { drop.classList.remove("over"); });
+    drop.addEventListener("drop", function (event) {
+      event.preventDefault();
+      drop.classList.remove("over");
+      var files = event.dataTransfer && event.dataTransfer.files;
+      if (files && files[0]) setFile(files[0]);
+    });
 
-  function decisionNodes(d, opts) {
-    var fixes = d.candidate_fixes || [];
-    var tone = C.ROUTE_TONE[d.route] || "";
-    var practice = d.dry_run && !opts.readOnly;
-    var buttons = h("div", { class: "row" });
-    if (opts.onBackStep) buttons.append(h("button", { type: "button", class: "btn", text: "Back to X-ray", onclick: opts.onBackStep }));
-    buttons.append(
-      h("button", { type: "button", class: "btn primary", id: "fixBtn", text: "Fix and resubmit", onclick: opts.onFix }),
-      h("button", { type: "button", class: "btn", id: "backAppsBtn", text: "Back to my applications", onclick: opts.onBack })
+    var consent = h("input", { type: "checkbox", id: "fconsent", "aria-describedby": "fconsentE", "aria-required": "true" });
+    var consentErr = h("p", { class: "err-text", id: "fconsentE", hidden: true });
+    var sendBtn = h("button", { type: "submit", class: "btn primary", id: "sendApp", text: "Send application" });
+    var progress = h("p", { class: "small muted", id: "sendNote", role: "status", "aria-live": "polite" });
+    var formError = h("p", { class: "alert error", id: "formError", role: "alert", hidden: true });
+
+    about.addEventListener("input", function () {
+      aboutCount.textContent = about.value.length + " of " + ABOUT_MAX + " characters";
+    });
+
+    function sectionCard(title, id, help) {
+      var card = h("fieldset", { class: "card form-section", "aria-labelledby": id });
+      card.append(h("legend", { id: id, class: "section-title", text: title }));
+      if (help) card.append(h("p", { class: "muted small", text: help }));
+      return card;
+    }
+
+    var banner = h("div", { id: "updateNote" });
+    function drawBanner() {
+      C.clear(banner);
+      if (!C.cand.replaces) return;
+      banner.append(h("div", { class: "alert info" },
+        h("strong", { text: "You are updating an application you sent before. " }),
+        "Change anything you like and send it again. Your earlier details are filled in for you. ",
+        h("button", { type: "button", class: "btn small", text: "Start a fresh application instead", onclick: function () { C.cand.replaces = null; drawBanner(); C.status("This will be sent as a new application."); } })
+      ));
+    }
+    drawBanner();
+
+    var secDetails = sectionCard("Your details", "secDetails", "We use these to reach you about this application.");
+    secDetails.append(
+      field("applicant_name", "Full name", text("text", { autocomplete: "name", maxlength: "120" }), { required: true }),
+      field("applicant_email", "Email address", text("email", { autocomplete: "email", maxlength: "200", inputmode: "email" }), { required: true, hint: "The hiring team will use this to write to you." }),
+      field("applicant_phone", "Phone number", text("tel", { autocomplete: "tel", maxlength: "30", inputmode: "tel" }), { required: true, hint: "Include your country code if you can." })
     );
-    if (opts.onAnother) buttons.append(h("button", { type: "button", class: "btn quiet", text: "Check another resume", onclick: opts.onAnother }));
-    return [
-      h("div", { class: "card" },
-        h("div", { class: "decision-top" },
-          C.gauge(d.score, false),
-          h("div", { class: "decision-side" },
-            h("div", { class: "muted small", text: "Trust score out of 100" }),
-            h("div", { style: "margin-top:6px" }, C.routeTag(d.route)),
-            h("p", { style: "margin:8px 0 0", text: ROUTE_MEANING[d.route] || "" }),
-            practice ? h("p", { class: "small muted", style: "margin:6px 0 0", text: "This was a practice run. Nothing was sent and it is not saved in My applications." }) : null
+
+    var secRole = sectionCard("Role", "secRole", "Tell us which job you are applying for.");
+    secRole.append(field("role", "Role", roleSelect, { required: true }), roleOtherWrap);
+
+    var secExp = sectionCard("Your experience", "secExp", "Share what you have done so far. Short answers are fine.");
+    secExp.append(
+      field("years", "Years of experience", years, { hint: "A whole number. Use 0 if you are just starting out." }),
+      field("current_employer", "Current or latest employer", text("text", { autocomplete: "organization", maxlength: "160" })),
+      field("education", "Education", text("text", { maxlength: "240" }), { hint: "For example your degree and where you studied." }),
+      field("skills", "Skills", skills, { hint: "Separate each skill with a comma." }),
+      field("extra_skills", "Anything else you are good at", h("textarea", { rows: "3", maxlength: "600" }), { hint: "Other tools, languages or strengths that were not listed above." })
+    );
+
+    var secLinks = sectionCard("Your links", "secLinks", "Links help the hiring team see your work. Leave out any you do not have.");
+    secLinks.append(
+      field("github_url", "GitHub profile link", text("url", { placeholder: "https://github.com/yourname", maxlength: "300", inputmode: "url" })),
+      field("linkedin_url", "LinkedIn profile link", text("url", { placeholder: "https://www.linkedin.com/in/yourname", maxlength: "300", inputmode: "url" })),
+      field("portfolio_url", "Portfolio link", text("url", { placeholder: "https://yourname.example", maxlength: "300", inputmode: "url" })),
+      field("papers", "Research papers or DOIs", h("textarea", { rows: "3", placeholder: "10.1000/example.123" }), { hint: "Put one on each line." }),
+      field("certificate_ids", "Certificate IDs", h("textarea", { rows: "3" }), { hint: "Put one on each line." })
+    );
+
+    var secAbout = sectionCard("About your work", "secAbout", null);
+    secAbout.append(field("about_project", "Tell us about one project you are proud of and what you did yourself", about, { hint: "Write in your own words. Plain and honest is best.", extra: aboutCount }));
+
+    var secResume = sectionCard("Resume", "secResume", "You can add your resume if you have one. It is optional.");
+    secResume.append(drop, h("div", { class: "row", style: "margin-top:8px" }, removeFile));
+
+    var secSend = h("div", { class: "card form-section" },
+      h("label", { class: "check", for: "fconsent" }, consent, h("span", { text: "I agree that the hiring team can read what I send and check the links I give." })),
+      consentErr,
+      formError,
+      h("div", { class: "row" }, sendBtn, progress)
+    );
+
+    var form = h("form", { id: "applyForm", novalidate: true, "aria-labelledby": "applyTitle" },
+      banner, secDetails, secRole, secExp, secLinks, secAbout, secResume, secSend
+    );
+    page.append(
+      h("h1", { id: "applyTitle", tabindex: "-1", text: "Apply for a role" }),
+      h("p", { class: "muted", text: "Fill in the form below and send it. It goes straight to the hiring team. Fields marked Required must be filled in." }),
+      form
+    );
+    aboutCount.textContent = about.value.length + " of " + ABOUT_MAX + " characters";
+
+    consent.addEventListener("change", function () {
+      consentErr.hidden = true;
+      consent.removeAttribute("aria-invalid");
+    });
+
+    function values() {
+      var v = {};
+      Object.keys(controls).forEach(function (name) { v[name] = controls[name].value; });
+      v.role = roleSelect.value;
+      return v;
+    }
+
+    function saveDraft() {
+      var v = values();
+      C.safeStore.set(DRAFT_KEY, JSON.stringify(v));
+    }
+
+    function normaliseUrl(value) {
+      var trimmed = String(value || "").trim();
+      if (!trimmed) return "";
+      var full = /^[a-z][a-z0-9+.]*:\/\//i.test(trimmed) ? trimmed : "https://" + trimmed;
+      try {
+        var parsed = new URL(full);
+        if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+        if (parsed.hostname.indexOf(".") < 1) return null;
+        return parsed.toString();
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function validate() {
+      Object.keys(errors).forEach(clearError);
+      consentErr.hidden = true;
+      var problems = [];
+      function bad(name, message) { setError(name, message); problems.push(name); }
+      var v = values();
+      if (v.applicant_name.trim().length < 2) bad("applicant_name", "Please enter your full name.");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.applicant_email.trim())) bad("applicant_email", "Please enter an email address like name@example.com.");
+      if (!/^\+?[0-9 ()\-.]{7,20}$/.test(v.applicant_phone.trim()) || v.applicant_phone.replace(/\D/g, "").length < 7) bad("applicant_phone", "Please enter a phone number with at least 7 digits.");
+      if (!roleSelect.value) bad("role", "Please choose the role you are applying for.");
+      else if (roleSelect.value === OTHER && v.roleOther.trim().length < 2) bad("roleOther", "Please type the role you are applying for.");
+      if (v.years.trim() !== "") {
+        var n = Number(v.years);
+        if (!isFinite(n) || n < 0 || n > 60) bad("years", "Please enter a number from 0 to 60.");
+      }
+      ["github_url", "linkedin_url", "portfolio_url"].forEach(function (name) {
+        if (v[name].trim() && normaliseUrl(v[name]) === null) bad(name, "Please enter a full web address such as https://example.com.");
+      });
+      if (v.about_project.length > ABOUT_MAX) bad("about_project", "Please keep this under " + ABOUT_MAX + " characters.");
+      if (!consent.checked) {
+        consentErr.textContent = "Please tick the box so we know you agree.";
+        consentErr.hidden = false;
+        consent.setAttribute("aria-invalid", "true");
+        problems.push("consent");
+      }
+      return problems;
+    }
+
+    function focusProblem(name) {
+      var node = name === "consent" ? consent : name === "role" ? roleSelect : controls[name];
+      if (node) node.focus();
+    }
+
+    form.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      if (S.sending) return;
+      formError.hidden = true;
+      var problems = validate();
+      if (problems.length) {
+        var message = problems.length === 1 ? "One thing needs your attention before you can send." : plural(problems.length, "thing needs", "things need").replace("things need", "things need") + " your attention before you can send.";
+        C.status(message, true);
+        focusProblem(problems[0]);
+        return;
+      }
+      var v = values();
+      var role = roleSelect.value === OTHER ? v.roleOther.trim() : roleSelect.value;
+      var skillList = splitLines(v.skills);
+      var yearsValue = v.years.trim() === "" ? "" : String(Math.max(0, Math.floor(Number(v.years))));
+      var fd = new FormData();
+      if (S.file) fd.append("file", S.file);
+      fd.append("job_json", JSON.stringify({ must_have_skills: skillList, nice_to_have: [], min_years: yearsValue === "" ? 0 : Number(yearsValue) }));
+      fd.append("device_id", deviceId());
+      fd.append("applicant_name", v.applicant_name.trim());
+      fd.append("applicant_email", v.applicant_email.trim());
+      fd.append("applicant_phone", v.applicant_phone.trim());
+      fd.append("role_title", role);
+      function maybe(key, value) { if (value !== "" && value !== null && value !== undefined) fd.append(key, value); }
+      maybe("current_employer", v.current_employer.trim());
+      maybe("education", v.education.trim());
+      maybe("github_url", normaliseUrl(v.github_url) || "");
+      maybe("linkedin_url", normaliseUrl(v.linkedin_url) || "");
+      maybe("portfolio_url", normaliseUrl(v.portfolio_url) || "");
+      maybe("papers", splitLines(v.papers.replace(/,/g, "\n")).join("\n"));
+      maybe("certificate_ids", splitLines(v.certificate_ids.replace(/,/g, "\n")).join("\n"));
+      maybe("years_experience", yearsValue);
+      maybe("extra_skills", v.extra_skills.trim());
+      maybe("about_project", v.about_project.trim());
+      fd.append("consent", "true");
+      if (C.cand.replaces) fd.append("replaces", C.cand.replaces);
+
+      S.sending = true;
+      sendBtn.disabled = true;
+      sendBtn.setAttribute("aria-busy", "true");
+      sendBtn.textContent = "Sending...";
+      progress.textContent = S.file ? "Sending your application and your file. Please keep this page open." : "Sending your application. Please keep this page open.";
+      C.status("Sending your application...");
+      try {
+        var res = await C.api("POST", "/v1/applications/upload", { form: fd });
+        var saved = values();
+        var memory2 = readJson(FORMS_KEY, {});
+        if (res && res.application_id) {
+          memory2[res.application_id] = saved;
+          var keys = Object.keys(memory2);
+          while (keys.length > 20) delete memory2[keys.shift()];
+          C.safeStore.set(FORMS_KEY, JSON.stringify(memory2));
+        }
+        C.safeStore.set(DRAFT_KEY, "");
+        C.cand.replaces = null;
+        if (C.refreshSummary) C.refreshSummary();
+        thankYou(res || {}, role);
+      } catch (error) {
+        if (C.authError(error)) return;
+        formError.textContent = errorText(error);
+        formError.hidden = false;
+        C.status("Your application was not sent. Please read the message and try again.", true);
+        sendBtn.disabled = false;
+        sendBtn.removeAttribute("aria-busy");
+        sendBtn.textContent = "Send application";
+        progress.textContent = "";
+        S.sending = false;
+        formError.scrollIntoView({ block: "nearest" });
+      }
+    });
+
+    function thankYou(res, role) {
+      C.clear(root);
+      var id = res.application_id || "";
+      var title = h("h1", { id: "thanksTitle", tabindex: "-1", class: "thanks-title", text: res.title || "Thank you. We have your application." });
+      var copyNote = h("span", { class: "small muted", role: "status", "aria-live": "polite" });
+      var copy = h("button", { type: "button", class: "btn small", text: "Copy", "aria-label": "Copy reference number" });
+      copy.addEventListener("click", async function () {
+        try {
+          await navigator.clipboard.writeText(id);
+          copyNote.textContent = "Copied.";
+        } catch (error) {
+          copyNote.textContent = "Copy did not work. Please select the number and copy it.";
+        }
+      });
+      var wrap = h("div", { class: "myapps thanks" },
+        h("div", { class: "card thanks-card" },
+          title,
+          res.message ? h("p", { class: "thanks-message", text: res.message }) : null,
+          role ? h("p", { class: "muted", text: "Role " + role }) : null,
+          id ? h("div", { class: "ref-row" }, h("span", { class: "muted small", text: "Your reference" }), h("strong", { class: "mono ref-id", id: "refId", text: shortId(id) }), copy, copyNote) : null,
+          h("h2", { text: "What happens next" }),
+          h("p", { text: "The hiring team reads every application. You can come back here any time to see if they need anything more from you." }),
+          h("div", { class: "row" },
+            h("button", { type: "button", class: "btn primary", id: "toMine", text: "See my applications", onclick: function () { C.go("myapps"); } }),
+            h("button", { type: "button", class: "btn", id: "another", text: "Send another application", onclick: function () { C.go("candidate"); } })
           )
-        ),
-        h("h3", { text: "What this means" }),
-        h("p", { text: ROUTE_MEAN_LONG[d.route] || "" }),
-        d.summary ? h("p", { class: "muted", text: d.summary }) : null
-      ),
-      h("div", { class: "card" }, h("h3", { text: "Reasons" }), d.reasons && d.reasons.length ? d.reasons.map(C.reasonCard) : h("p", { class: "muted", text: "No concerns were found." })),
-      h("div", { class: "card" }, h("h3", { text: "What you can fix" }),
-        fixes.length ? h("ol", null, fixes.map(function (fix) { return h("li", { text: fixText(fix) }); })) : h("p", { class: "muted", text: "Nothing to fix right now." })),
-      opts.progress || null,
-      h("div", { class: "card" }, buttons)
-    ].filter(Boolean);
-  }
+        )
+      );
+      var items = normaliseItems(res.follow_up);
+      if (items.some(function (item) { return !item.answered; })) {
+        wrap.append(C.cand.followPanel(id, items, {}));
+      }
+      root.append(wrap);
+      title.focus();
+      window.scrollTo(0, 0);
+      C.status("Your application was sent.");
+    }
+
+    page.querySelector("#applyTitle").focus({ preventScroll: true });
+  };
 
   C.views.myapps = function (root) {
     var listBox = h("div", { id: "appList" });
     var detailBox = h("div", { id: "appDetail", hidden: true });
     var title = h("h1", { id: "myAppsTitle", tabindex: "-1", text: "My applications" });
-    root.append(h("div", { class: "myapps" }, title, h("p", { class: "muted", text: "Every application you have sent is saved here. Open one to see the decision again or to fix it and send it again. Practice runs are not listed." }), listBox, detailBox));
-
-    function dateText(row) {
-      var seconds = toSeconds(row.submitted_at);
-      return seconds ? C.fmtTime(seconds) : "Date not recorded";
-    }
+    root.append(h("div", { class: "myapps" }, title, h("p", { class: "muted", text: "Every application you have sent is saved here. Open one to see how it is going or to answer anything the hiring team asked." }), listBox, detailBox));
 
     function drawList(rows, focusId) {
       C.clear(listBox);
       if (!rows.length) {
-        listBox.append(h("div", { class: "card" }, h("h2", { text: "No applications yet" }), h("p", { class: "muted", text: "When you send a resume that is not a practice run it will appear here." }), h("button", { type: "button", class: "btn primary", text: "Start a new application", onclick: function () { C.go("candidate"); } })));
+        listBox.append(h("div", { class: "card" }, h("h2", { text: "No applications yet" }), h("p", { class: "muted", text: "When you send an application it will appear here." }), h("button", { type: "button", class: "btn primary", text: "Start an application", onclick: function () { C.go("candidate"); } })));
         return;
       }
       var list = h("ul", { class: "app-list", "aria-label": "Your applications" });
       rows.forEach(function (row) {
-        var concerns = Number(row.concern_count) || 0;
-        var view = h("button", { type: "button", class: "detail-link", "data-view-id": row.application_id, "aria-label": "View application from " + dateText(row), text: "View" });
+        var needs = Number(row.follow_up_count) > 0;
+        var role = row.role_title || row.job_id || "Application";
+        var view = h("button", { type: "button", class: "detail-link", "data-view-id": row.application_id, "aria-label": "View application for " + role + " sent on " + dateText(row.submitted_at), text: "View" });
         view.addEventListener("click", function () { openApp(row, rows); });
         list.append(h("li", { class: "app-item" },
-          C.gauge(row.score, true),
           h("div", { class: "app-main" },
-            h("div", { class: "row", style: "gap:8px" }, C.routeTag(row.route), row.replaces ? C.tag("Fixed and resent", "info", true) : null),
-            h("div", { class: "app-meta", text: dateText(row) + (row.job_id ? " for " + row.job_id : "") }),
-            h("div", { class: "app-meta muted", text: concerns === 0 ? "No concerns" : plural(concerns, "concern", "concerns") })
+            h("h2", { class: "app-role", text: role }),
+            h("div", { class: "row", style: "gap:8px" }, statusChip(row.status), needs ? C.tag("Details needed", "", true) : null, row.replaces ? C.tag("Updated", "", true) : null),
+            h("div", { class: "app-meta muted", text: "Sent on " + dateText(row.submitted_at) })
           ),
           view
         ));
@@ -215,620 +639,67 @@
         if (C.authError(error)) return;
         listBox.hidden = false;
         detailBox.hidden = true;
-        C.status(C.friendly(error), true);
+        C.status(errorText(error), true);
         return;
       }
-      d = Object.assign({ score: row.score, route: row.route, summary: row.summary, reasons: [], candidate_fixes: [] }, d);
-      d.dry_run = false;
-      var progress = null;
-      if (row.replaces) {
-        var delta = await loadDelta(row.application_id);
-        if (delta) progress = progressCard(delta);
-      }
-      var heading = h("h2", { id: "detailTitle", tabindex: "-1", text: "Application from " + dateText(row) });
-      C.clear(detailBox);
-      detailBox.append(
-        h("button", { type: "button", class: "btn small", id: "backListTop", text: "Back to my applications", onclick: back }),
-        heading,
-        ...decisionNodes(d, {
-          readOnly: true,
-          progress: progress,
-          onFix: function () {
-            C.cand.replaces = row.application_id;
-            C.go("candidate");
-          },
-          onBack: back
-        })
-      );
+      d = Object.assign({}, row, d || {});
+      var role = d.role_title || d.job_id || "Application";
+      var heading = h("h2", { id: "detailTitle", tabindex: "-1", text: role });
       function back() {
         detailBox.hidden = true;
         C.clear(detailBox);
         listBox.hidden = false;
-        drawList(rows, row.application_id);
+        refresh(row.application_id);
         C.status("Back to your applications.");
       }
+      var statusLine = h("div", { class: "row", style: "gap:8px" }, statusChip(d.status), h("span", { class: "muted small", text: "Sent on " + dateText(d.submitted_at) }));
+      var summary = h("div", { class: "card" },
+        statusLine,
+        d.title ? h("h3", { style: "margin-top:12px", text: d.title }) : null,
+        d.message ? h("p", { text: d.message }) : null,
+        h("p", { class: "muted small", text: "Your reference is " + shortId(d.application_id) + "." })
+      );
+      var items = normaliseItems(d.follow_up);
+      var follow = items.length ? C.cand.followPanel(d.application_id, items, {}) : h("div", { class: "card" }, h("h3", { text: "A few more details" }), h("p", { class: "muted", text: "Nothing more is needed from you right now. The hiring team will write to you if that changes." }));
+      var update = h("button", { type: "button", class: "btn primary", id: "updateApp", text: "Update this application", onclick: function () {
+        C.cand.replaces = d.application_id;
+        C.cand.replacesRole = role;
+        C.go("candidate");
+      } });
+      C.clear(detailBox);
+      detailBox.append(
+        h("button", { type: "button", class: "btn small", id: "backListTop", text: "Back to my applications", onclick: back }),
+        heading,
+        summary,
+        follow,
+        h("div", { class: "card" }, h("h3", { text: "Want to change something" }), h("p", { class: "muted", text: "You can open the form again with your details filled in, make your changes and send it again." }), update)
+      );
       heading.focus();
       window.scrollTo(0, 0);
       C.status("Application opened.");
     }
 
-    (async function () {
+    async function refresh(focusId) {
       C.status("Loading your applications...");
       try {
         var rows = await C.api("GET", "/v1/me/applications");
         rows = Array.isArray(rows) ? rows : (rows && rows.applications) || [];
         rows = rows.slice().sort(function (a, b) { return toSeconds(b.submitted_at) - toSeconds(a.submitted_at); });
-        drawList(rows);
+        drawList(rows, focusId);
         C.status(rows.length ? plural(rows.length, "application", "applications") + " loaded." : "You have no applications yet.");
-        title.focus({ preventScroll: true });
+        if (!focusId) title.focus({ preventScroll: true });
       } catch (error) {
         if (C.authError(error)) return;
         C.clear(listBox);
         if (error.status === 404) {
-          listBox.append(h("div", { class: "card" }, h("p", { class: "muted", text: "The list of your applications is not available from this server yet." }), h("button", { type: "button", class: "btn primary", text: "Start a new application", onclick: function () { C.go("candidate"); } })));
+          listBox.append(h("div", { class: "card" }, h("p", { class: "muted", text: "The list of your applications is not available from this service yet." }), h("button", { type: "button", class: "btn primary", text: "Start an application", onclick: function () { C.go("candidate"); } })));
           C.status("");
         } else {
           listBox.append(h("p", { class: "alert error", role: "alert", text: C.friendly(error) }));
           C.status(C.friendly(error), true);
         }
       }
-    })();
-  };
-
-  function highlight(container, text, spans) {
-    C.clear(container);
-    var ranges = [];
-    (spans || []).forEach(function (span) {
-      if (!span.text) return;
-      var from = 0;
-      for (;;) {
-        var index = text.indexOf(span.text, from);
-        if (index < 0) break;
-        ranges.push([index, index + span.text.length]);
-        from = index + span.text.length;
-      }
-    });
-    ranges.sort(function (a, b) { return a[0] - b[0]; });
-    var merged = [];
-    ranges.forEach(function (range) {
-      var last = merged[merged.length - 1];
-      if (last && range[0] <= last[1]) last[1] = Math.max(last[1], range[1]);
-      else merged.push([range[0], range[1]]);
-    });
-    var position = 0;
-    merged.forEach(function (range) {
-      if (range[0] > position) container.append(document.createTextNode(text.slice(position, range[0])));
-      container.append(h("mark", { class: "hidden-text", text: text.slice(range[0], range[1]) }));
-      position = range[1];
-    });
-    if (position < text.length) container.append(document.createTextNode(text.slice(position)));
-    return merged.length;
-  }
-
-  function intentList(entries) {
-    if (!entries || !entries.length) return null;
-    return h("div", { class: "stack" },
-      h("h3", { text: "Hidden text and what it says" }),
-      entries.map(function (entry) {
-        return h("div", { class: "reason sev-high" },
-          h("div", { class: "reason-head" }, C.tag(entry.label || "Hidden content", "danger")),
-          h("p", { class: "small muted", style: "margin-bottom:4px", text: "Exact text found" }),
-          h("blockquote", { class: "evidence", text: entry.evidence || "" })
-        );
-      })
-    );
-  }
-
-  function writingCard(style) {
-    var card = h("section", { class: "card muted-card", "aria-labelledby": "styleTitle" });
-    card.append(h("h3", { id: "styleTitle" }, "Writing style ", C.tag("Not part of the decision", "info", true)));
-    if (!style || style.score === null || style.score === undefined) {
-      card.append(h("p", { class: "muted", text: "Not enough text to estimate. This never affects the decision." }));
-      return card;
     }
-    card.append(
-      h("dl", { class: "kv" },
-        h("dt", { text: "Estimate" }), h("dd", { text: style.label + " (" + style.score + " out of 100)" }),
-        h("dt", { text: "Method" }), h("dd", { text: style.mode || "not stated" }),
-        h("dt", { text: "Confidence" }), h("dd", { text: (style.confidence || "unknown") + ", " + (style.word_count || 0) + " words" }),
-        h("dt", { text: "Effect on decision" }), h("dd", { text: "None. Using AI to polish a resume is fine." })
-      )
-    );
-    var patterns = style.patterns_found || [];
-    if (patterns.length) {
-      card.append(h("h4", { style: "margin-top:12px", text: "Patterns noticed" }), h("ul", null, patterns.map(function (item) { return h("li", { text: item.name + ": " + item.detail }); })));
-    }
-    var human = style.human_like_signals || [];
-    if (human.length) {
-      card.append(h("h4", { text: "Signals that read as human" }), h("ul", null, human.map(function (item) { return h("li", { text: item }); })));
-    }
-    var quotes = style.verified_quotes || style.quotes || [];
-    if (quotes.length) {
-      card.append(h("h4", { text: "Quoted from your resume" }));
-      quotes.forEach(function (quote) {
-        var text = typeof quote === "string" ? quote : quote.text;
-        var verified = typeof quote === "string" ? true : quote.verified !== false;
-        card.append(h("blockquote", { class: "evidence" }, text, " ", C.tag(verified ? "Found in your resume" : "Not found verbatim", verified ? "ok" : "warn", true)));
-      });
-    }
-    card.append(h("p", { class: "small muted", style: "margin-top:12px", text: style.disclaimer || "This is an estimate, not proof of authorship. It is shown for context only." }));
-    return card;
-  }
-
-  C.views.candidate = function (root) {
-    var S = { file: null, inspect: null, decision: null, step: 1, applicationId: "app-" + Date.now(), consentId: null };
-
-    var stepper = h("ol", { class: "stepper", "aria-label": "Progress" });
-    var panels = { 1: h("section", { id: "p1", tabindex: "-1" }), 2: h("section", { id: "p2", tabindex: "-1" }), 3: h("section", { id: "p3", tabindex: "-1" }) };
-    root.append(
-      h("h1", { text: "Check your resume before you apply" }),
-      h("p", { class: "muted", text: "See what a keyword parser reads compared with what a person reads, then see the decision and how to improve it." }),
-      stepper, panels[1], panels[2], panels[3]
-    );
-
-    function drawStepper() {
-      C.clear(stepper);
-      [["Upload resume", 1, true], ["X-ray", 2, Boolean(S.inspect)], ["Decision", 3, Boolean(S.decision)]].forEach(function (item) {
-        var button = h("button", { type: "button", class: S.step > item[1] ? "done" : "", "aria-current": S.step === item[1] ? "step" : false, disabled: !item[2] },
-          h("span", { class: "num", "aria-hidden": "true", text: S.step > item[1] ? "✓" : String(item[1]) }),
-          item[0]
-        );
-        button.addEventListener("click", function () { show(item[1]); });
-        stepper.appendChild(h("li", null, button));
-      });
-    }
-
-    function show(step, noFocus) {
-      S.step = step;
-      [1, 2, 3].forEach(function (n) { panels[n].hidden = n !== step; });
-      drawStepper();
-      if (!noFocus) {
-        panels[step].focus({ preventScroll: true });
-        window.scrollTo(0, 0);
-      }
-    }
-
-    var MAX_BYTES = 5 * 1024 * 1024;
-    var JOB_KEY = "trust-job-fields";
-    var fileInput = h("input", { type: "file", id: "resumeFile", accept: ".pdf,.docx,.txt", "aria-describedby": "fileHelp fileError" });
-    var fileName = h("div", { class: "file-name", id: "fileName" });
-    var fileError = h("p", { class: "field-error", id: "fileError", role: "alert", hidden: true });
-    var chipBox = h("div", { id: "samples" });
-    var saved = null;
-    try { saved = JSON.parse(C.safeStore.get(JOB_KEY) || "null"); } catch (error) { saved = null; }
-    saved = saved || {};
-    var must = h("input", { type: "text", id: "must", value: saved.must !== undefined ? saved.must : "Python, PostgreSQL, Kubernetes" });
-    var nice = h("input", { type: "text", id: "nice", value: saved.nice !== undefined ? saved.nice : "Terraform, AWS" });
-    var years = h("input", { type: "number", id: "years", value: saved.years !== undefined ? saved.years : "3", min: "0", max: "40" });
-    var preset = h("select", { id: "preset" }, h("option", { value: "", text: "Custom, I will type my own" }));
-    var presets = BUILTIN_PRESETS;
-    var readBtn = h("button", { type: "button", class: "btn primary", id: "readBtn", text: "Read my resume", disabled: true });
-    var readNote = h("p", { class: "small muted", id: "readNote", role: "status", "aria-live": "polite", style: "margin:8px 0 0" });
-    var drop = h("div", { class: "dropzone", id: "drop" },
-      h("label", { for: "resumeFile", class: "field", style: "margin:0" }, "Choose a resume", fileInput),
-      h("p", { class: "small muted", id: "fileHelp", style: "margin:8px 0 0", text: "or drop a file here. PDF, DOCX or TXT, up to 5 MB." }),
-      fileName,
-      fileError
-    );
-
-    function saveJob() {
-      C.safeStore.set(JOB_KEY, JSON.stringify({ must: must.value, nice: nice.value, years: years.value, preset: preset.value }));
-    }
-    [must, nice, years].forEach(function (input) {
-      input.addEventListener("input", function () { preset.value = ""; saveJob(); });
-    });
-
-    function drawPresets() {
-      presets.forEach(function (item, index) {
-        preset.append(h("option", { value: String(index), text: item.name }));
-      });
-      if (saved.preset !== undefined && saved.preset !== "" && presets[Number(saved.preset)]) preset.value = String(saved.preset);
-    }
-    preset.addEventListener("change", function () {
-      var item = presets[Number(preset.value)];
-      if (!item) { saveJob(); return; }
-      must.value = (item.must_have || []).join(", ");
-      nice.value = (item.nice_to_have || []).join(", ");
-      years.value = String(item.min_years || 0);
-      saveJob();
-      C.status("Skills and years filled in for " + item.name + ". You can still change them.");
-    });
-    drawPresets();
-    (async function () {
-      try {
-        var remote = await C.api("GET", "/v1/job-presets");
-        remote = Array.isArray(remote) ? remote : (remote && remote.presets) || [];
-        if (remote.length) {
-          var current = preset.value ? presets[Number(preset.value)] : null;
-          presets = remote;
-          while (preset.options.length > 1) preset.remove(1);
-          drawPresets();
-          if (current) {
-            var again = presets.findIndex(function (item) { return item.name === current.name; });
-            preset.value = again >= 0 ? String(again) : "";
-          }
-        }
-      } catch (error) {
-        return;
-      }
-    })();
-
-    var tips = [
-      "Keep all of your text visible. Never hide words in white or tiny text.",
-      "Describe your own work with a project and a result.",
-      "List the skills you really have and no others.",
-      "Check that your dates are in order and that jobs do not overlap by mistake.",
-      "Write for a person. Do not add instructions meant for a screening tool.",
-      "Use a PDF, DOCX or TXT file up to 5 MB."
-    ];
-
-    var resubmitNote = h("div", { id: "resubmitNote" });
-
-    panels[1].append(
-      resubmitNote,
-      h("section", { class: "card tips-card", "aria-labelledby": "tipsT", style: "margin-bottom:16px" },
-        h("h2", { id: "tipsT", text: "Before you submit" }),
-        h("ul", { class: "tips" }, tips.map(function (tip) { return h("li", { text: tip }); }))
-      ),
-      h("div", { class: "grid-2" },
-        h("div", { class: "card" }, h("h2", { text: "1. Upload your resume" }), drop,
-          h("details", { class: "group", style: "margin-top:16px" }, h("summary", { text: "Try a sample resume" }), chipBox)),
-        h("div", { class: "card" }, h("h2", { text: "The job you are applying to" }),
-          h("label", { class: "field", for: "preset" }, "Job role", preset, h("span", { class: "hint", text: "Pick a role to fill in the skills and years below." })),
-          h("label", { class: "field", for: "must" }, "Skills the job must have", must, h("span", { class: "hint", text: "Separate with commas." })),
-          h("label", { class: "field", for: "nice" }, "Skills that would be a bonus", nice),
-          h("label", { class: "field", for: "years" }, "Minimum years of experience", years),
-          readBtn, readNote)
-      )
-    );
-
-    function drawResubmit() {
-      C.clear(resubmitNote);
-      if (!C.cand.replaces) return;
-      resubmitNote.append(h("div", { class: "alert info" },
-        h("strong", { text: "You are fixing an earlier application. " }),
-        "Choose your updated resume and send it again. We will show how your result changed. ",
-        h("button", { type: "button", class: "btn small", text: "Start a fresh application instead", onclick: function () { C.cand.replaces = null; drawResubmit(); C.status("This will be saved as a new application."); } })
-      ));
-    }
-    drawResubmit();
-
-    function formatSize(bytes) {
-      if (bytes < 1024) return bytes + " bytes";
-      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-      return (bytes / (1024 * 1024)).toFixed(2) + " MB";
-    }
-
-    function checkFile(file, isSample) {
-      var name = String(file.name || "");
-      if (!/\.(pdf|docx|txt)$/i.test(name)) return "That file type is not accepted. Please choose a PDF, DOCX or TXT file.";
-      if (file.size > MAX_BYTES) return "That file is " + formatSize(file.size) + ", which is more than the 5 MB limit. Please save a smaller copy.";
-      if (!isSample && file.size === 0) return "That file is empty. Please choose a file that has your resume in it.";
-      return null;
-    }
-
-    function setFile(file, isSample) {
-      var problem = file ? checkFile(file, isSample) : null;
-      fileError.hidden = !problem;
-      fileError.textContent = problem || "";
-      fileInput.setAttribute("aria-invalid", problem ? "true" : "false");
-      if (problem) {
-        S.file = null;
-        fileName.textContent = "";
-        readBtn.disabled = true;
-        fileInput.value = "";
-        chipBox.querySelectorAll("button").forEach(function (chip) { chip.setAttribute("aria-pressed", "false"); });
-        C.status(problem, true);
-        drawStepper();
-        return;
-      }
-      S.file = file;
-      S.inspect = null;
-      S.decision = null;
-      fileName.textContent = file ? file.name + (isSample ? "" : ", " + formatSize(file.size)) : "";
-      readBtn.disabled = !file;
-      if (file) C.status("Selected " + file.name + (isSample ? "." : ", " + formatSize(file.size) + "."));
-      chipBox.querySelectorAll("button").forEach(function (chip) { chip.setAttribute("aria-pressed", file && chip.dataset.file === file.name ? "true" : "false"); });
-      drawStepper();
-    }
-
-    fileInput.addEventListener("change", function () { if (fileInput.files[0]) setFile(fileInput.files[0]); });
-    drop.addEventListener("dragover", function (event) { event.preventDefault(); drop.classList.add("over"); });
-    drop.addEventListener("dragleave", function () { drop.classList.remove("over"); });
-    drop.addEventListener("drop", function (event) {
-      event.preventDefault();
-      drop.classList.remove("over");
-      var files = event.dataTransfer && event.dataTransfer.files;
-      if (files && files.length > 1) { setFile(files[0]); return; }
-      if (files && files[0]) setFile(files[0]);
-    });
-
-    async function loadSample(name) {
-      if (C.state.demo) {
-        setFile(new File(["sample"], name), true);
-        return;
-      }
-      C.status("Loading sample...");
-      try {
-        var response = await fetch("../resume-xray/samples/" + encodeURIComponent(name));
-        if (!response.ok) throw new Error("missing");
-        var blob = await response.blob();
-        setFile(new File([blob], name), true);
-        C.status("Sample loaded.");
-      } catch (error) {
-        C.status("That sample could not be loaded.", true);
-      }
-    }
-
-    async function drawSamples() {
-      var groups = C.demo.samples;
-      try {
-        var response = await fetch("../resume-xray/samples/index.json");
-        if (response.ok) groups = await response.json();
-      } catch (error) {
-        groups = C.demo.samples;
-      }
-      C.clear(chipBox);
-      groups.forEach(function (group) {
-        chipBox.append(
-          h("p", { class: "small muted", style: "margin:12px 0 6px", text: group.group }),
-          h("div", { class: "chips" }, group.samples.map(function (sample) {
-            var chip = h("button", { type: "button", class: "chip", "data-file": sample.file, "aria-pressed": "false", title: sample.note, text: sample.file.replace(/\.[a-z]+$/, "").replace(/_/g, " ") });
-            chip.addEventListener("click", function () { loadSample(sample.file); });
-            return chip;
-          }))
-        );
-      });
-    }
-
-    function skillList(value) {
-      return value.split(",").map(function (item) { return item.trim(); }).filter(Boolean);
-    }
-    function jobJson() {
-      return JSON.stringify({ must_have_skills: skillList(must.value), nice_to_have: skillList(nice.value), min_years: Number(years.value) || 0 });
-    }
-
-    var testMode = h("input", { type: "checkbox", id: "dryRun", checked: !C.cand.replaces });
-
-    function drawInspect() {
-      var r = S.inspect;
-      var panel = panels[2];
-      C.clear(panel);
-      var humanBox = h("pre", { class: "textview", tabindex: "0", "aria-label": "Text a person reads" });
-      var atsBox = h("pre", { class: "textview", tabindex: "0", "aria-label": "Text a parser reads, hidden text marked" });
-      highlight(humanBox, r.human_view || "", []);
-      var hiddenCount = highlight(atsBox, r.ats_view || "", r.hidden_spans || []);
-      var gap = r.naive_ats_score - r.human_view_ats_score;
-      var note = hiddenCount > 0 || gap > 0
-        ? h("div", { class: "alert warn", role: "status" }, h("strong", { text: "The two views differ. " }), "A keyword parser would score this resume " + r.naive_ats_score.toFixed(1) + ", while a person would score it " + r.human_view_ats_score.toFixed(1) + ". Some content is hidden from people.")
-        : h("div", { class: "alert ok", role: "status" }, h("strong", { text: "The two views match. " }), "Nothing is hidden from a person.");
-      var agreement = r.agreement || { score: 0, label: "Unavailable" };
-      panel.append(
-        h("h2", { text: "2. X-ray, parser versus person" }),
-        note,
-        h("div", { class: "grid-3" },
-          h("div", { class: "card" }, C.meter({ id: "mAts", label: "What an ATS parser reads", value: r.naive_ats_score, decimals: 1, sub: "Keyword match score on the full text layer." })),
-          h("div", { class: "card" }, C.meter({ id: "mHuman", label: "What a person reads", value: r.human_view_ats_score, decimals: 1, sub: "Same score using only visible text." })),
-          h("div", { class: "card" }, C.meter({ id: "mAgree", label: "Agreement", value: agreement.score, tone: toneFor(agreement.score), valuetext: agreement.score + " out of 100, " + agreement.label, sub: agreement.label }))
-        ),
-        h("div", { class: "grid-2", style: "margin-top:16px" },
-          h("div", { class: "card" }, h("h3", { id: "hvT", text: "What a person sees" }), humanBox),
-          h("div", { class: "card" }, h("h3", { id: "avT" }, "What a parser reads ", C.tag(hiddenCount > 0 ? "Hidden text found" : "Full text layer", hiddenCount > 0 ? "warn" : "ok")), atsBox)
-        ),
-        h("div", { style: "margin-top:16px" }, intentList(r.hidden_intent)),
-        h("div", { style: "margin-top:16px" }, writingCard(r.ai_writing)),
-        h("div", { class: "card", style: "margin-top:16px" },
-          h("label", { class: "check", for: "dryRun" }, testMode, h("span", null, "Practice mode lets you try this resume without sending it or saving it to My applications.")),
-          h("div", { class: "row" },
-            h("button", { type: "button", class: "btn primary", id: "sendBtn", text: "See the decision", onclick: submit }),
-            h("button", { type: "button", class: "btn", text: "Choose another resume", onclick: function () { show(1); } })
-          )
-        )
-      );
-    }
-
-    async function runInspect() {
-      if (!S.file) { C.status("Choose a file or a sample first.", true); return; }
-      readBtn.disabled = true;
-      readBtn.setAttribute("aria-busy", "true");
-      readBtn.textContent = "Reading your resume...";
-      readNote.textContent = "Uploading your file.";
-      var stage = setTimeout(function () { readNote.textContent = "Comparing what a parser reads with what a person reads."; }, 900);
-      C.status("Reading the resume both ways...");
-      var form = new FormData();
-      form.append("file", S.file);
-      form.append("job_json", jobJson());
-      try {
-        S.inspect = await C.api("POST", "/v1/resume/inspect", { form: form });
-        S.decision = null;
-        drawInspect();
-        show(2);
-        C.status("Compare the two views, then see the decision.");
-      } catch (error) {
-        if (C.authError(error)) return;
-        C.status(C.friendly(error), true);
-      } finally {
-        clearTimeout(stage);
-        readBtn.disabled = !S.file;
-        readBtn.removeAttribute("aria-busy");
-        readBtn.textContent = "Read my resume";
-        readNote.textContent = "";
-      }
-    }
-    readBtn.addEventListener("click", runInspect);
-
-    function drawDecision(progress) {
-      var d = S.decision;
-      var panel = panels[3];
-      C.clear(panel);
-      panel.append(
-        h("h2", { text: "3. Decision" }),
-        ...decisionNodes(d, {
-          progress: progress,
-          onBackStep: function () { show(2); },
-          onFix: function () {
-            C.cand.replaces = d.dry_run ? C.cand.replaces : d.application_id;
-            S.fromFix = true;
-            setFile(null);
-            fileInput.value = "";
-            testMode.checked = false;
-            drawResubmit();
-            show(1);
-            C.status("Change your resume, then choose it again and send it. The job details are kept.");
-          },
-          onBack: function () { C.go("myapps"); },
-          onAnother: function () { setFile(null); fileInput.value = ""; show(1); }
-        }),
-        intakeCard()
-      );
-    }
-
-    async function submit() {
-      var button = C.$("sendBtn");
-      button.disabled = true;
-      S.applicationId = "app-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
-      C.status("Sending through the firewall...");
-      var form = new FormData();
-      form.append("file", S.file);
-      form.append("job_json", jobJson());
-      form.append("device_id", "console-" + Math.random().toString(36).slice(2, 10));
-      form.append("application_id", S.applicationId);
-      form.append("session_seconds", "120");
-      form.append("dry_run", testMode.checked ? "true" : "false");
-      var replaced = !testMode.checked && C.cand.replaces ? C.cand.replaces : null;
-      if (replaced) form.append("replaces", replaced);
-      try {
-        S.decision = await C.api("POST", "/v1/applications/upload", { form: form });
-        S.consentId = null;
-        var progress = null;
-        if (replaced) {
-          var delta = await loadDelta(S.decision.application_id || S.applicationId);
-          if (delta) progress = progressCard(delta);
-          C.cand.replaces = null;
-        }
-        drawDecision(progress);
-        show(3);
-        C.status((S.decision.route === "PASS_TO_ATS" ? "Your resume can move on." : "Your resume needs a person to look at it.") + (progress ? " Your progress is shown below the result." : ""));
-        if (!testMode.checked && C.refreshSummary) C.refreshSummary();
-      } catch (error) {
-        if (C.authError(error)) return;
-        C.status(C.friendly(error), true);
-        button.disabled = false;
-      }
-    }
-
-    function intakeCard() {
-      var card = h("section", { class: "card", "aria-labelledby": "intakeT" });
-      var results = h("div", { id: "intakeResults", "aria-live": "polite" });
-      var github = h("input", { type: "url", id: "inGithub", placeholder: "https://github.com/your-name", autocomplete: "off" });
-      var linkedin = h("input", { type: "file", id: "inLinkedin", accept: ".pdf" });
-      var portfolio = h("input", { type: "url", id: "inPortfolio", placeholder: "https://your-site.example", autocomplete: "off" });
-      var dois = h("textarea", { id: "inDois", placeholder: "10.1000/example.123\nhttps://doi.org/10.1000/example.456" });
-      var certs = h("textarea", { id: "inCerts", placeholder: "One certificate ID per line" });
-      var consent = h("input", { type: "checkbox", id: "inConsent" });
-      var errorBox = h("p", { class: "alert error", role: "alert", hidden: true });
-      var send = h("button", { type: "button", class: "btn primary", text: "Check what I added" });
-
-      function drawFindings(data) {
-        C.clear(results);
-        S.consentId = data.consent_id;
-        results.append(h("h3", { style: "margin-top:16px", text: "What we found" }));
-        (data.findings || []).forEach(function (finding, index) {
-          var tone = finding.status === "verified" ? "ok" : finding.status === "needs_review" ? "warn" : "info";
-          var dispute = h("button", { type: "button", class: "btn small", text: "Dispute this finding", "aria-label": "Dispute finding " + (index + 1) + " from " + finding.source });
-          dispute.addEventListener("click", function () { disputeFinding(index, finding); });
-          results.append(h("div", { class: "finding" }, h("div", null, h("div", { class: "row" }, h("strong", { text: finding.source }), C.tag(finding.status.replace(/_/g, " "), tone)), h("p", { style: "margin:4px 0 0", text: finding.fact })), dispute));
-        });
-        results.append(h("p", { class: "small muted", text: "Reference: " + data.consent_id + ". You can ask for any finding to be reviewed." }));
-      }
-
-      async function disputeFinding(index, finding) {
-        var note = h("textarea", { id: "disputeNote", "aria-label": "Why is this finding wrong?", placeholder: "What is wrong or missing?" });
-        var answer = await C.dialog({
-          title: "Dispute a finding",
-          body: h("div", null, h("p", { class: "muted", text: finding.source + ": " + finding.fact }), h("label", { class: "field", for: "disputeNote" }, "What is wrong?", note)),
-          actions: [
-            { label: "Cancel", value: null },
-            { label: "Send dispute", kind: "primary", value: "send", validate: function () { return note.value.trim().length < 5 ? "Add a short note, at least 5 characters." : null; } }
-          ]
-        });
-        if (answer !== "send") return;
-        try {
-          await C.api("POST", "/v1/intake/dispute", { json: { consent_id: S.consentId, finding_index: index, note: note.value.trim() } });
-          C.status("Your dispute was sent. A person will review this finding.");
-        } catch (error) {
-          if (C.authError(error)) return;
-          C.status(C.friendly(error), true);
-        }
-      }
-
-      send.addEventListener("click", async function () {
-        errorBox.hidden = true;
-        if (!consent.checked) {
-          errorBox.textContent = "Please tick the consent box so we know you agree to these checks.";
-          errorBox.hidden = false;
-          consent.focus();
-          return;
-        }
-        var form = new FormData();
-        form.append("application_id", S.applicationId);
-        form.append("github_url", github.value.trim());
-        form.append("portfolio_url", portfolio.value.trim());
-        splitList(dois.value).forEach(function (item) { form.append("doi_links", item); });
-        splitList(certs.value).forEach(function (item) { form.append("certificate_ids", item); });
-        form.append("consent", "true");
-        if (linkedin.files[0]) form.append("linkedin_pdf", linkedin.files[0]);
-        send.disabled = true;
-        C.status("Checking what you added...");
-        try {
-          drawFindings(await C.api("POST", "/v1/intake/profile", { form: form }));
-          C.status("Done. Review the findings below.");
-        } catch (error) {
-          if (C.authError(error)) return;
-          errorBox.textContent = C.friendly(error);
-          errorBox.hidden = false;
-        } finally {
-          send.disabled = false;
-        }
-      });
-
-      card.append(
-        h("h3", { id: "intakeT", text: "Add more about you (optional)" }),
-        h("p", { class: "muted", text: "Sharing these can help a reviewer see your work. Leaving them out never counts against you." }),
-        h("div", { class: "alert info" }, h("strong", { text: "Your consent. " }), "If you tick the box, we look only at the links and files you provide here, compare them with your resume, and show you every finding. A person can see the findings when reviewing your application. You can dispute any of them."),
-        h("div", { class: "grid-2" },
-          h("div", null,
-            h("label", { class: "field", for: "inGithub" }, "GitHub profile URL", github),
-            h("label", { class: "field", for: "inPortfolio" }, "Portfolio URL", portfolio),
-            h("label", { class: "field", for: "inLinkedin" }, "LinkedIn profile saved as PDF", linkedin, h("span", { class: "hint", text: "On LinkedIn choose More, then Save to PDF." }))
-          ),
-          h("div", null,
-            h("label", { class: "field", for: "inDois" }, "Papers (DOI or link, one per line)", dois),
-            h("label", { class: "field", for: "inCerts" }, "Certificate IDs", certs)
-          )
-        ),
-        h("label", { class: "check", for: "inConsent" }, consent, h("span", { text: "I agree to these checks on the links and files above." })),
-        errorBox,
-        send,
-        results
-      );
-      return card;
-    }
-
-    drawStepper();
-    show(1, true);
-    drawSamples();
-
-    var auto = C.params && C.params.sample;
-    if (auto) {
-      C.params.sample = null;
-      setFile(new File(["sample"], auto), true);
-      runInspect().then(function () {
-        if (C.params.step === "3") {
-          C.params.step = null;
-          return submit();
-        }
-      });
-    }
+    refresh();
   };
 })();

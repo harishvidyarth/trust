@@ -67,3 +67,13 @@ def test_slack_rejects_other_hosts_and_missing_secret():
         build(config, {})
     with pytest.raises(ValueError):
         validate_delivery_config({**config, "destinations": {**config["destinations"], "ping": {"type": "slack"}}})
+
+
+def test_slack_hooks_in_the_environment_are_added_to_the_default_routes():
+    plain = default_delivery_config({})
+    assert "review_slack" not in plain["destinations"]
+    wired = default_delivery_config({"SLACK_REVIEW_HOOK": "x", "SLACK_VERIFY_HOOK": "y"})
+    assert wired["routes"]["MANUAL_REVIEW"] == ["review_inbox", "review_slack"]
+    assert wired["routes"]["ADDITIONAL_VERIFICATION"] == ["verification_inbox", "verification_slack"]
+    clean = validate_delivery_config(wired)
+    assert clean["destinations"]["review_slack"]["url_env"] == "SLACK_REVIEW_HOOK"

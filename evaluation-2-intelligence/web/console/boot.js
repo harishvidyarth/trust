@@ -33,7 +33,7 @@
         C.showLogin("");
         C.status("Service not reachable. Showing demo data.");
       } else {
-        C.showLogin(error.status === 401 ? "Please sign in to continue." : C.friendly(error));
+        C.showLogin(error.status === 401 ? "" : C.friendly(error));
       }
     }
   }

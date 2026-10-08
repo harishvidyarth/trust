@@ -216,6 +216,46 @@ _TEMPLATES = {
         "No change is needed for this claim.",
         "The code project online backs up what the application says. This is a good sign.",
     ),
+    "GITHUB_LINK_INVALID": (
+        "A code link in the application does not lead to GitHub, so it cannot be a real project page.",
+        "Replace it with the real link to your GitHub profile or project, or remove it.",
+        "A code link in the application does not point to GitHub. It cannot be a real GitHub page, so it could not be checked.",
+    ),
+    "GITHUB_ACCOUNT_NOT_FOUND": (
+        "The code account named in the application does not exist.",
+        "Correct the account name in your link or remove it.",
+        "No code account with the name in the application exists. The name may have a typing mistake.",
+    ),
+    "GITHUB_CLAIMED_REPO_IS_FORK": (
+        "A code project listed as built by the candidate is a copy of someone else's project.",
+        "Link the project you wrote yourself, or say clearly which parts you added to the copy.",
+        "The code project named in the application is a copy of another person's project. It does not show that the candidate wrote it.",
+    ),
+    "GITHUB_NO_COMMITS_BY_USER": (
+        "The candidate's code account has no work saved in a project the application names.",
+        "Link a project where your own work is saved, or explain why it is not visible.",
+        "The code account named in the application has no saved work in the project the application lists. The work may sit under another account.",
+    ),
+    "GITHUB_ALL_FORKS": (
+        "Every public project on the code account is a copy of someone else's work.",
+        "Add a project you wrote yourself so your own work can be reviewed.",
+        "Every public project on the code account is a copy of another person's project. That gives little proof of original work.",
+    ),
+    "GITHUB_NO_LANGUAGE_EVIDENCE": (
+        "The programming skills listed do not appear in the public code.",
+        "Add public code that uses the skills you list, or note that your work is private.",
+        "None of the programming skills listed appear in the public code on the account. The work may be private.",
+    ),
+    "GITHUB_COMMITS_VERIFIED": (
+        "The candidate's own saved work is visible in an original project.",
+        "No change is needed for this claim.",
+        "The code account shows many saved changes written by the candidate in an original project. This is a good sign.",
+    ),
+    "GITHUB_LANGUAGES_MATCH": (
+        "The programming skills listed appear in the public code.",
+        "No change is needed for this claim.",
+        "Most of the programming skills listed appear in the public code on the account. This is a good sign.",
+    ),
     "DOI_NOT_FOUND": (
         "A research paper reference in the application could not be checked.",
         "Correct the paper reference or remove the claim you cannot support.",

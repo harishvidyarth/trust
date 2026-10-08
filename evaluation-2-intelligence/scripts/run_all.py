@@ -5,6 +5,7 @@ import functools
 import http.client
 import http.server
 import os
+import re
 import signal
 import socket
 import subprocess
@@ -39,6 +40,35 @@ def private_file(path: Path, initial: str) -> str:
             stream.write(initial)
     os.chmod(path, 0o600)
     return str(path)
+
+
+KEY_NAMES = (
+    "GITHUB_TOKEN",
+    "FIREWALL_USPTO_ODP_API_KEY",
+    "SEMANTIC_SCHOLAR_API_KEY",
+    "SLACK_REVIEW_HOOK",
+    "SLACK_VERIFY_HOOK",
+    "LEVER_API_KEY",
+    "GREENHOUSE_API_KEY",
+    "IPINFO_TOKEN",
+)
+
+
+def load_env_file(path: Path) -> list[str]:
+    loaded: list[str] = []
+    if not path.is_file():
+        return loaded
+    for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip().removeprefix("export ").strip()
+        value = value.strip().strip("\"'")
+        if key and value and key not in os.environ and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+            os.environ[key] = value
+            loaded.append(key)
+    return loaded
 
 
 def ollama_status(environment: dict[str, str]) -> tuple[bool, str]:
@@ -76,6 +106,7 @@ def warm_model(environment: dict[str, str], model: str) -> None:
 
 
 def build_environment(web_port: int) -> dict[str, str]:
+    load_env_file(ROOT / ".env")
     environment = dict(os.environ)
     if "FIREWALL_LLM" not in environment:
         available, detail = ollama_status(environment)
@@ -153,6 +184,10 @@ def main() -> int:
             print(f"Console:  http://localhost:{arguments.web_port}/console/")
             print(f"Users saved in: {environment['FIREWALL_USERS_FILE']}")
             print("Language model: " + environment["_TRUST_LLM_NOTE"])
+            present = [name for name in KEY_NAMES if environment.get(name)]
+            missing = [name for name in KEY_NAMES if not environment.get(name)]
+            print("Keys found: " + (", ".join(present) if present else "none"))
+            print("Keys not set: " + ", ".join(missing))
             print("Press Ctrl+C to stop.")
             while not stopping.is_set() and api.poll() is None:
                 time.sleep(0.5)

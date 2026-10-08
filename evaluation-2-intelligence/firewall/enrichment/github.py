@@ -22,12 +22,39 @@ class GitHubConnector(HttpConnector):
 
     def check(self, claims: Claims) -> list[EnrichmentSignal]:
         username = (claims.github_username or "").strip()
-        if not username:
-            return []
-
         signals: list[EnrichmentSignal] = []
+        for link in claims.invalid_code_links:
+            signals.append(
+                EnrichmentSignal(
+                    code="GITHUB_LINK_INVALID",
+                    polarity="negative",
+                    severity="medium",
+                    confidence=0.8,
+                    source=self.name,
+                    detail=f"The code link {link} does not point to github.com, so it cannot be a real GitHub profile or project.",
+                    matched_claim=link,
+                    evidence_url=None,
+                )
+            )
+        if not username:
+            return signals
+
         user_url = f"{self.base_url}/users/{quote(username, safe='')}"
         user_response = self._get(user_url, headers=self._headers())
+        if user_response is not None and user_response.status_code == 404:
+            signals.append(
+                EnrichmentSignal(
+                    code="GITHUB_ACCOUNT_NOT_FOUND",
+                    polarity="negative",
+                    severity="high",
+                    confidence=0.85,
+                    source=self.name,
+                    detail=f"No GitHub account named {username} exists.",
+                    matched_claim=f"https://github.com/{username}",
+                    evidence_url=f"https://github.com/{quote(username, safe='')}",
+                )
+            )
+            return signals
         account_created = None
         if user_response is not None and user_response.status_code == 200:
             payload = self._json(user_response)

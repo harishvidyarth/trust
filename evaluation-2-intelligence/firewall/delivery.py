@@ -242,8 +242,9 @@ def validate_delivery_config(
     return {"destinations": clean_destinations, "routes": clean_routes}
 
 
-def default_delivery_config() -> dict[str, Any]:
-    return {
+def default_delivery_config(environ: Mapping[str, str] | None = None) -> dict[str, Any]:
+    active_environ = {} if environ is None else environ
+    config: dict[str, Any] = {
         "destinations": {
             "mock_ats": {"type": "mock_ats"},
             "verification_inbox": {"type": "queue"},
@@ -255,6 +256,14 @@ def default_delivery_config() -> dict[str, Any]:
             Route.MANUAL_REVIEW.value: ["review_inbox"],
         },
     }
+    for variable, name, route in (
+        ("SLACK_VERIFY_HOOK", "verification_slack", Route.ADDITIONAL_VERIFICATION.value),
+        ("SLACK_REVIEW_HOOK", "review_slack", Route.MANUAL_REVIEW.value),
+    ):
+        if active_environ.get(variable):
+            config["destinations"][name] = {"type": "slack", "url_env": variable}
+            config["routes"][route].append(name)
+    return config
 
 
 def load_delivery_config(
@@ -266,7 +275,7 @@ def load_delivery_config(
     source = active_environ.get("FIREWALL_ROUTES") if value is None else value
     allow_private = active_environ.get("FIREWALL_ALLOW_PRIVATE_DESTINATIONS") == "1"
     if source is None or not source.strip():
-        return validate_delivery_config(default_delivery_config(), allow_private=allow_private)
+        return validate_delivery_config(default_delivery_config(active_environ), allow_private=allow_private)
     raw = source.strip()
     if raw.startswith("{"):
         loaded = json.loads(raw)

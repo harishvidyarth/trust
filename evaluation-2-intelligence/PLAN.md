@@ -29,8 +29,11 @@ Builds on: [Evaluation 1](../evaluation-1-foundation/PLAN.md). Everything there 
 | 19 | Final destinations: three inboxes, optional Slack, Destinations tab | `tests_ats`, live browser | Done. Inbox is in memory only. |
 | 20 | Registry formats verified, live ORCID lookup | `tests_registry` | Done. Unverifiable formats removed. Patent lookup needs a key. |
 | 21 | Hardened LinkedIn export parser | `tests_intel` | Done on synthetic layouts only. |
-| 22 | Face, voice and video verification | none | Not started. Stopped by decision. |
-| 23 | Independent DAST | none | Not done. A third party must run and accept it. |
+| 22 | Typed applicant form with no scores for candidates, follow up questions, recruiter requests | `tests_candidate` | Done. Candidates see only a status. Checked live. |
+| 23 | GitHub evidence: repositories, commits, languages, fake link and missing account checks | `tests_enrichment`, live GitHub | Done. Checked live against a real account. |
+| 24 | Recruiter reject and reopen, with a polite closed message for the candidate | `tests_candidate`, live | Done. A person decides. Stored decision never changes. |
+| 25 | Face, voice and video verification | none | Not started. Stopped by decision. |
+| 26 | Independent DAST | none | Not done. A third party must run and accept it. |
 
 ## Verified in this round
 
