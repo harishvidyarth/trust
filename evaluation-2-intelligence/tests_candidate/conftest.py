@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import time
 import uuid
 from io import BytesIO
@@ -11,6 +12,7 @@ from reportlab.pdfgen import canvas
 
 from firewall.api import STORE, _resume_text_for, app
 from firewall.auth import get_service
+from firewall.auth.service import set_service
 from firewall.auth.users import ADMIN, CANDIDATE, RECRUITER, make_user
 from firewall.models import JobRequirements
 
@@ -77,6 +79,14 @@ class Session:
 
     def get(self, path: str):
         return self.client.get(path)
+
+
+ORIGINAL_SERVICE = get_service()
+
+
+@pytest.fixture(autouse=True)
+def original_auth_service() -> None:
+    set_service(ORIGINAL_SERVICE)
 
 
 @pytest.fixture(autouse=True)
