@@ -1,0 +1,1027 @@
+{
+  "schema_version": 1,
+  "label": "rotation-fix",
+  "generated_at": "2026-10-08T07:51:52.047266+00:00",
+  "requested_base_url": "http://127.0.0.1",
+  "definitions": {
+    "flagged": "Decision route is not PASS_TO_ATS.",
+    "evasion_rate": "Attack submissions routed PASS_TO_ATS / attack submissions.",
+    "detection_rate": "Attack submissions not routed PASS_TO_ATS / attack submissions.",
+    "control_false_positive_rate": "Control submissions not routed PASS_TO_ATS / control submissions.",
+    "time_to_first_flag_seconds": "Synthetic submitted_at delta from first measured submission; null if never flagged."
+  },
+  "scenarios": [
+    {
+      "name": "naive_flood",
+      "kind": "attack",
+      "seed": 2026,
+      "application_count": 18,
+      "passed_count": 6,
+      "flagged_count": 12,
+      "evasion_rate": 0.3333333333333333,
+      "detection_rate": 0.6666666666666666,
+      "control_false_positive_rate": null,
+      "time_to_first_flag_seconds": 6.0,
+      "first_flag_application_index": 7,
+      "route_counts": {
+        "PASS_TO_ATS": 6,
+        "ADDITIONAL_VERIFICATION": 0,
+        "MANUAL_REVIEW": 12
+      },
+      "reason_codes_seen": {
+        "FAST_SUBMIT": 18,
+        "PASTE_BULK": 18,
+        "VELOCITY_HIGH": 12
+      },
+      "wall_time_seconds": 0.0539,
+      "startup_attempts": 1,
+      "decisions": [
+        {
+          "application_id": "naive-2026-000",
+          "route": "PASS_TO_ATS",
+          "score": 70,
+          "reason_codes": [
+            "PASTE_BULK",
+            "FAST_SUBMIT"
+          ]
+        },
+        {
+          "application_id": "naive-2026-001",
+          "route": "PASS_TO_ATS",
+          "score": 70,
+          "reason_codes": [
+            "PASTE_BULK",
+            "FAST_SUBMIT"
+          ]
+        },
+        {
+          "application_id": "naive-2026-002",
+          "route": "PASS_TO_ATS",
+          "score": 70,
+          "reason_codes": [
+            "PASTE_BULK",
+            "FAST_SUBMIT"
+          ]
+        },
+        {
+          "application_id": "naive-2026-003",
+          "route": "PASS_TO_ATS",
+          "score": 70,
+          "reason_codes": [
+            "PASTE_BULK",
+            "FAST_SUBMIT"
+          ]
+        },
+        {
+          "application_id": "naive-2026-004",
+          "route": "PASS_TO_ATS",
+          "score": 70,
+          "reason_codes": [
+            "PASTE_BULK",
+            "FAST_SUBMIT"
+          ]
+        },
+        {
+          "application_id": "naive-2026-005",
+          "route": "PASS_TO_ATS",
+          "score": 70,
+          "reason_codes": [
+            "PASTE_BULK",
+            "FAST_SUBMIT"
+          ]
+        },
+        {
+          "application_id": "naive-2026-006",
+          "route": "MANUAL_REVIEW",
+          "score": 40,
+          "reason_codes": [
+            "VELOCITY_HIGH",
+            "PASTE_BULK",
+            "FAST_SUBMIT"
+          ]
+        },
+        {
+          "application_id": "naive-2026-007",
+          "route": "MANUAL_REVIEW",
+          "score": 40,
+          "reason_codes": [
+            "VELOCITY_HIGH",
+            "PASTE_BULK",
+            "FAST_SUBMIT"
+          ]
+        },
+        {
+          "application_id": "naive-2026-008",
+          "route": "MANUAL_REVIEW",
+          "score": 40,
+          "reason_codes": [
+            "VELOCITY_HIGH",
+            "PASTE_BULK",
+            "FAST_SUBMIT"
+          ]
+        },
+        {
+          "application_id": "naive-2026-009",
+          "route": "MANUAL_REVIEW",
+          "score": 40,
+          "reason_codes": [
+            "VELOCITY_HIGH",
+            "PASTE_BULK",
+            "FAST_SUBMIT"
+          ]
+        },
+        {
+          "application_id": "naive-2026-010",
+          "route": "MANUAL_REVIEW",
+          "score": 40,
+          "reason_codes": [
+            "VELOCITY_HIGH",
+            "PASTE_BULK",
+            "FAST_SUBMIT"
+          ]
+        },
+        {
+          "application_id": "naive-2026-011",
+          "route": "MANUAL_REVIEW",
+          "score": 40,
+          "reason_codes": [
+            "VELOCITY_HIGH",
+            "PASTE_BULK",
+            "FAST_SUBMIT"
+          ]
+        },
+        {
+          "application_id": "naive-2026-012",
+          "route": "MANUAL_REVIEW",
+          "score": 40,
+          "reason_codes": [
+            "VELOCITY_HIGH",
+            "PASTE_BULK",
+            "FAST_SUBMIT"
+          ]
+        },
+        {
+          "application_id": "naive-2026-013",
+          "route": "MANUAL_REVIEW",
+          "score": 40,
+          "reason_codes": [
+            "VELOCITY_HIGH",
+            "PASTE_BULK",
+            "FAST_SUBMIT"
+          ]
+        },
+        {
+          "application_id": "naive-2026-014",
+          "route": "MANUAL_REVIEW",
+          "score": 40,
+          "reason_codes": [
+            "VELOCITY_HIGH",
+            "PASTE_BULK",
+            "FAST_SUBMIT"
+          ]
+        },
+        {
+          "application_id": "naive-2026-015",
+          "route": "MANUAL_REVIEW",
+          "score": 40,
+          "reason_codes": [
+            "VELOCITY_HIGH",
+            "PASTE_BULK",
+            "FAST_SUBMIT"
+          ]
+        },
+        {
+          "application_id": "naive-2026-016",
+          "route": "MANUAL_REVIEW",
+          "score": 40,
+          "reason_codes": [
+            "VELOCITY_HIGH",
+            "PASTE_BULK",
+            "FAST_SUBMIT"
+          ]
+        },
+        {
+          "application_id": "naive-2026-017",
+          "route": "MANUAL_REVIEW",
+          "score": 40,
+          "reason_codes": [
+            "VELOCITY_HIGH",
+            "PASTE_BULK",
+            "FAST_SUBMIT"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "rotating_identity",
+      "kind": "attack",
+      "seed": 2026,
+      "application_count": 14,
+      "passed_count": 3,
+      "flagged_count": 11,
+      "evasion_rate": 0.21428571428571427,
+      "detection_rate": 0.7857142857142857,
+      "control_false_positive_rate": null,
+      "time_to_first_flag_seconds": 36.0,
+      "first_flag_application_index": 4,
+      "route_counts": {
+        "PASS_TO_ATS": 3,
+        "ADDITIONAL_VERIFICATION": 11,
+        "MANUAL_REVIEW": 0
+      },
+      "reason_codes_seen": {
+        "IDENTITY_DEVICE_ROTATION": 11
+      },
+      "wall_time_seconds": 0.0433,
+      "startup_attempts": 1,
+      "decisions": [
+        {
+          "application_id": "rotating-2026-000",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "rotating-2026-001",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "rotating-2026-002",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "rotating-2026-003",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 65,
+          "reason_codes": [
+            "IDENTITY_DEVICE_ROTATION"
+          ]
+        },
+        {
+          "application_id": "rotating-2026-004",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 65,
+          "reason_codes": [
+            "IDENTITY_DEVICE_ROTATION"
+          ]
+        },
+        {
+          "application_id": "rotating-2026-005",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 65,
+          "reason_codes": [
+            "IDENTITY_DEVICE_ROTATION"
+          ]
+        },
+        {
+          "application_id": "rotating-2026-006",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 65,
+          "reason_codes": [
+            "IDENTITY_DEVICE_ROTATION"
+          ]
+        },
+        {
+          "application_id": "rotating-2026-007",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 65,
+          "reason_codes": [
+            "IDENTITY_DEVICE_ROTATION"
+          ]
+        },
+        {
+          "application_id": "rotating-2026-008",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 65,
+          "reason_codes": [
+            "IDENTITY_DEVICE_ROTATION"
+          ]
+        },
+        {
+          "application_id": "rotating-2026-009",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 65,
+          "reason_codes": [
+            "IDENTITY_DEVICE_ROTATION"
+          ]
+        },
+        {
+          "application_id": "rotating-2026-010",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 65,
+          "reason_codes": [
+            "IDENTITY_DEVICE_ROTATION"
+          ]
+        },
+        {
+          "application_id": "rotating-2026-011",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 65,
+          "reason_codes": [
+            "IDENTITY_DEVICE_ROTATION"
+          ]
+        },
+        {
+          "application_id": "rotating-2026-012",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 65,
+          "reason_codes": [
+            "IDENTITY_DEVICE_ROTATION"
+          ]
+        },
+        {
+          "application_id": "rotating-2026-013",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 65,
+          "reason_codes": [
+            "IDENTITY_DEVICE_ROTATION"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "slow_and_low",
+      "kind": "attack",
+      "seed": 2026,
+      "application_count": 12,
+      "passed_count": 6,
+      "flagged_count": 6,
+      "evasion_rate": 0.5,
+      "detection_rate": 0.5,
+      "control_false_positive_rate": null,
+      "time_to_first_flag_seconds": 1440.0,
+      "first_flag_application_index": 7,
+      "route_counts": {
+        "PASS_TO_ATS": 6,
+        "ADDITIONAL_VERIFICATION": 6,
+        "MANUAL_REVIEW": 0
+      },
+      "reason_codes_seen": {
+        "DUP_RESUME_NEAR": 6
+      },
+      "wall_time_seconds": 0.0361,
+      "startup_attempts": 1,
+      "decisions": [
+        {
+          "application_id": "slow-2026-000",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "slow-2026-001",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "slow-2026-002",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "slow-2026-003",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "slow-2026-004",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "slow-2026-005",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "slow-2026-006",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "slow-2026-007",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "slow-2026-008",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "slow-2026-009",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "slow-2026-010",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "slow-2026-011",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "paraphrase_copy",
+      "kind": "attack",
+      "seed": 2026,
+      "application_count": 10,
+      "passed_count": 6,
+      "flagged_count": 4,
+      "evasion_rate": 0.6,
+      "detection_rate": 0.4,
+      "control_false_positive_rate": null,
+      "time_to_first_flag_seconds": 450.0,
+      "first_flag_application_index": 7,
+      "route_counts": {
+        "PASS_TO_ATS": 6,
+        "ADDITIONAL_VERIFICATION": 4,
+        "MANUAL_REVIEW": 0
+      },
+      "reason_codes_seen": {
+        "DUP_RESUME_NEAR": 4
+      },
+      "wall_time_seconds": 0.029,
+      "startup_attempts": 1,
+      "decisions": [
+        {
+          "application_id": "copy-2026-000",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "copy-2026-001",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "copy-2026-002",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "copy-2026-003",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "copy-2026-004",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "copy-2026-005",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "copy-2026-006",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "copy-2026-007",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "copy-2026-008",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "copy-2026-009",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "resume_farm",
+      "kind": "attack",
+      "seed": 2026,
+      "application_count": 12,
+      "passed_count": 4,
+      "flagged_count": 8,
+      "evasion_rate": 0.3333333333333333,
+      "detection_rate": 0.6666666666666666,
+      "control_false_positive_rate": null,
+      "time_to_first_flag_seconds": 32.0,
+      "first_flag_application_index": 5,
+      "route_counts": {
+        "PASS_TO_ATS": 4,
+        "ADDITIONAL_VERIFICATION": 8,
+        "MANUAL_REVIEW": 0
+      },
+      "reason_codes_seen": {
+        "DUP_RESUME_NEAR": 8
+      },
+      "wall_time_seconds": 0.0343,
+      "startup_attempts": 1,
+      "decisions": [
+        {
+          "application_id": "farm-2026-000",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "farm-2026-001",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "farm-2026-002",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "farm-2026-003",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "farm-2026-004",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "farm-2026-005",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "farm-2026-006",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "farm-2026-007",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "farm-2026-008",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "farm-2026-009",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "farm-2026-010",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "farm-2026-011",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "email_alias_abuse",
+      "kind": "attack",
+      "seed": 2026,
+      "application_count": 10,
+      "passed_count": 3,
+      "flagged_count": 7,
+      "evasion_rate": 0.3,
+      "detection_rate": 0.7,
+      "control_false_positive_rate": null,
+      "time_to_first_flag_seconds": 270.0,
+      "first_flag_application_index": 4,
+      "route_counts": {
+        "PASS_TO_ATS": 3,
+        "ADDITIONAL_VERIFICATION": 0,
+        "MANUAL_REVIEW": 7
+      },
+      "reason_codes_seen": {
+        "DUP_EMAIL": 9,
+        "DUP_RESUME_NEAR": 6,
+        "DUP_SAME_JOB": 6,
+        "IDENTITY_DEVICE_ROTATION": 7
+      },
+      "wall_time_seconds": 0.0321,
+      "startup_attempts": 1,
+      "decisions": [
+        {
+          "application_id": "alias-2026-000",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "alias-2026-001",
+          "route": "PASS_TO_ATS",
+          "score": 78,
+          "reason_codes": [
+            "DUP_EMAIL"
+          ]
+        },
+        {
+          "application_id": "alias-2026-002",
+          "route": "PASS_TO_ATS",
+          "score": 78,
+          "reason_codes": [
+            "DUP_EMAIL"
+          ]
+        },
+        {
+          "application_id": "alias-2026-003",
+          "route": "MANUAL_REVIEW",
+          "score": 11,
+          "reason_codes": [
+            "IDENTITY_DEVICE_ROTATION",
+            "DUP_RESUME_NEAR",
+            "DUP_EMAIL"
+          ]
+        },
+        {
+          "application_id": "alias-2026-004",
+          "route": "MANUAL_REVIEW",
+          "score": 0,
+          "reason_codes": [
+            "DUP_SAME_JOB",
+            "IDENTITY_DEVICE_ROTATION",
+            "DUP_RESUME_NEAR",
+            "DUP_EMAIL"
+          ]
+        },
+        {
+          "application_id": "alias-2026-005",
+          "route": "MANUAL_REVIEW",
+          "score": 0,
+          "reason_codes": [
+            "DUP_SAME_JOB",
+            "IDENTITY_DEVICE_ROTATION",
+            "DUP_RESUME_NEAR",
+            "DUP_EMAIL"
+          ]
+        },
+        {
+          "application_id": "alias-2026-006",
+          "route": "MANUAL_REVIEW",
+          "score": 3,
+          "reason_codes": [
+            "DUP_SAME_JOB",
+            "IDENTITY_DEVICE_ROTATION",
+            "DUP_EMAIL"
+          ]
+        },
+        {
+          "application_id": "alias-2026-007",
+          "route": "MANUAL_REVIEW",
+          "score": 0,
+          "reason_codes": [
+            "DUP_SAME_JOB",
+            "IDENTITY_DEVICE_ROTATION",
+            "DUP_RESUME_NEAR",
+            "DUP_EMAIL"
+          ]
+        },
+        {
+          "application_id": "alias-2026-008",
+          "route": "MANUAL_REVIEW",
+          "score": 0,
+          "reason_codes": [
+            "DUP_SAME_JOB",
+            "IDENTITY_DEVICE_ROTATION",
+            "DUP_RESUME_NEAR",
+            "DUP_EMAIL"
+          ]
+        },
+        {
+          "application_id": "alias-2026-009",
+          "route": "MANUAL_REVIEW",
+          "score": 0,
+          "reason_codes": [
+            "DUP_SAME_JOB",
+            "IDENTITY_DEVICE_ROTATION",
+            "DUP_RESUME_NEAR",
+            "DUP_EMAIL"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "honest_ai_polished",
+      "kind": "control",
+      "seed": 2026,
+      "application_count": 10,
+      "passed_count": 7,
+      "flagged_count": 3,
+      "evasion_rate": null,
+      "detection_rate": null,
+      "control_false_positive_rate": 0.3,
+      "time_to_first_flag_seconds": 3600.0,
+      "first_flag_application_index": 5,
+      "route_counts": {
+        "PASS_TO_ATS": 7,
+        "ADDITIONAL_VERIFICATION": 3,
+        "MANUAL_REVIEW": 0
+      },
+      "reason_codes_seen": {
+        "DUP_RESUME_NEAR": 3
+      },
+      "wall_time_seconds": 0.0317,
+      "startup_attempts": 1,
+      "decisions": [
+        {
+          "application_id": "honest-polished-2026-000",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "honest-polished-2026-001",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "honest-polished-2026-002",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "honest-polished-2026-003",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "honest-polished-2026-004",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "honest-polished-2026-005",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        },
+        {
+          "application_id": "honest-polished-2026-006",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "honest-polished-2026-007",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "honest-polished-2026-008",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "honest-polished-2026-009",
+          "route": "ADDITIONAL_VERIFICATION",
+          "score": 68,
+          "reason_codes": [
+            "DUP_RESUME_NEAR"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "honest_campus_burst",
+      "kind": "control",
+      "seed": 2026,
+      "application_count": 18,
+      "passed_count": 18,
+      "flagged_count": 0,
+      "evasion_rate": null,
+      "detection_rate": null,
+      "control_false_positive_rate": 0.0,
+      "time_to_first_flag_seconds": null,
+      "first_flag_application_index": null,
+      "route_counts": {
+        "PASS_TO_ATS": 18,
+        "ADDITIONAL_VERIFICATION": 0,
+        "MANUAL_REVIEW": 0
+      },
+      "reason_codes_seen": {
+        "NETWORK_BURST": 8
+      },
+      "wall_time_seconds": 0.0583,
+      "startup_attempts": 1,
+      "decisions": [
+        {
+          "application_id": "campus-2026-000",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "campus-2026-001",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "campus-2026-002",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "campus-2026-003",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "campus-2026-004",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "campus-2026-005",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "campus-2026-006",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "campus-2026-007",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "campus-2026-008",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "campus-2026-009",
+          "route": "PASS_TO_ATS",
+          "score": 100,
+          "reason_codes": []
+        },
+        {
+          "application_id": "campus-2026-010",
+          "route": "PASS_TO_ATS",
+          "score": 88,
+          "reason_codes": [
+            "NETWORK_BURST"
+          ]
+        },
+        {
+          "application_id": "campus-2026-011",
+          "route": "PASS_TO_ATS",
+          "score": 88,
+          "reason_codes": [
+            "NETWORK_BURST"
+          ]
+        },
+        {
+          "application_id": "campus-2026-012",
+          "route": "PASS_TO_ATS",
+          "score": 88,
+          "reason_codes": [
+            "NETWORK_BURST"
+          ]
+        },
+        {
+          "application_id": "campus-2026-013",
+          "route": "PASS_TO_ATS",
+          "score": 88,
+          "reason_codes": [
+            "NETWORK_BURST"
+          ]
+        },
+        {
+          "application_id": "campus-2026-014",
+          "route": "PASS_TO_ATS",
+          "score": 88,
+          "reason_codes": [
+            "NETWORK_BURST"
+          ]
+        },
+        {
+          "application_id": "campus-2026-015",
+          "route": "PASS_TO_ATS",
+          "score": 88,
+          "reason_codes": [
+            "NETWORK_BURST"
+          ]
+        },
+        {
+          "application_id": "campus-2026-016",
+          "route": "PASS_TO_ATS",
+          "score": 88,
+          "reason_codes": [
+            "NETWORK_BURST"
+          ]
+        },
+        {
+          "application_id": "campus-2026-017",
+          "route": "PASS_TO_ATS",
+          "score": 88,
+          "reason_codes": [
+            "NETWORK_BURST"
+          ]
+        }
+      ]
+    }
+  ]
+}

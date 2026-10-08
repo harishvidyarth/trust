@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Resume X-ray</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f3f5f0; --surface: #ffffff; --ink: #17231c; --muted: #56635b; --line: #ccd4ce;
+  --accent: #145c3d; --accent-strong: #0b452d; --accent-soft: #dcece3;
+  --pass: #176b43; --pass-soft: #d7eee1; --verify: #855100; --verify-soft: #f8e9bd;
+  --review: #9c2f28; --review-soft: #f6dbd8; --shadow: 0 12px 36px rgba(22, 40, 30, 0.08);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.5; }
+header { background: var(--surface); border-bottom: 1px solid var(--line); padding: 18px 24px; display: flex; gap: 16px; align-items: center; justify-content: space-between; }
+header h1 { margin: 0; font-size: 1.1rem; }
+header a { color: var(--accent); font-weight: 600; }
+main { max-width: 1180px; margin: 0 auto; padding: 32px 24px 64px; }
+h2 { font-size: 1.9rem; margin: 0 0 6px; letter-spacing: -0.01em; }
+.lede { color: var(--muted); margin: 0 0 24px; max-width: 70ch; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 22px; margin-bottom: 20px; }
+.grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; }
+input[type=text], input[type=number], input[type=file] { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; font: inherit; background: #fff; color: var(--ink); }
+input:focus-visible, button:focus-visible { outline: 3px solid #7fc4a0; outline-offset: 2px; }
+.actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+button { font: inherit; font-weight: 700; padding: 11px 18px; border-radius: 10px; border: 1px solid var(--accent); cursor: pointer; background: #fff; color: var(--accent); }
+button.primary { background: var(--accent); color: #fff; }
+button:disabled { opacity: 0.55; cursor: not-allowed; }
+.status { margin-top: 12px; min-height: 1.4em; color: var(--muted); }
+.status.error { color: var(--review); font-weight: 600; }
+.cols { display: grid; gap: 18px; grid-template-columns: 1fr 1fr; }
+@media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
+.pane h3 { margin: 0 0 4px; font-size: 1rem; }
+.pane p.sub { margin: 0 0 10px; color: var(--muted); font-size: 0.88rem; }
+pre { margin: 0; white-space: pre-wrap; word-break: break-word; font: 0.84rem/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; background: #fbfcf8; border: 1px solid var(--line); border-radius: 12px; padding: 14px; max-height: 360px; overflow: auto; }
+mark.hidden { background: var(--review-soft); color: var(--review); border-radius: 4px; padding: 0 2px; font-weight: 700; }
+.bars { display: grid; gap: 14px; }
+.bar-row { display: grid; grid-template-columns: 220px 1fr 56px; gap: 12px; align-items: center; }
+@media (max-width: 640px) { .bar-row { grid-template-columns: 1fr; } }
+.track { background: #e8eee9; border-radius: 999px; height: 16px; overflow: hidden; }
+.fill { height: 100%; border-radius: 999px; background: var(--review); }
+.fill.human { background: var(--pass); }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.chip { background: var(--review-soft); color: var(--review); border-radius: 999px; padding: 5px 12px; font-size: 0.8rem; font-weight: 700; }
+.badge { display: inline-block; padding: 6px 14px; border-radius: 999px; font-weight: 800; font-size: 0.9rem; }
+.badge.PASS_TO_ATS { background: var(--pass-soft); color: var(--pass); }
+.badge.ADDITIONAL_VERIFICATION { background: var(--verify-soft); color: var(--verify); }
+.badge.MANUAL_REVIEW { background: var(--review-soft); color: var(--review); }
+.reason { border-top: 1px solid var(--line); padding: 10px 0; }
+.reason strong { font-size: 0.85rem; }
+.reason span { display: block; color: var(--muted); font-size: 0.88rem; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Resume X-ray</h1>
+  <a href="../dashboard/index.html">Open recruiter dashboard</a>
+</header>
+<main>
+  <h2>What a human sees is not always what an ATS reads.</h2>
+  <p class="lede">Upload a resume. We read it the way a keyword-ranking ATS parser does, then the way a person does, and show the difference. Anything hidden from people but visible to the parser is highlighted.</p>
+
+  <section class="card" aria-labelledby="job-title">
+    <h3 id="job-title" style="margin-top:0">Job requirements and resume</h3>
+    <div class="grid">
+      <div><label for="must">Must-have skills (comma separated)</label><input id="must" type="text" value="python, sql, docker"></div>
+      <div><label for="nice">Nice-to-have skills</label><input id="nice" type="text" value="kubernetes, aws"></div>
+      <div><label for="years">Minimum years of experience</label><input id="years" type="number" min="0" step="0.5" value="2"></div>
+      <div><label for="file">Resume file (PDF, DOCX or TXT, up to 5 MB)</label><input id="file" type="file" accept=".pdf,.docx,.txt"></div>
+    </div>
+    <div class="actions">
+      <button id="inspect" class="primary" type="button">Inspect resume</button>
+      <button id="submit" type="button" disabled>Send through the firewall</button>
+    </div>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+  </section>
+
+  <section id="results" hidden>
+    <div class="card">
+      <h3 style="margin-top:0">Naive ATS ranking score</h3>
+      <div class="bars">
+        <div class="bar-row"><span>What the ATS parser reads</span><div class="track"><div id="atsFill" class="fill"></div></div><strong id="atsScore"></strong></div>
+        <div class="bar-row"><span>What a human reads</span><div class="track"><div id="humanFill" class="fill human"></div></div><strong id="humanScore"></strong></div>
+      </div>
+      <div id="chips" class="chips" aria-label="Integrity findings"></div>
+    </div>
+    <div class="cols">
+      <div class="card pane"><h3>What a human sees</h3><p class="sub">Visible text only.</p><pre id="human"></pre></div>
+      <div class="card pane"><h3>What the ATS parser reads</h3><p class="sub">Everything in the text layer. Hidden content is highlighted.</p><pre id="ats"></pre></div>
+    </div>
+  </section>
+
+  <section id="decision" class="card" hidden aria-live="polite">
+    <h3 style="margin-top:0">Firewall decision</h3>
+    <p><span id="route" class="badge"></span> &nbsp; Trust score <strong id="score"></strong>/100</p>
+    <p id="summary" class="lede" style="margin-bottom:8px"></p>
+    <div id="reasons"></div>
+  </section>
+</main>
+<script>
+const API = "http://localhost:8000";
+const $ = (id) => document.getElementById(id);
+const ROUTES = { PASS_TO_ATS: "Pass to ATS", ADDITIONAL_VERIFICATION: "Additional verification", MANUAL_REVIEW: "Manual review" };
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+function skills(value) { return value.split(",").map((item) => item.trim()).filter(Boolean); }
+function jobJson() {
+  return JSON.stringify({ must_have_skills: skills($("must").value), nice_to_have: skills($("nice").value), min_years: Number($("years").value) || 0 });
+}
+function setStatus(message, isError) {
+  $("status").textContent = message;
+  $("status").className = isError ? "status error" : "status";
+}
+function highlight(container, text, spans) {
+  container.textContent = "";
+  const ranges = [];
+  for (const span of spans) {
+    if (!span.text) continue;
+    let from = 0;
+    for (;;) {
+      const index = text.indexOf(span.text, from);
+      if (index < 0) break;
+      ranges.push([index, index + span.text.length]);
+      from = index + span.text.length;
+    }
+  }
+  ranges.sort((a, b) => a[0] - b[0]);
+  const merged = [];
+  for (const range of ranges) {
+    const last = merged[merged.length - 1];
+    if (last && range[0] <= last[1]) last[1] = Math.max(last[1], range[1]);
+    else merged.push([range[0], range[1]]);
+  }
+  let position = 0;
+  for (const [start, end] of merged) {
+    if (start > position) container.append(document.createTextNode(text.slice(position, start)));
+    container.append(el("mark", "hidden", text.slice(start, end)));
+    position = end;
+  }
+  if (position < text.length) container.append(document.createTextNode(text.slice(position)));
+}
+function formFor(file) {
+  const data = new FormData();
+  data.append("file", file);
+  data.append("job_json", jobJson());
+  return data;
+}
+async function call(path, data) {
+  const response = await fetch(API + path, { method: "POST", body: data });
+  if (!response.ok) {
+    let detail = "request failed (" + response.status + ")";
+    try {
+      const body = await response.json();
+      if (typeof body.detail === "string") detail = body.detail;
+    } catch (error) {
+      detail = "request failed (" + response.status + ")";
+    }
+    throw new Error(detail);
+  }
+  return response.json();
+}
+function percent(value) { return Math.max(0, Math.min(100, value)); }
+
+$("inspect").addEventListener("click", async () => {
+  const file = $("file").files[0];
+  if (!file) { setStatus("Choose a resume file first.", true); return; }
+  $("inspect").disabled = true;
+  setStatus("Reading the resume both ways...");
+  try {
+    const result = await call("/v1/resume/inspect", formFor(file));
+    $("atsFill").style.width = percent(result.naive_ats_score) + "%";
+    $("humanFill").style.width = percent(result.human_view_ats_score) + "%";
+    $("atsScore").textContent = result.naive_ats_score.toFixed(1);
+    $("humanScore").textContent = result.human_view_ats_score.toFixed(1);
+    highlight($("human"), result.human_view, []);
+    highlight($("ats"), result.ats_view, result.hidden_spans);
+    const chips = $("chips");
+    chips.textContent = "";
+    if (result.reasons.length === 0) chips.append(el("span", "badge PASS_TO_ATS", "No resume integrity flags"));
+    for (const reason of result.reasons) chips.append(el("span", "chip", reason.code));
+    $("results").hidden = false;
+    $("decision").hidden = true;
+    $("submit").disabled = false;
+    setStatus("Done. Compare the two views, then send it through the firewall.");
+  } catch (error) {
+    setStatus("Could not inspect: " + error.message, true);
+  } finally {
+    $("inspect").disabled = false;
+  }
+});
+
+$("submit").addEventListener("click", async () => {
+  const file = $("file").files[0];
+  if (!file) return;
+  $("submit").disabled = true;
+  setStatus("Sending through the firewall...");
+  try {
+    const data = formFor(file);
+    data.append("device_id", "xray-" + Math.random().toString(36).slice(2, 10));
+    data.append("application_id", "xray-" + Date.now());
+    data.append("session_seconds", "120");
+    const decision = await call("/v1/applications/upload", data);
+    $("route").className = "badge " + decision.route;
+    $("route").textContent = ROUTES[decision.route] || decision.route;
+    $("score").textContent = decision.score;
+    $("summary").textContent = decision.summary;
+    const list = $("reasons");
+    list.textContent = "";
+    for (const reason of decision.reasons) {
+      const row = el("div", "reason");
+      row.append(el("strong", "", reason.code + " (weight " + reason.weight + ")"));
+      row.append(el("span", "", reason.detail));
+      list.append(row);
+    }
+    $("decision").hidden = false;
+    setStatus(decision.route === "PASS_TO_ATS" ? "Passed to the ATS." : "Held back from the ATS for a person to review.");
+  } catch (error) {
+    setStatus("Could not submit: " + error.message, true);
+  } finally {
+    $("submit").disabled = false;
+  }
+});
+</script>
+</body>
+</html>
