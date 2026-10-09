@@ -38,6 +38,9 @@ from firewall.connectors.greenhouse import GreenhouseWebhook, adapt
 from firewall.connectors.mock_ats import MockATS
 from firewall.check_routes import build_check_router
 from firewall.claim_routes import build_claim_router
+from firewall.identity import IdentityService
+from firewall.identity.service import RESULT_TTL_SECONDS as IDENTITY_TTL_S
+from firewall.identity_routes import build_identity_router
 from firewall.delivery import build_delivery_from_env
 from firewall.delivery_routes import build_delivery_router, build_inbox_router
 from firewall.guards import application_access, auth_enforced, guard, session_cookie_present
@@ -339,6 +342,13 @@ def _form_cache() -> JsonCache:
 FORM_CACHE = _form_cache()
 CLAIM_CACHE = build_cache("claimcheck")
 OUTCOMES = OutcomeStore(build_cache("outcomes", default_ttl_s=OUTCOME_TTL_S), time.time)
+IDENTITY_COUNTER = build_counter()
+IDENTITY = IdentityService(
+    results=build_cache("identity", default_ttl_s=IDENTITY_TTL_S),
+    sessions=build_cache("identity_sessions", default_ttl_s=1800),
+    counter=IDENTITY_COUNTER,
+    audit=lambda: get_service().audit,
+)
 APPLICANTS = ApplicantService(
     form_cache=FORM_CACHE,
     claim_cache=CLAIM_CACHE,
@@ -348,6 +358,7 @@ APPLICANTS = ApplicantService(
     owner_of=lambda application_id: get_service().ownership.owner(application_id),
     audit=lambda: get_service().audit,
     closed=OUTCOMES.is_rejected,
+    identity_done=IDENTITY.is_complete,
 )
 
 
@@ -528,6 +539,7 @@ def list_decisions(
                 "consent_id": INTAKE_REPO.consent_for_application(application.application_id),
                 "applicant_form_present": APPLICANTS.record(application.application_id) is not None,
                 "follow_up_open": APPLICANTS.open_count(application.application_id),
+                **IDENTITY.summary(application.application_id),
             }
         )
     return items
@@ -675,6 +687,18 @@ app.include_router(
         owner_of=lambda application_id: get_service().ownership.owner(application_id),
         cache=CLAIM_CACHE,
         audit=lambda: get_service().audit,
+        closed=OUTCOMES.is_rejected,
+    )
+)
+app.include_router(
+    build_identity_router(
+        candidate_guard=guard("candidate"),
+        reader_guard=guard("candidate", "recruiter", "admin"),
+        staff_guard=guard("recruiter", "admin"),
+        service=IDENTITY,
+        decision_for=STORE.get_decision,
+        owner_of=lambda application_id: get_service().ownership.owner(application_id),
+        counter=IDENTITY_COUNTER,
         closed=OUTCOMES.is_rejected,
     )
 )

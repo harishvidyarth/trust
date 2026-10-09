@@ -24,6 +24,8 @@
     if (row.outcome === "rejected" && isLinked(row)) list.push(C.tag("Linked to an earlier rejection", "", true));
     if (row.applicant_form_present) list.push(C.tag("Form", "info", true));
     if (open > 0) list.push(C.tag(open + (open === 1 ? " open request" : " open requests"), "", true));
+    if (row.identity_check) list.push(C.tag("Identity", "info", true));
+    if (row.identity_advisory === "ask_for_live_check") list.push(C.tag("Live check suggested", "warn", true));
     return list;
   }
 
@@ -650,6 +652,9 @@
       var checksSec = section("Claim checks", "dsChecks");
       checksSec.body.append(C.checks.panel(id, { who: "recruiter", bare: true, isStale: function () { return stale(id); } }));
 
+      var identitySec = section("Identity check", "dsIdentity");
+      identitySec.body.append(h("p", { class: "muted", text: "Loading..." }));
+
       var delivery = section("Delivery", "dsDelivery");
       delivery.body.append(h("p", { class: "muted", text: "Loading delivery status..." }));
 
@@ -661,10 +666,11 @@
       drawBanner(row, bannerBox);
       var decisionCard = outcomeCard(row);
 
-      drawer.append(header, h("div", { class: "drawer-scroll" }, bannerBox, summary.card, formSec.card, evidence.card, intent.card, agree.card, fixCard.card, cf.card, intake.card, claimSec.card, checksSec.card, delivery.card, history.card, decisionCard, form));
+      drawer.append(header, h("div", { class: "drawer-scroll" }, bannerBox, summary.card, formSec.card, evidence.card, intent.card, agree.card, fixCard.card, cf.card, intake.card, claimSec.card, checksSec.card, identitySec.card, delivery.card, history.card, decisionCard, form));
 
       loadForm(id, formSec.body);
       C.claim.recruiterLoad(id, claimSec.body, function () { return stale(id); });
+      if (C.identity) C.identity.recruiterLoad(id, identitySec.body, function () { return stale(id); });
 
       if (consentId) loadIntake(id, consentId, intakeBody);
       loadDelivery(id, row, delivery.body);

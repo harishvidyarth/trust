@@ -29,6 +29,7 @@ The language model never decides a route and never changes a weight. Every model
 | Final destinations | Pass goes to the ATS, Additional verification to a verification inbox, Manual review to a review inbox, with an optional Slack message. | `firewall/delivery.py` |
 | Registries | ORCID lookup is live. Patent lookup needs a free key. Formats that could not be verified no longer penalise anyone. | `firewall/enrichment/roles/` |
 | LinkedIn export | Reads two column Save to PDF exports and says how much it could read. | `firewall/intel/linkedin.py` |
+| Identity check | An optional face and voice check after the form. The server issues the prompts and a spoken one time code, limits the audio, stores no media and never changes a score or route. The candidate sees only that it was received. Recruiters see plain notes with the limits stated. | `firewall/identity/`, `web/console/identity.js` |
 
 ## Results
 
@@ -123,7 +124,9 @@ Start everything in one command (API on 8000, console on 8081, both on this mach
 FIREWALL_ADMIN_USER=you FIREWALL_ADMIN_PASSWORD='choose-a-long-password' python3 scripts/run_all.py
 ```
 
-Open `http://localhost:8081/console/`. Settings are in `scripts/README_run.md`. Without Redis a restart signs everyone out.
+Open `http://localhost:8081/console/`. Settings are in `scripts/README_run.md`.
+
+To serve other laptops on the same Wi-Fi, add `--lan`. It switches to HTTPS, because browsers block the camera on plain http addresses. Steps are in `scripts/README_lan.md`. Without Redis a restart signs everyone out.
 
 The launcher looks for Ollama on this machine. If it finds the model, it switches the language model on and warms it, then prints "Language model: on". If not, it prints why it stays off. Set `FIREWALL_LLM=0` to force it off.
 
@@ -136,7 +139,8 @@ The launcher looks for Ollama on this machine. If it finds the model, it switche
 - Uploading with the model on takes 5 to 13 seconds.
 - Name search and corroboration have only been tested with fakes. They have not been run against the live services.
 - Passive name search needs a consent flag and is limited to scores 41 to 69.
-- Face, voice and video checks are not built.
+- The identity check is advice only. The face part is measured in the candidate's browser and can be forged. The voice part is a rule based estimate and called all six machine made macOS voices we tried human, so a clean voice result proves nothing. The spoken code is the useful signal. No real face has been tested yet, only a test camera. Details are in `firewall/identity/FAIRNESS.md`.
+- Video recording and ID photo matching are not built, on purpose.
 - A cold model load can pass the 5 second timeout and the first request then falls back to the rules.
 - Every figure above is synthetic and partly circular.
 - Round 3 was not rebuilt and has not been checked against these changes.

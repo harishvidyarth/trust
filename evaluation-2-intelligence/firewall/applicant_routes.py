@@ -22,6 +22,9 @@ from firewall.intake_routes import normalise_public_https_url
 from firewall.models import Candidate, Decision, Route
 
 FORM_TTL_S = 90 * 24 * 3600
+IDENTITY_ITEM = "identity-check"
+IDENTITY_LABEL = "Quick identity check"
+IDENTITY_HELP = "About one minute. You use your camera and microphone to follow three simple prompts. Nothing is recorded or kept."
 FORBIDDEN_CHARS = "-()[]:;"
 MAX_DETAIL_NOTES = 5
 MAX_REQUESTS = 20
@@ -301,8 +304,10 @@ class ApplicantService:
         owner_of: Callable[[str], str | None],
         audit: Callable[[], Any] | None = None,
         closed: Callable[[str], bool] | None = None,
+        identity_done: Callable[[str], bool] | None = None,
     ) -> None:
         self.closed = closed or (lambda application_id: False)
+        self.identity_done = identity_done or (lambda application_id: False)
         self.form_cache = form_cache
         self.claim_cache = claim_cache
         self.decision_for = decision_for
@@ -388,6 +393,7 @@ class ApplicantService:
                 }
             )
         notes = record.get("details", [])
+        items.append(self.identity_item(application_id))
         items.append(
             {
                 "id": DETAILS_ITEM,
@@ -401,9 +407,19 @@ class ApplicantService:
         )
         return items
 
+    def identity_item(self, application_id: str) -> dict[str, Any]:
+        return {
+            "id": IDENTITY_ITEM,
+            "kind": "identity",
+            "label": IDENTITY_LABEL,
+            "help": IDENTITY_HELP,
+            "required": False,
+            "answered": bool(self.identity_done(application_id)),
+        }
+
     @staticmethod
     def unanswered(items: list[dict[str, Any]]) -> int:
-        return sum(1 for item in items if item["kind"] != "details" and not item["answered"])
+        return sum(1 for item in items if item["kind"] not in {"details", "identity"} and not item["answered"])
 
     def own_decision(self, principal: Principal, application_id: str) -> Decision:
         decision = self.decision_for(application_id)

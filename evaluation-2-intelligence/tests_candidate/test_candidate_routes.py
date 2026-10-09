@@ -62,7 +62,7 @@ def test_own_detail_has_status_and_follow_up_but_no_scores(alice, make_pdf):
     assert set(detail) == LIST_KEYS | {"follow_up"}
     assert detail["status"] == reply["status"]
     assert detail["follow_up"] == reply["follow_up"]
-    open_items = [i for i in detail["follow_up"] if i["kind"] != "details" and not i["answered"]]
+    open_items = [i for i in detail["follow_up"] if i["kind"] not in {"details", "identity"} and not i["answered"]]
     assert detail["follow_up_count"] == len(open_items)
     assert stored_decision(reply["application_id"]).summary not in alice.get(f"/v1/me/applications/{reply['application_id']}").text
 

@@ -285,7 +285,7 @@
     return "item-" + counter;
   }
   function openCount(id) {
-    return (state.followups[id] || []).filter(function (item) { return !item.answered; }).length;
+    return (state.followups[id] || []).filter(function (item) { return !item.answered && item.kind !== "identity"; }).length;
   }
   function statusFor(rec) {
     if (isRejected(rec.application_id)) return "closed";
@@ -298,6 +298,14 @@
   function ownRecord(id) {
     var list = mineFor(state.session.username);
     return list.find(function (r) { return r.application_id === id; });
+  }
+  function identityStatus(id) {
+    var r = state.identity && state.identity.results[id];
+    return r ? r.status : null;
+  }
+  function identityAdvisory(id) {
+    var r = state.identity && state.identity.results[id];
+    return r && r.advisory === "ask_for_live_check" ? "ask_for_live_check" : null;
   }
   function mineRecord(id, role, secondsAgo, baseStatus, replaces) {
     return { application_id: id, job_id: role, role_title: role, submitted_at: now - secondsAgo, base_status: baseStatus, replaces: replaces || null };
@@ -352,17 +360,29 @@
   function item(kind, label, help, required, answered, answer, attempts) {
     return { id: newItemId(), kind: kind, label: label, help: help, required: required, answered: answered, answer: answer || "", attempts_left: attempts };
   }
+  function identityItem(answered) {
+    var made = item("identity", "Quick identity check", "This is optional and takes about one minute.", false, Boolean(answered), "", null);
+    made.id = "identity-check";
+    return made;
+  }
+  state.identity = { sessions: {}, results: {} };
+  function seedIdentity(id, result) {
+    state.identity.results[id] = result;
+  }
   state.mine.candidate = [
     mineRecord("app-mine-3", "Data analyst", 86400 * 9, "in_review"),
     mineRecord("app-mine-1", "Backend engineer", 86400 * 5, "sent"),
     mineRecord("app-mine-2", "Backend engineer", 86400 * 4, "sent", "app-mine-1")
   ];
+  seedIdentity("app-demo-1049", { status: "complete", face: { state: "passed", steps_done: 3, steps_total: 3, client_measured: true }, voice: { state: "human_like", code_matched: true, sentence_match: 0.96, transcript_source: "server", indicators: { pitch_variation: 0.64, background_noise: 0.1, clipping: false, silence_ratio: 0.2 }, model: "heuristic-v1", is_real_model: false }, advisory: "none", summary: "The measurements look ordinary.", notes: [], completed_at: now - 3600 });
+  seedIdentity("app-demo-1047", { status: "complete", face: { state: "steps_incomplete", steps_done: 1, steps_total: 3, client_measured: true }, voice: { state: "replay_suspected", code_matched: false, sentence_match: 0.58, transcript_source: "server", indicators: { pitch_variation: 0.21, room_echo: 0.74, clipping: false, silence_ratio: 0.31 }, model: "heuristic-v1", is_real_model: false }, advisory: "ask_for_live_check", summary: "Some prompts were missed and the voice sounds flat.", notes: ["Two face prompts were not completed.", "The spoken sentence matched only in part."], completed_at: now - 7200 });
   addForm("app-mine-3", { applicant_name: "Demo Candidate", applicant_email: "candidate@example.test", applicant_phone: "+91 98765 43210", role_title: "Data analyst", years_experience: 2, current_employer: "Lakeview Retail", education: "B.Sc. Statistics", skills: "SQL, Python, Excel", extra_skills: "Dashboards", github_url: "https://github.com/octocat", linkedin_url: "", portfolio_url: "", papers: "", certificate_ids: "", about_project: "I built a weekly sales dashboard for our stores. I wrote the queries and the charts myself and the managers now use it every Monday." }, "Data analyst", 86400 * 9, SCENARIOS.timeline, [
     item("request", "Please share the name of the store system you pulled the sales data from.", "A short answer is enough.", true, true, "It was the point of sale export from our regional office.", 3)
   ]);
   addForm("app-mine-1", { applicant_name: "Demo Candidate", applicant_email: "candidate@example.test", applicant_phone: "+91 98765 43210", role_title: "Backend engineer", years_experience: 4, current_employer: "Northwind Analytics", education: "B.Tech Computer Science", skills: "Python, PostgreSQL, Kubernetes", extra_skills: "", github_url: "https://github.com/octocat", linkedin_url: "https://www.linkedin.com/in/democandidate", portfolio_url: "", papers: "", certificate_ids: "", about_project: "I moved our billing export to a faster design. I wrote the new queries and the nightly job." }, "Backend engineer", 86400 * 5, SCENARIOS.hidden, [
     item("question", "Your application says you used PostgreSQL in production.\nDescribe one real problem you solved with it.\nSay what you changed and what happened next.", "Write a few sentences in your own words.", true, false, "", 3),
-    item("details", "Tell us a little more about what you did yourself in your project.", "This is optional. Add whatever you think helps.", false, false, "", 5)
+    item("details", "Tell us a little more about what you did yourself in your project.", "This is optional. Add whatever you think helps.", false, false, "", 5),
+    identityItem(false)
   ]);
   addForm("app-mine-2", { applicant_name: "Demo Candidate", applicant_email: "candidate@example.test", applicant_phone: "+91 98765 43210", role_title: "Backend engineer", years_experience: 4, current_employer: "Northwind Analytics", education: "B.Tech Computer Science", skills: "Python, PostgreSQL, Kubernetes, Terraform", extra_skills: "", github_url: "https://github.com/octocat", linkedin_url: "https://www.linkedin.com/in/democandidate", portfolio_url: "https://democandidate.example", papers: "", certificate_ids: "", about_project: "I moved our billing export to a faster design and cut the nightly run from four hours to forty minutes. I wrote the new queries, the job and the checks myself." }, "Backend engineer", 86400 * 4, SCENARIOS.clean, []);
   addForm("app-demo-1052", { applicant_name: "Priya Nair", applicant_email: "priya@example.test", applicant_phone: "+91 90000 11111", role_title: "SWE-PLATFORM-04", years_experience: 5, current_employer: "Northwind Analytics", education: "M.Tech Software Systems", skills: "Python, PostgreSQL", extra_skills: "Technical writing", github_url: "https://github.com/octocat", linkedin_url: "http://www.linkedin.com/in/priya", portfolio_url: "", papers: "10.1000/example.123", certificate_ids: "", about_project: "I led the billing export rebuild. I wrote the data model and the nightly job." }, "SWE-PLATFORM-04", 3 * 60, SCENARIOS.clean, [
@@ -650,6 +670,7 @@
       if (typed.about_project.trim().length < 80) {
         items.push(item("details", "Tell us a little more about what you did yourself in your project.", "This is optional. Add whatever you think helps.", false, false, "", 5));
       }
+      items.push(identityItem(false));
       var upName = fileName(form);
       var upScenario = upName ? scenarioFor(upName) : SCENARIOS.clean;
       var upRec = { application_id: upId, job_id: typed.role_title, role_title: typed.role_title, submitted_at: Math.floor(Date.now() / 1000), base_status: "sent", replaces: field("replaces") || null };
@@ -681,7 +702,7 @@
         var hist = outcomeHistory(r.application_id);
         var last = hist[hist.length - 1];
         var closed = isRejected(r.application_id);
-        return Object.assign({}, r, { applicant_form_present: Boolean(state.forms[r.application_id]), follow_up_open: openCount(r.application_id), outcome: closed ? "rejected" : null, outcome_by: closed ? last.by : null, outcome_at: closed ? last.at : null });
+        return Object.assign({}, r, { applicant_form_present: Boolean(state.forms[r.application_id]), follow_up_open: openCount(r.application_id), identity_check: identityStatus(r.application_id), identity_advisory: identityAdvisory(r.application_id), outcome: closed ? "rejected" : null, outcome_by: closed ? last.by : null, outcome_at: closed ? last.at : null });
       });
     }
     if ((match = path.match(/^\/v1\/decisions\/([^/]+)\/(reject|reopen)$/)) && method === "POST") {
@@ -903,6 +924,75 @@
       state.followups[reqId] = (state.followups[reqId] || []).concat([made]);
       addAudit("request.create", reqId, label);
       return { id: made.id, label: label, asked_by: state.session ? state.session.username : "recruiter", asked_at: Math.floor(Date.now() / 1000), answer: null, answered_at: null, status: "waiting", message: "The request was sent to the candidate." };
+    }
+
+    if (path === "/v1/verify/session" && method === "POST") {
+      requireRole(["candidate"]);
+      var vApp = ownRecord(String(json.application_id || ""));
+      if (!vApp) fail(404, "That application could not be found.");
+      if (json.consent !== true) fail(400, "Please agree before the check can start.");
+      var vSid = "vs-" + Math.random().toString(16).slice(2, 12);
+      var vExpires = Math.floor(Date.now() / 1000) + 900;
+      state.identity.sessions[vSid] = { application_id: vApp.application_id, expires_at: vExpires, face: null, voice: null };
+      return {
+        session_id: vSid,
+        expires_at: vExpires,
+        face: { steps: [
+          { id: "blink", label: "Blink once", hint: "Look at the camera and blink slowly one time." },
+          { id: "turn_left", label: "Turn your head to the left", hint: "Turn slowly, then hold still for a moment." },
+          { id: "smile", label: "Smile", hint: "Keep a calm face for a moment first, then smile." }
+        ] },
+        voice: { sentence: "The blue door opens at seven and the red lamp stays on all night.", max_seconds: 10 },
+        consent_text: "You agreed to a short check with your camera and microphone. The video and sound stay on your device. Only a few measurements are sent to the hiring team, and a person reads them."
+      };
+    }
+    match = path.match(/^\/v1\/verify\/session\/([^/]+)$/);
+    if (match && method === "GET") {
+      requireRole(["candidate"]);
+      var vs = state.identity.sessions[decodeURIComponent(match[1])];
+      if (!vs) fail(404, "That check could not be found.");
+      return { status: vs.face && vs.voice ? "complete" : vs.face || vs.voice ? "partial" : "open", face_received: Boolean(vs.face), voice_received: Boolean(vs.voice), expires_at: vs.expires_at, complete: Boolean(vs.face && vs.voice) };
+    }
+    match = path.match(/^\/v1\/verify\/application\/([^/]+)$/);
+    if (match && method === "GET") {
+      requireRole(["recruiter", "admin"]);
+      var vr = state.identity.results[decodeURIComponent(match[1])];
+      if (!vr) fail(404, "No identity check has been done.");
+      return vr;
+    }
+    match = path.match(/^\/v1\/verify\/([^/]+)\/(face|voice)$/);
+    if (match && method === "POST") {
+      requireRole(["candidate"]);
+      var vSess = state.identity.sessions[decodeURIComponent(match[1])];
+      if (!vSess) fail(404, "That check could not be found.");
+      if (vSess.expires_at < Math.floor(Date.now() / 1000)) fail(409, "This check has run out of time. Please start it again.");
+      var vAppId = vSess.application_id;
+      if (match[2] === "face") {
+        if (!Array.isArray(json.steps) || !json.steps.length) fail(422, "The face part had no prompts in it.");
+        vSess.face = json;
+      } else {
+        if (!form || !form.get("audio")) fail(422, "No sound was sent.");
+        vSess.voice = { bytes: form.get("audio").size || 0 };
+      }
+      var done = json.steps ? json.steps.filter(function (x) { return x.passed; }).length : 0;
+      var vFace = vSess.face ? {
+        state: vSess.face.steps.every(function (x) { return x.passed; }) ? "passed" : vSess.face.frames_with_face < 5 ? "not_seen" : "steps_incomplete",
+        steps_done: vSess.face.steps.filter(function (x) { return x.passed; }).length, steps_total: vSess.face.steps.length, client_measured: true
+      } : { state: "missing", steps_done: 0, steps_total: 0, client_measured: true };
+      var vVoice = vSess.voice ? { state: "human_like", code_matched: true, sentence_match: 0.94, transcript_source: "server", indicators: { pitch_variation: 0.62, background_noise: 0.12, clipping: false, silence_ratio: 0.18 }, model: "heuristic-v1", is_real_model: false }
+        : { state: "missing", code_matched: null, sentence_match: null, transcript_source: null, indicators: {}, model: "heuristic-v1", is_real_model: false };
+      var needsCall = vFace.state !== "passed" && vSess.face;
+      state.identity.results[vAppId] = {
+        status: vSess.face && vSess.voice ? "complete" : "partial",
+        face: vFace, voice: vVoice,
+        advisory: needsCall ? "ask_for_live_check" : "none",
+        summary: needsCall ? "The face prompts were not all completed." : "The measurements look ordinary.",
+        notes: needsCall ? ["Some face prompts were not completed in the candidate's browser."] : [],
+        completed_at: Math.floor(Date.now() / 1000)
+      };
+      var foll = (state.followups[vAppId] || []).find(function (it) { return it.id === "identity-check"; });
+      if (foll) foll.answered = true;
+      return { received: true, message: "Thank you. Your check was received." };
     }
     if (state.session && state.session.role === "candidate" && /^\/v1\/(checks|claims|resume|intake)\//.test(path)) fail(403, "Your account does not have permission to do that.");
     match = path.match(/^\/v1\/checks\/(run|application)(?:\/([^/]+))?$/);

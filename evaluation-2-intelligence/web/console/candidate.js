@@ -581,8 +581,11 @@
         )
       );
       var items = normaliseItems(res.follow_up);
-      if (items.some(function (item) { return !item.answered; })) {
-        wrap.append(C.cand.followPanel(id, items, {}));
+      var idItem = items.filter(function (item) { return item.kind === "identity"; })[0];
+      var plainItems = items.filter(function (item) { return item.kind !== "identity"; });
+      if (id && C.identity && !(idItem && idItem.answered)) wrap.append(C.identity.card(id, { answered: false }));
+      if (plainItems.some(function (item) { return !item.answered; })) {
+        wrap.append(C.cand.followPanel(id, plainItems, {}));
       }
       root.append(wrap);
       title.focus();
@@ -659,7 +662,10 @@
         d.message ? h("p", { text: d.message }) : null,
         h("p", { class: "muted small", text: "Your reference is " + shortId(d.application_id) + "." })
       );
-      var items = normaliseItems(d.follow_up);
+      var allItems = normaliseItems(d.follow_up);
+      var idItem = allItems.filter(function (item) { return item.kind === "identity"; })[0];
+      var items = allItems.filter(function (item) { return item.kind !== "identity"; });
+      var idCard = idItem && C.identity ? C.identity.card(d.application_id, { answered: idItem.answered, later: false }) : null;
       var follow = items.length ? C.cand.followPanel(d.application_id, items, {}) : h("div", { class: "card" }, h("h3", { text: "A few more details" }), h("p", { class: "muted", text: "Nothing more is needed from you right now. The hiring team will write to you if that changes." }));
       var update = h("button", { type: "button", class: "btn primary", id: "updateApp", text: "Update this application", onclick: function () {
         C.cand.replaces = d.application_id;
@@ -672,6 +678,7 @@
         heading,
         summary,
         follow,
+        idCard,
         h("div", { class: "card" }, h("h3", { text: "Want to change something" }), h("p", { class: "muted", text: "You can open the form again with your details filled in, make your changes and send it again." }), update)
       );
       heading.focus();

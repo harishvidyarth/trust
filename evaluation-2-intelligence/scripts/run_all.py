@@ -8,6 +8,7 @@ import os
 import re
 import signal
 import socket
+import ssl
 import subprocess
 import sys
 import threading
@@ -22,8 +23,29 @@ HOST = "127.0.0.1"
 
 
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
+    api_port = 8000
+    api_scheme = ""
+
     def log_message(self, format: str, *args: object) -> None:
         return None
+
+    def do_GET(self) -> None:
+        if self.api_scheme and self.path.split("?", 1)[0] == "/console/config.js":
+            host = (self.headers.get("Host") or "localhost").rsplit(":", 1)[0].strip("[]")
+            if not re.fullmatch(r"[A-Za-z0-9.\-]{1,253}", host):
+                host = "localhost"
+            body = ('window.TRUST_API = "%s://%s:%d";\n' % (self.api_scheme, host, self.api_port)).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/javascript")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        super().do_GET()
+
+    def end_headers(self) -> None:
+        self.send_header("Cache-Control", "no-cache")
+        super().end_headers()
 
 
 def port_is_busy(port: int) -> bool:
@@ -105,7 +127,38 @@ def warm_model(environment: dict[str, str], model: str) -> None:
         return None
 
 
-def build_environment(web_port: int) -> dict[str, str]:
+def lan_address() -> str | None:
+    probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        probe.connect(("192.0.2.1", 9))
+        found = probe.getsockname()[0]
+    except OSError:
+        return None
+    finally:
+        probe.close()
+    return None if found.startswith("127.") else found
+
+
+def make_certificate(address: str) -> tuple[Path, Path]:
+    folder = STATE_DIR / "tls"
+    folder.mkdir(parents=True, exist_ok=True)
+    os.chmod(folder, 0o700)
+    key, certificate = folder / "lan.key", folder / "lan.crt"
+    if key.exists() and certificate.exists() and address in (folder / "lan.ip").read_text().split():
+        if time.time() - certificate.stat().st_mtime < 5 * 24 * 3600:
+            return key, certificate
+    command = [
+        "openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "7", "-subj", "/CN=trust-lan",
+        "-addext", "subjectAltName=IP:%s,IP:127.0.0.1,DNS:localhost" % address,
+        "-keyout", str(key), "-out", str(certificate),
+    ]
+    subprocess.run(command, check=True, capture_output=True)
+    os.chmod(key, 0o600)
+    (folder / "lan.ip").write_text(address)
+    return key, certificate
+
+
+def build_environment(web_port: int, lan: str | None = None) -> dict[str, str]:
     load_env_file(ROOT / ".env")
     environment = dict(os.environ)
     if "FIREWALL_LLM" not in environment:
@@ -118,24 +171,37 @@ def build_environment(web_port: int) -> dict[str, str]:
         environment["FIREWALL_USERS_FILE"] = private_file(STATE_DIR / "users.json", "[]")
     if not environment.get("FIREWALL_AUDIT_FILE"):
         environment["FIREWALL_AUDIT_FILE"] = private_file(STATE_DIR / "audit.jsonl", "")
-    if not environment.get("FIREWALL_CORS_ORIGINS"):
+    if lan:
+        environment["FIREWALL_CORS_ORIGINS"] = f"https://{lan}:{web_port},https://localhost:{web_port}"
+        environment["FIREWALL_COOKIE_SECURE"] = "1"
+        environment["FIREWALL_REQUIRE_AUTH"] = "1"
+    elif not environment.get("FIREWALL_CORS_ORIGINS"):
         environment["FIREWALL_CORS_ORIGINS"] = f"http://localhost:{web_port},http://{HOST}:{web_port}"
     return environment
 
 
-def start_api(port: int, environment: dict[str, str]) -> subprocess.Popen:
+def start_api(port: int, environment: dict[str, str], tls: tuple[Path, Path] | None = None) -> subprocess.Popen:
     if not 1024 <= port <= 65535:
         raise SystemExit("api port must be between 1024 and 65535")
-    command = [sys.executable, "-m", "uvicorn", "firewall.api:app", "--host", HOST, "--port", "%d" % port]
+    host = "0.0.0.0" if tls else HOST
+    command = [sys.executable, "-m", "uvicorn", "firewall.api:app", "--host", host, "--port", "%d" % port]
+    if tls:
+        command += ["--ssl-keyfile", str(tls[0]), "--ssl-certfile", str(tls[1])]
     return subprocess.Popen(command, cwd=ROOT, env=environment)
 
 
-def wait_for_api(process: subprocess.Popen, port: int, seconds: float = 40.0) -> bool:
+def wait_for_api(process: subprocess.Popen, port: int, seconds: float = 40.0, secure: bool = False) -> bool:
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
         if process.poll() is not None:
             return False
-        connection = http.client.HTTPConnection(HOST, port, timeout=1)
+        if secure:
+            unverified = ssl.create_default_context()
+            unverified.check_hostname = False
+            unverified.verify_mode = ssl.CERT_NONE
+            connection = http.client.HTTPSConnection(HOST, port, timeout=1, context=unverified)
+        else:
+            connection = http.client.HTTPConnection(HOST, port, timeout=1)
         try:
             connection.request("GET", "/healthz")
             if connection.getresponse().status == 200:
@@ -151,6 +217,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Start the firewall API and the web console together.")
     parser.add_argument("--api-port", type=int, default=8000)
     parser.add_argument("--web-port", type=int, default=8081)
+    parser.add_argument("--lan", action="store_true", help="Serve over HTTPS on the Wi-Fi address so other laptops can connect.")
     arguments = parser.parse_args()
     busy = [port for port in (arguments.api_port, arguments.web_port) if port_is_busy(port)]
     if busy or arguments.api_port == arguments.web_port:
@@ -159,10 +226,27 @@ def main() -> int:
     if not WEB_DIR.is_dir():
         print(f"Cannot start: web folder not found at {WEB_DIR}")
         return 1
-    environment = build_environment(arguments.web_port)
-    api = start_api(arguments.api_port, environment)
+    lan = None
+    tls = None
+    if arguments.lan:
+        lan = lan_address()
+        if lan is None:
+            print("Cannot start LAN mode: no Wi-Fi address found. Connect to the Wi-Fi first.")
+            return 1
+        if not (os.environ.get("FIREWALL_ADMIN_USER") or os.environ.get("FIREWALL_ADMIN_PASSWORD")) and not (ROOT / ".env").exists():
+            print("Note: no admin account is set. Set FIREWALL_ADMIN_USER and FIREWALL_ADMIN_PASSWORD before sharing.")
+        tls = make_certificate(lan)
+    environment = build_environment(arguments.web_port, lan)
+    api = start_api(arguments.api_port, environment, tls)
+    QuietHandler.api_port = arguments.api_port
+    QuietHandler.api_scheme = "https" if tls else ""
     handler = functools.partial(QuietHandler, directory=str(WEB_DIR))
-    server = http.server.ThreadingHTTPServer((HOST, arguments.web_port), handler)
+    server = http.server.ThreadingHTTPServer(("0.0.0.0" if tls else HOST, arguments.web_port), handler)
+    if tls:
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
+        context.load_cert_chain(str(tls[1]), str(tls[0]))
+        server.socket = context.wrap_socket(server.socket, server_side=True)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     stopping = threading.Event()
 
@@ -176,12 +260,19 @@ def main() -> int:
         threading.Thread(target=warm_model, args=(environment, environment.get("FIREWALL_LLM_MODEL", "qwen2.5:7b-instruct")), daemon=True).start()
     code = 0
     try:
-        if not wait_for_api(api, arguments.api_port):
+        if not wait_for_api(api, arguments.api_port, secure=bool(tls)):
             print("The API did not start. Check the messages above.")
             code = 1
         else:
-            print(f"API:      http://{HOST}:{arguments.api_port}")
-            print(f"Console:  http://localhost:{arguments.web_port}/console/")
+            if tls:
+                print(f"API:      https://{lan}:{arguments.api_port}")
+                print(f"Console:  https://{lan}:{arguments.web_port}/console/")
+                print("Other laptops on the same Wi-Fi open the Console address above.")
+                print(f"First time only, each laptop must also open https://{lan}:{arguments.api_port}/healthz and accept the certificate warning.")
+                print("Cameras only work over this secure address. Sign in is required.")
+            else:
+                print(f"API:      http://{HOST}:{arguments.api_port}")
+                print(f"Console:  http://localhost:{arguments.web_port}/console/")
             print(f"Users saved in: {environment['FIREWALL_USERS_FILE']}")
             print("Language model: " + environment["_TRUST_LLM_NOTE"])
             present = [name for name in KEY_NAMES if environment.get(name)]
