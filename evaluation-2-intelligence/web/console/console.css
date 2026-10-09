@@ -587,6 +587,11 @@ dialog.idflow .id-top h2 { margin: 0; }
 .id-consent { margin: 0 0 var(--space-3); }
 .id-sent { margin: 0; }
 .id-actions .btn { min-width: 96px; }
+.id-thumb { margin: var(--space-3) 0; }
+.id-thumb img { display: block; max-width: 220px; max-height: 160px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-3); }
+.id-photo-consent { margin: 0 0 var(--space-3); }
+.id-photo-consent .check { margin-bottom: var(--space-1); }
+dialog.idflow input[type="file"] { display: block; max-width: 100%; margin: var(--space-1) 0 var(--space-2); }
 @media (max-width: 480px) {
   dialog.idflow { padding: var(--space-4); }
   .id-prompt { font-size: var(--fs-lg); }
@@ -595,3 +600,4 @@ dialog.idflow:focus, dialog.idflow:focus-visible { outline: none; }
 dialog.idflow { box-sizing: border-box; margin: auto; }
 dialog.idflow .btn.quiet.small { margin-left: calc(-1 * var(--space-3)); }
 dialog.idflow .row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-2); }
+.id-practice { margin-top: var(--space-3); }

@@ -29,7 +29,10 @@
     } catch (error) {
       C.renderShell();
       if (error.network) {
-        C.enterDemo("The service at " + C.base() + " could not be reached, so this is sample data.");
+        C.state.needsCert = /^https:/i.test(C.base());
+        C.enterDemo(C.state.needsCert
+          ? "Your browser has not allowed the secure connection to the service yet, so this is sample data."
+          : "The service at " + C.base() + " could not be reached, so this is sample data.");
         C.showLogin("");
         C.status("Service not reachable. Showing demo data.");
       } else {

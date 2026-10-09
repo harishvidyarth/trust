@@ -24,6 +24,14 @@ If macOS asks whether Python may accept incoming connections, choose Allow.
 
 Browsers block the camera and microphone on plain http addresses, except on localhost. The identity check needs both, so LAN mode always uses HTTPS and secure cookies.
 
+## Recruiter accounts
+
+New account has a Candidate or Recruiter choice. Recruiter needs an access code that you set on the server laptop before starting.
+
+    export FIREWALL_RECRUITER_SIGNUP_CODE='at least 8 characters'
+
+Give the code only to people who should read applications. If it is not set, recruiter sign up is switched off. Admin accounts can never be made from the sign up screen.
+
 ## Things to know
 
 - A new certificate is made when the Wi-Fi address changes and lasts 7 days. It is kept in .state/tls and is never committed.

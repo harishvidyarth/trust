@@ -17,6 +17,11 @@ MAX_PARTS = 4
 REQUESTS_PER_MINUTE = 40
 FACE_RECEIVED = "Thank you. Your face check was received."
 VOICE_RECEIVED = "Thank you. Your voice check was received."
+PHOTO_RECEIVED = "Thank you. Your photo check was received."
+PHOTO_BODY_BYTES = 4 * 1024 * 1024
+ID_PHOTO_BYTES = 1536 * 1024
+LIVE_PHOTO_BYTES = 700 * 1024
+PHOTO_PARTS = 3
 NOT_FOUND = "We could not find that application."
 TOO_BIG = "That upload is too large."
 BAD_UPLOAD = "We could not read that upload. Please try again."
@@ -27,9 +32,10 @@ class SessionIn(BaseModel):
 
     application_id: str = Field(min_length=1, max_length=128)
     consent: StrictBool
+    photo_consent: StrictBool = False
 
 
-async def read_capped(request: Request) -> bytes:
+async def read_capped(request: Request, limit: int = MAX_BODY_BYTES) -> bytes:
     declared = request.headers.get("content-length")
     if declared is not None:
         try:
@@ -38,17 +44,17 @@ async def read_capped(request: Request) -> bytes:
             raise HTTPException(status_code=400, detail=BAD_UPLOAD) from error
         if length < 0:
             raise HTTPException(status_code=400, detail=BAD_UPLOAD)
-        if length > MAX_BODY_BYTES:
+        if length > limit:
             raise HTTPException(status_code=413, detail=TOO_BIG)
     body = bytearray()
     async for chunk in request.stream():
         body.extend(chunk)
-        if len(body) > MAX_BODY_BYTES:
+        if len(body) > limit:
             raise HTTPException(status_code=413, detail=TOO_BIG)
     return bytes(body)
 
 
-def parse_form(body: bytes, content_type: str) -> dict[str, bytes]:
+def parse_form(body: bytes, content_type: str, max_parts: int = MAX_PARTS, max_size: int = MAX_BODY_BYTES) -> dict[str, bytes]:
     kind, options = parse_options_header(content_type.encode("latin-1", "ignore"))
     boundary = options.get(b"boundary")
     if kind != b"multipart/form-data" or not boundary:
@@ -59,7 +65,7 @@ def parse_form(body: bytes, content_type: str) -> dict[str, bytes]:
     def on_part_begin() -> None:
         state["name"] = None
         state["count"] += 1
-        if state["count"] > MAX_PARTS:
+        if state["count"] > max_parts:
             raise ValueError("too many parts")
 
     def on_header_field(data: bytes, start: int, end: int) -> None:
@@ -91,7 +97,7 @@ def parse_form(body: bytes, content_type: str) -> dict[str, bytes]:
             "on_header_end": on_header_end,
             "on_part_data": on_part_data,
         },
-        max_size=MAX_BODY_BYTES,
+        max_size=max_size,
     )
     try:
         parser.write(body)
@@ -143,7 +149,7 @@ def build_identity_router(
         if closed is not None and closed(application_id):
             raise HTTPException(status_code=409, detail="This application is closed.")
         try:
-            return service.create_session(application_id, principal.username, data.consent)
+            return service.create_session(application_id, principal.username, data.consent, data.photo_consent)
         except IdentityError as error:
             raise fail(error) from error
 
@@ -183,6 +189,32 @@ def build_identity_router(
             del audio
             form.clear()
         return {"received": True, "message": VOICE_RECEIVED}
+
+    @router.post("/v1/verify/{session_id}/photos")
+    async def photos(session_id: str, request: Request, principal: Principal = Depends(candidate_guard)) -> dict[str, Any]:
+        throttle(principal)
+        own_session(principal, session_id)
+        body = await read_capped(request, PHOTO_BODY_BYTES)
+        form = parse_form(body, request.headers.get("content-type", ""), PHOTO_PARTS, PHOTO_BODY_BYTES)
+        del body
+        try:
+            id_photo = form.get("id_photo")
+            live = [form[name] for name in ("live_1", "live_2") if form.get(name)]
+            if not id_photo or not live:
+                raise HTTPException(status_code=400, detail="Please include your ID photo and a camera frame.")
+            if len(id_photo) > ID_PHOTO_BYTES or any(len(item) > LIVE_PHOTO_BYTES for item in live):
+                raise HTTPException(status_code=413, detail=TOO_BIG)
+            try:
+                service.record_photos(session_id, id_photo, live)
+            except IdentityError as error:
+                raise fail(error) from error
+        finally:
+            form.clear()
+        return {"received": True, "message": PHOTO_RECEIVED}
+
+    @router.get("/v1/verify/capabilities")
+    def capabilities(principal: Principal = Depends(candidate_guard)) -> dict[str, Any]:
+        return {"face_match_available": service.face_match_available()}
 
     @router.get("/v1/verify/status")
     def status(principal: Principal = Depends(staff_guard)) -> dict[str, Any]:

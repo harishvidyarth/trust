@@ -14,16 +14,17 @@ from tests_identity.fakes import Recorder
 FORBIDDEN = re.compile(r"[-()\[\]{};:]")
 HUMAN = wav_bytes(speech_like())
 SYNTHETIC = wav_bytes(sine(3.0))
-SESSION_KEYS = {"session_id", "expires_at", "face", "voice", "consent_text"}
+SESSION_KEYS = {"session_id", "expires_at", "face", "voice", "consent_text", "photo"}
 RECEIPT_KEYS = {"received", "message"}
 VIEW_KEYS = {"status", "face_received", "voice_received", "expires_at", "complete"}
-RESULT_KEYS = {"status", "face", "voice", "advisory", "summary", "notes", "completed_at"}
+RESULT_KEYS = {"status", "face", "voice", "photo", "advisory", "summary", "notes", "completed_at"}
 CANDIDATE_BANNED = {"advisory", "indicators", "sentence_match", "code_matched", "verdict", "human_score", "synthetic_risk", "replay_risk", "confidence", "summary", "notes", "state"}
 
 
 @pytest.fixture(autouse=True)
 def no_asr(monkeypatch):
     monkeypatch.setattr(IDENTITY, "_asr", None)
+    monkeypatch.setattr(IDENTITY, "_matcher", None)
 
 
 def keys_of(value, found=None):
@@ -164,10 +165,11 @@ def test_recruiter_reads_result(alice, recruiter, make_pdf):
         assert not FORBIDDEN.search(text), text
 
 
-def test_status_endpoint(recruiter, admin):
+def test_status_endpoint(recruiter, admin, monkeypatch):
+    monkeypatch.setattr(IDENTITY, "_matcher", None)
     for who in (recruiter, admin):
         body = who.get("/v1/verify/status").json()
-        assert body == {"voice_model": "heuristic-v1", "is_real_model": False, "asr_available": False, "face": "measured in the browser"}
+        assert body == {"voice_model": "heuristic-v1", "is_real_model": False, "asr_available": False, "face": "measured in the browser", "face_match_available": False, "face_match_model": "sface-2021dec"}
 
 
 def test_second_upload_of_a_part_is_409(alice, make_pdf):

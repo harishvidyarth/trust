@@ -410,9 +410,47 @@
     var form = h("form", { id: "applyForm", novalidate: true, "aria-labelledby": "applyTitle" },
       banner, secDetails, secRole, secExp, secLinks, secAbout, secResume, secSend
     );
+    var TEST_PROFILES = [
+      { name: "Asha Verma", role: /backend/i, years: "3", employer: "Northwind Labs", education: "B.E. Computer Science, Anna University, 2022", skills: "Python, FastAPI, PostgreSQL, Docker, REST APIs", extra: "Redis caching, writing unit tests, reading logs to find slow queries.", github: "https://github.com/octocat", about: "I built an order tracking API for a small online shop. I designed the database tables, wrote the FastAPI endpoints for orders and payments, and added Redis caching. I also wrote the tests and the Docker setup myself. A teammate built the website that uses it." },
+      { name: "Rohan Iyer", role: /front|web|ui/i, years: "2", employer: "Brightside Studio", education: "B.Tech Information Technology, VIT, 2023", skills: "JavaScript, React, CSS, HTML, Accessibility", extra: "Design handoff, keyboard friendly forms, simple animations.", github: "https://github.com/octocat", about: "I rebuilt the sign up flow for a small booking site. I wrote the React components, fixed the keyboard and screen reader problems, and cut the first page load by about a third. A designer made the visuals." },
+      { name: "Meera Nair", role: /data|analyst|machine/i, years: "4", employer: "Lumen Analytics", education: "M.Sc. Statistics, University of Madras, 2020", skills: "Python, SQL, Pandas, Tableau, Statistics", extra: "Cleaning messy data, explaining results to non technical teams.", github: "", about: "I built a weekly sales report for a retail team. I wrote the SQL that joins four tables, cleaned the data in Python, and made the charts. The team now reads it every Monday and I no longer prepare it by hand." }
+    ];
+    var testCount = 0;
+    var testBtn = h("button", { type: "button", class: "btn small", id: "fillTest", text: "Fill with test data" });
+    var testNote = h("span", { class: "small muted", id: "fillTestNote", role: "status", "aria-live": "polite" });
+    function fillTestData() {
+      var p = TEST_PROFILES[testCount % TEST_PROFILES.length];
+      testCount += 1;
+      var stamp = String(Date.now()).slice(-6);
+      var vals = {
+        applicant_name: p.name,
+        applicant_email: p.name.toLowerCase().replace(/[^a-z]+/g, ".") + "." + stamp + "@example.com",
+        applicant_phone: "+91 9" + stamp + String(100 + (testCount * 37) % 900),
+        years: p.years, current_employer: p.employer, education: p.education, skills: p.skills,
+        extra_skills: p.extra, github_url: p.github, linkedin_url: "", portfolio_url: "", papers: "", certificate_ids: "",
+        about_project: p.about
+      };
+      Object.keys(vals).forEach(function (name) {
+        var control = controls[name];
+        if (!control) return;
+        control.value = vals[name];
+        control.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      var option = Array.prototype.find.call(roleSelect.options, function (o) { return o.value && p.role.test(o.text); }) || roleSelect.options[1];
+      if (option) {
+        roleSelect.value = option.value;
+        roleSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      Object.keys(errors).forEach(clearError);
+      aboutCount.textContent = about.value.length + " of " + ABOUT_MAX + " characters";
+      testNote.textContent = "Filled in " + p.name + ". Tick the box at the bottom, then send.";
+    }
+    testBtn.addEventListener("click", fillTestData);
+
     page.append(
       h("h1", { id: "applyTitle", tabindex: "-1", text: "Apply for a role" }),
       h("p", { class: "muted", text: "Fill in the form below and send it. It goes straight to the hiring team. Fields marked Required must be filled in." }),
+      window.TRUST_TEST_DATA === false ? document.createDocumentFragment() : h("div", { class: "row", style: "margin-bottom:12px" }, testBtn, testNote),
       form
     );
     aboutCount.textContent = about.value.length + " of " + ABOUT_MAX + " characters";

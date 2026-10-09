@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Camera test</title>
+<script src="theme-init.js"></script>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="console.css">
+</head>
+<body>
+<main class="apply-page" style="max-width:640px;margin:32px auto;padding:0 16px">
+  <h1 tabindex="-1">Camera test</h1>
+  <p class="muted">Use this page to see whether your browser can open your camera and microphone. Nothing is recorded or sent anywhere.</p>
+  <div class="card form-section">
+    <p id="secure" class="small"></p>
+    <div class="id-frame" id="frame"><p class="muted small id-frame-note" id="frameNote">No camera preview yet</p></div>
+    <div class="id-level"><div class="id-level-fill" id="level"></div></div>
+    <p id="result" role="status" aria-live="polite"></p>
+    <div class="row">
+      <button type="button" class="btn primary" id="start">Start the camera and microphone</button>
+      <button type="button" class="btn" id="stop" disabled>Stop</button>
+    </div>
+  </div>
+  <div class="card form-section">
+    <h2 class="section-title">What your browser sees</h2>
+    <dl id="info" class="small"></dl>
+  </div>
+</main>
+<script src="camera-test.js"></script>
+</body>
+</html>

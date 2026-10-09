@@ -19,7 +19,7 @@ HUMAN = wav_bytes(speech_like())
 SYNTHETIC = wav_bytes(sine(3.0))
 
 
-def build(asr=None, seed=1, results=None):
+def build(asr=None, seed=1, results=None, matcher=None):
     clock = Clock()
     audit = Audit()
     service = IdentityService(
@@ -29,6 +29,7 @@ def build(asr=None, seed=1, results=None):
         clock=clock,
         rng=random.Random(seed),
         asr=asr,
+        matcher=matcher,
         audit=audit,
     )
     return service, clock, audit
@@ -69,7 +70,7 @@ def test_consent_is_required():
 def test_session_shape_and_challenge():
     service, clock, _ = build()
     session = start(service)
-    assert set(session) == {"session_id", "expires_at", "face", "voice", "consent_text"}
+    assert set(session) == {"session_id", "expires_at", "face", "voice", "consent_text", "photo"}
     assert len(session["session_id"]) >= 32
     assert session["expires_at"] == int(clock.now + 600)
     steps = session["face"]["steps"]
@@ -440,7 +441,7 @@ def test_stored_result_shape_and_plain_wording():
     service.record_face(session["session_id"], good_face(session))
     service.record_voice(session["session_id"], HUMAN, spoken_for(session))
     result = status_of(service)
-    assert set(result) == {"status", "face", "voice", "advisory", "summary", "notes", "completed_at"}
+    assert set(result) == {"status", "face", "voice", "photo", "advisory", "summary", "notes", "completed_at"}
     assert set(result["face"]) == {"state", "steps_done", "steps_total", "client_measured"}
     assert set(result["voice"]) == {"state", "code_matched", "sentence_match", "transcript_source", "indicators", "model", "is_real_model"}
     assert result["status"] == "complete" and result["completed_at"] is not None
@@ -523,7 +524,7 @@ def test_two_threads_same_part_exactly_one_succeeds(part):
 
 def test_status_reports_honestly():
     service, _, _ = build(asr=None)
-    assert service.status() == {"voice_model": "heuristic-v1", "is_real_model": False, "asr_available": False, "face": "measured in the browser"}
+    assert service.status() == {"voice_model": "heuristic-v1", "is_real_model": False, "asr_available": False, "face": "measured in the browser", "face_match_available": False, "face_match_model": "sface-2021dec"}
     service, _, _ = build(asr=FakeAsr())
     assert service.status()["asr_available"] is True
 

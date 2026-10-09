@@ -10,8 +10,12 @@ from typing import Any
 from firewall.identity import face as face_check
 from firewall.identity import transcript as spoken
 from firewall.identity.asr import asr_available, default_adapter
-from firewall.identity.challenge import CONSENT_TEXT, pick_sentence, pick_steps, public_steps
+from firewall.identity.challenge import CONSENT_TEXT, PHOTO_CONSENT_TEXT, pick_sentence, pick_steps, public_steps
 from firewall.identity.errors import IdentityError
+from firewall.identity.facematch import MODEL_NAME as FACE_MODEL
+from firewall.identity.facematch import STATES as PHOTO_STATES
+from firewall.identity.facematch import THRESHOLDS as PHOTO_THRESHOLDS
+from firewall.identity.facematch import OpenCvFaceMatcher
 from firewall.identity.voice import MODEL_NAME, REJECT_CODES, MESSAGES, analyze_wav, decode_for_asr
 
 SESSION_SECONDS = 600
@@ -35,6 +39,33 @@ def missing_face() -> dict[str, Any]:
     return {"state": "missing", "steps_done": 0, "steps_total": 0, "client_measured": True}
 
 
+def missing_photo() -> dict[str, Any]:
+    return {
+        "state": "missing",
+        "similarity": None,
+        "threshold": PHOTO_THRESHOLDS["cosine"],
+        "model": FACE_MODEL,
+        "frames_checked": 0,
+        "client_images": True,
+    }
+
+
+PHOTO_NOTES = {
+    "match": "The face in the ID photo looked like the face in the camera frames.",
+    "no_match": "The face in the ID photo did not look like the face in the camera frames. This can be a different person or just a poor photo.",
+    "no_face_in_id": "No face could be found in the ID photo. This is only a note and not held against the candidate.",
+    "no_face_live": "No face could be found in the camera frames. This is only a note and not held against the candidate.",
+    "several_faces": "More than one face was in the camera frames so the comparison was not made. This is only a note.",
+    "unreadable": "The photos could not be read so the comparison was not made.",
+    "not_available": "The photo comparison was not available on the server so it was not made.",
+    "missing": "The photo check was not done. This is not held against the candidate.",
+}
+PHOTO_LIMITS = (
+    "Face matching can miss the same person in poor light or with glasses. It can pass a look alike. A photo held up to the camera can fool it.",
+    "Face matching accuracy differs across groups of people and we have not measured it ourselves, so it is advice only.",
+)
+
+
 def missing_voice() -> dict[str, Any]:
     return {
         "state": "missing",
@@ -47,8 +78,10 @@ def missing_voice() -> dict[str, Any]:
     }
 
 
-def advisory_for(face: dict[str, Any], voice: dict[str, Any]) -> str:
+def advisory_for(face: dict[str, Any], voice: dict[str, Any], photo: dict[str, Any] | None = None) -> str:
     risky = (
+        (photo or {}).get("state") == "no_match"
+        or
         voice["state"] in {"synthetic_suspected", "replay_suspected"}
         or face["state"] in {"not_seen", "implausible"}
         or voice["code_matched"] is False
@@ -56,7 +89,7 @@ def advisory_for(face: dict[str, Any], voice: dict[str, Any]) -> str:
     return ASK if risky else "none"
 
 
-def notes_for(face: dict[str, Any], voice: dict[str, Any]) -> list[str]:
+def notes_for(face: dict[str, Any], voice: dict[str, Any], photo: dict[str, Any] | None = None) -> list[str]:
     notes: list[str] = []
     state = face["state"]
     if state == "passed":
@@ -89,6 +122,12 @@ def notes_for(face: dict[str, Any], voice: dict[str, Any]) -> list[str]:
         notes.append("The transcript came from the candidate's browser and can be faked.")
     elif voice["transcript_source"] == "server":
         notes.append("The transcript was made on the server.")
+    photo_state = (photo or {}).get("state", "missing")
+    if photo_state != "missing":
+        notes.append(PHOTO_NOTES[photo_state])
+        if photo_state in {"match", "no_match"}:
+            notes.append(f"The match score was {max(photo['similarity'], 0)} against a line of {photo['threshold']}.")
+            notes.extend(PHOTO_LIMITS)
     return notes + list(STANDING_NOTES)
 
 
@@ -110,6 +149,7 @@ class IdentityService:
         clock: Callable[[], float] = time.time,
         rng: random.Random | None = None,
         asr: Any = "auto",
+        matcher: Any = "auto",
         audit: Callable[[], Any] | None = None,
     ) -> None:
         self.results = results
@@ -118,6 +158,7 @@ class IdentityService:
         self.clock = clock
         self.rng = rng or random.SystemRandom()
         self._asr = asr
+        self._matcher = OpenCvFaceMatcher() if matcher == "auto" else matcher
         self.audit = audit
         self._lock = threading.Lock()
 
@@ -134,12 +175,22 @@ class IdentityService:
             return asr_available()
         return self._asr is not None
 
+    def face_match_available(self) -> bool:
+        if self._matcher is None:
+            return False
+        try:
+            return bool(self._matcher.available())
+        except Exception:
+            return False
+
     def status(self) -> dict[str, Any]:
         return {
             "voice_model": MODEL_NAME,
             "is_real_model": False,
             "asr_available": self.asr_ready(),
             "face": "measured in the browser",
+            "face_match_available": self.face_match_available(),
+            "face_match_model": FACE_MODEL,
         }
 
     @staticmethod
@@ -150,7 +201,7 @@ class IdentityService:
     def result_key(application_id: str) -> str:
         return f"identity:{application_id}"
 
-    def create_session(self, application_id: str, username: str, consent: bool) -> dict[str, Any]:
+    def create_session(self, application_id: str, username: str, consent: bool, photo_consent: bool = False) -> dict[str, Any]:
         if consent is not True:
             raise IdentityError(400, "Please agree before you start the check.")
         app_count = self.counter.hit(f"identity:app:{application_id}", DAY)
@@ -172,6 +223,8 @@ class IdentityService:
             "digits": digits,
             "face": None,
             "voice": None,
+            "photos": None,
+            "photo_consent": photo_consent is True,
         }
         self.sessions.set(self._key(session_id), record, SESSION_STORE_SECONDS)
         return {
@@ -180,6 +233,7 @@ class IdentityService:
             "face": {"steps": steps},
             "voice": {"sentence": sentence, "max_seconds": MAX_VOICE_SECONDS},
             "consent_text": CONSENT_TEXT,
+            "photo": {"enabled": photo_consent is True and self.face_match_available(), "consent_text": PHOTO_CONSENT_TEXT},
         }
 
     def load(self, session_id: str) -> dict[str, Any]:
@@ -214,7 +268,7 @@ class IdentityService:
         record = self.load(session_id)
         if self.state_of(record) == "expired":
             raise IdentityError(410, "This check has run out of time. Please start again.")
-        if record[part] is not None:
+        if record.get(part) is not None:
             raise IdentityError(409, "That part was already received.")
         return record
 
@@ -225,7 +279,7 @@ class IdentityService:
                 raise IdentityError(409, "That part was already received.")
             record[part] = value
             self.sessions.set(self._key(session_id), record, SESSION_STORE_SECONDS)
-            self._publish(record)
+            self._publish(record, part)
 
     def record_face(self, session_id: str, report: Any) -> None:
         record = self._open(session_id, "face")
@@ -276,27 +330,61 @@ class IdentityService:
         }
         self._commit(session_id, "voice", outcome)
 
-    def _publish(self, record: dict[str, Any]) -> None:
+    def record_photos(self, session_id: str, id_bytes: bytes, live_list: list[bytes]) -> None:
+        record = self._open(session_id, "photos")
+        if record.get("photo_consent") is not True:
+            raise IdentityError(400, "Please agree to the photo check first.")
+        if self.clock() >= record["expires_at"]:
+            raise IdentityError(410, "This check has run out of time. Please start again.")
+        try:
+            raw = self._matcher.compare(id_bytes, list(live_list)) if self._matcher is not None else {}
+        except Exception:
+            raw = {}
+        if not isinstance(raw, dict):
+            raw = {}
+        state = raw.get("state")
+        if state not in PHOTO_STATES:
+            state = "not_available"
+        if state == "unreadable":
+            raise IdentityError(400, "We could not read those photos. Please try again with clear photos.")
+        similarity = raw.get("similarity")
+        frames = raw.get("frames_checked")
+        outcome = {
+            "state": state,
+            "similarity": round(float(similarity), 3) if isinstance(similarity, (int, float)) and not isinstance(similarity, bool) and state in {"match", "no_match"} else None,
+            "threshold": PHOTO_THRESHOLDS["cosine"],
+            "model": FACE_MODEL,
+            "frames_checked": frames if isinstance(frames, int) and not isinstance(frames, bool) and 0 <= frames <= 8 else 0,
+            "client_images": True,
+        }
+        self._commit(session_id, "photos", outcome)
+
+    def _publish(self, record: dict[str, Any], part: str = "") -> None:
         application_id = record["application_id"]
         previous = self.result(application_id) or {}
         face = record["face"] or previous.get("face") or missing_face()
         voice = record["voice"] or previous.get("voice") or missing_voice()
+        photo = record.get("photos") or previous.get("photo") or missing_photo()
         complete = face["state"] != "missing" and voice["state"] != "missing"
         status = "complete" if complete else "partial"
-        advisory = advisory_for(face, voice)
+        advisory = advisory_for(face, voice, photo)
+        finished = complete and part != "photos"
+        stamp = self.clock() if finished else (previous.get("completed_at") if complete else None)
         result = {
             "status": status,
             "face": face,
             "voice": voice,
+            "photo": photo,
             "advisory": advisory,
             "summary": summary_for(status, advisory),
-            "notes": notes_for(face, voice),
-            "completed_at": self.clock() if complete else None,
+            "notes": notes_for(face, voice, photo),
+            "completed_at": stamp,
         }
         self.results.set(self.result_key(application_id), result, RESULT_TTL_SECONDS)
-        if complete and self.audit is not None:
+        event = "identity_photo_checked" if part == "photos" else "identity_check_completed" if complete else None
+        if event is not None and self.audit is not None:
             try:
-                self.audit().append("identity_check_completed", record["username"], application_id)
+                self.audit().append(event, record["username"], application_id)
             except Exception:
                 pass
 

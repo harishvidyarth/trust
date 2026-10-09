@@ -108,10 +108,67 @@ def test_signup_creates_candidate_only(env):
     assert client.post("/v1/auth/login", json={"username": "carol", "password": PASSWORD}).status_code == 200
 
 
-def test_signup_cannot_choose_role(env):
+def test_signup_cannot_choose_admin(env):
     client = env.client()
-    client.post("/v1/auth/register", json={"username": "mallory", "password": PASSWORD, "role": "admin"})
-    assert env.service.users.get("mallory").role == "candidate"
+    response = client.post("/v1/auth/register", json={"username": "mallory", "password": PASSWORD, "role": "admin"})
+    assert response.status_code == 422
+    assert env.service.users.get("mallory") is None
+
+
+def test_recruiter_signup_off_without_code_setting(env, monkeypatch):
+    monkeypatch.delenv("FIREWALL_RECRUITER_SIGNUP_CODE", raising=False)
+    client = env.client()
+    body = {"username": "newrec", "password": PASSWORD, "role": "recruiter", "access_code": "anything-at-all"}
+    response = client.post("/v1/auth/register", json=body)
+    assert response.status_code == 403
+    assert "not turned on" in response.json()["detail"]
+    assert env.service.users.get("newrec") is None
+
+
+def test_recruiter_signup_short_code_setting_is_ignored(env, monkeypatch):
+    monkeypatch.setenv("FIREWALL_RECRUITER_SIGNUP_CODE", "short")
+    client = env.client()
+    body = {"username": "newrec", "password": PASSWORD, "role": "recruiter", "access_code": "short"}
+    assert client.post("/v1/auth/register", json=body).status_code == 403
+    assert env.service.users.get("newrec") is None
+
+
+def test_recruiter_signup_wrong_and_missing_code(env, monkeypatch):
+    monkeypatch.setenv("FIREWALL_RECRUITER_SIGNUP_CODE", "lab-code-1234")
+    client = env.client()
+    wrong = client.post("/v1/auth/register", json={"username": "newrec", "password": PASSWORD, "role": "recruiter", "access_code": "lab-code-9999"})
+    missing = client.post("/v1/auth/register", json={"username": "newrec", "password": PASSWORD, "role": "recruiter"})
+    assert wrong.status_code == 403 and missing.status_code == 403
+    assert env.service.users.get("newrec") is None
+
+
+def test_recruiter_signup_with_right_code(env, monkeypatch):
+    monkeypatch.setenv("FIREWALL_RECRUITER_SIGNUP_CODE", "lab-code-1234")
+    client = env.client()
+    body = {"username": "NewRec", "password": PASSWORD, "role": "recruiter", "access_code": "lab-code-1234"}
+    response = client.post("/v1/auth/register", json=body)
+    assert response.status_code == 201
+    assert response.json()["role"] == "recruiter"
+    assert "lab-code-1234" not in response.text
+    assert env.service.users.get("newrec").role == "recruiter"
+
+
+def test_candidate_signup_ignores_access_code(env, monkeypatch):
+    monkeypatch.setenv("FIREWALL_RECRUITER_SIGNUP_CODE", "lab-code-1234")
+    client = env.client()
+    body = {"username": "cora", "password": PASSWORD, "role": "candidate", "access_code": "lab-code-1234"}
+    assert client.post("/v1/auth/register", json=body).json()["role"] == "candidate"
+
+
+def test_wrong_recruiter_code_counts_against_the_limit(env, monkeypatch):
+    monkeypatch.setenv("FIREWALL_RECRUITER_SIGNUP_CODE", "lab-code-1234")
+    client = env.client()
+    statuses = []
+    for number in range(12):
+        body = {"username": "guess%d" % number, "password": PASSWORD, "role": "recruiter", "access_code": "wrong-%d" % number}
+        statuses.append(client.post("/v1/auth/register", json=body).status_code)
+    assert 429 in statuses
+    assert all(env.service.users.get("guess%d" % n) is None for n in range(12))
 
 
 def test_signup_validation_and_duplicates(env):

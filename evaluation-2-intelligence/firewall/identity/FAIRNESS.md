@@ -22,7 +22,7 @@ Voice check
 ## What is not measured
 
 - Accent, language skill, age, gender, skin tone, looks or any other feature of appearance.
-- Who the person is. The face is never compared with an ID photo or with any other picture.
+- Who the person is. The optional photo match described below only says how alike two faces look. It does not say who anyone is.
 - Anything that could be used to look the person up.
 - How well the candidate speaks, how loud they are or how high or low their voice is. The rules use relative changes inside one recording, not absolute levels.
 
@@ -60,3 +60,37 @@ That means the voice check cannot tell a machine voice from a person. A clean vo
 The check that carries weight is the spoken code. It is new for every session, so a pre recorded clip will not match it.
 
 Do not give this check any weight in a decision. Replace it with a trained anti spoofing model and test it on recordings from many different speakers before that is ever considered.
+
+
+## Photo match with an ID card or passport page
+
+What it does
+- This part is optional and the candidate must agree first. The candidate gives a photo of an ID card or a passport page and the camera frames from the face prompts are compared with the face in that photo.
+- A face finder and a face recognition model run on our server. They turn each face into a list of numbers and measure how alike the two lists are. The best score over the camera frames is kept.
+- The score is compared with one fixed line taken from the model maker. We did not tune it on our own data.
+- Candidates only see that their photo check was received. They never see a score or a verdict. A person on the hiring team reads a short plain note.
+- It is advice only. It never rejects anyone and never changes a score, a route or a weight. Only a result that says the faces looked different adds a note that suggests a short live check. Poor light, no face found and several faces are only notes.
+
+What is kept
+- The photos and the numbers made from them are used in memory and dropped straight away. No picture is saved and no face numbers are saved.
+- Only a state word, the best score, the line it was compared with, the model name and the number of frames checked are kept, for 90 days.
+- No cloud service is called.
+
+Consent
+- The session must be started with photo consent. Without it the photo route refuses the upload.
+- The consent text says what is used, that it is compared on the server, that nothing is kept, that a person reads the result and that the comparison can be wrong.
+
+Known limits
+- Published tests of face recognition show different error rates across skin tones, ages and genders. We have not measured this on our own data, so we do not know how it behaves for the people who apply here.
+- Poor light, glasses, head coverings, an old ID photo, a worn card, a scan with glare and a changed appearance can all make the same person look different.
+- A look alike can pass. A photo or a screen held up to the camera can pass.
+- The ID photo is often small and low quality, which makes errors more likely.
+- A missing or unclear photo is never held against a candidate.
+
+Testing needed before any weight is considered
+1. Collect consented photo pairs from many volunteers across skin tones, ages, genders, head coverings, glasses and disabilities, using real cameras and real ID photos of different quality.
+2. Measure the false reject rate and the false accept rate overall and for each group. Compare the groups. Drop or fix the check if the gaps are large.
+3. Test against held up photos, screens and look alikes and report how many get through.
+4. Set up an appeal path so that any candidate flagged by this check can ask a person to look again and can offer a live check as an equal alternative.
+5. Have an outside reviewer check the results and the wording.
+6. Until all of this is done the photo match stays advice only with no weight in any decision.

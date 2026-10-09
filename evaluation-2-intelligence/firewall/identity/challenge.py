@@ -47,3 +47,11 @@ def pick_sentence(rng: random.Random) -> tuple[str, list[str]]:
 
 def public_steps(ids: list[str]) -> list[dict[str, Any]]:
     return [{"id": step, "label": FACE_STEPS[step][0], "hint": FACE_STEPS[step][1]} for step in ids]
+
+PHOTO_CONSENT_TEXT = (
+    "If you agree, we compare your ID photo with a few frames from your camera. "
+    "The ID photo and the camera frames are sent to our server for the comparison and then thrown away. "
+    "Nothing is kept except a few numbers and a short plain note. "
+    "A person on the hiring team reads that note and the person makes the decision. "
+    "The comparison can be wrong, so it never rejects anyone and it does not change your score or your result."
+)

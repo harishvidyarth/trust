@@ -19,6 +19,10 @@
   var WAV_RATE = 16000;
   var WAV_MAX_SECONDS = 12;
   var FACE_BASE = "vendor/mediapipe/face_mesh/";
+  var ID_MAX_BYTES = 1.5 * 1024 * 1024;
+  var ID_MAX_SIDE = 1600;
+  var FRAME_SIDE = 640;
+  var FRAME_MAX_BYTES = 700 * 1024;
 
   function dist(a, b) {
     var dx = a.x - b.x;
@@ -227,6 +231,67 @@
     return n + " " + (n === 1 ? one : many);
   }
 
+  var PHOTO_CONSENT_TEXT = "An ID photo and two pictures from your camera are compared on the server. Nothing is kept after that. A person reads the result. A computer comparison can be wrong, so it is only a hint.";
+  var PHOTO_RECEIVED = "Thank you. Your photo check was received.";
+
+  function toBlob(canvas, quality) {
+    return new Promise(function (resolve) {
+      try { canvas.toBlob(function (b) { resolve(b || null); }, "image/jpeg", quality); } catch (e) { resolve(null); }
+    });
+  }
+
+  async function loadImage(blob) {
+    if (window.createImageBitmap) {
+      try {
+        var bmp = await createImageBitmap(blob);
+        return { source: bmp, width: bmp.width, height: bmp.height, release: function () { try { bmp.close(); } catch (e) { return null; } } };
+      } catch (e) {
+        return null;
+      }
+    }
+    return new Promise(function (resolve) {
+      var url = URL.createObjectURL(blob);
+      var img = new Image();
+      img.onload = function () {
+        resolve({ source: img, width: img.naturalWidth, height: img.naturalHeight, release: function () { img.src = ""; URL.revokeObjectURL(url); } });
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
+
+  async function drawToJpeg(source, width, height, longest, maxBytes, qualities) {
+    var scale = Math.min(1, longest / Math.max(width, height));
+    var canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+    var g = canvas.getContext("2d");
+    g.drawImage(source, 0, 0, canvas.width, canvas.height);
+    var out = null;
+    for (var i = 0; i < qualities.length; i++) {
+      out = await toBlob(canvas, qualities[i]);
+      if (out && out.size <= maxBytes) break;
+    }
+    canvas.width = 0;
+    canvas.height = 0;
+    return out && out.size <= maxBytes ? out : null;
+  }
+
+  async function prepareIdPhoto(file) {
+    if (!file || (file.type !== "image/jpeg" && file.type !== "image/png")) return { error: "Please choose a JPEG or PNG photo." };
+    if (file.size <= ID_MAX_BYTES) return { blob: file };
+    var img = await loadImage(file);
+    if (!img) return { error: "We could not read that photo. Please choose another one." };
+    var out = null;
+    try {
+      out = await drawToJpeg(img.source, img.width, img.height, ID_MAX_SIDE, ID_MAX_BYTES, [0.85, 0.7, 0.55]);
+      if (!out) out = await drawToJpeg(img.source, img.width, img.height, 1200, ID_MAX_BYTES, [0.6, 0.45]);
+    } finally {
+      img.release();
+    }
+    return out ? { blob: out } : { error: "That photo is too large. Please choose a smaller one." };
+  }
+
   function message(error) {
     if (error && error.message && (error.status === 404 || error.status === 409 || error.status === 429 || error.status === 400 || error.status === 413 || error.status === 422)) return error.message;
     return C.friendly(error);
@@ -251,8 +316,46 @@
       closed: false, session: null, stream: null, ctx: null, analyser: null, mesh: null,
       practice: false, hasCam: false, hasMic: false, faceReady: false, skipFace: false, faceSent: false,
       timers: [], urls: [], latest: null, listeners: [], resolvers: [], meterTimer: null, detect: false,
-      framesTotal: 0, framesWith: 0, faceStart: 0, onFrame: null, video: null, sim: null, audio: null, recorder: null
+      framesTotal: 0, framesWith: 0, faceStart: 0, onFrame: null, video: null, sim: null, audio: null, recorder: null,
+      photoAvail: false, photoOn: false, idPhoto: null, photoUrl: null, frames: [], photoSent: false, notice: "", simCanvas: null
     };
+
+    function totalSteps() {
+      return F.photoOn ? 5 : 4;
+    }
+    function stepNo(base) {
+      return "Step " + (F.photoOn && base >= 3 ? base + 1 : base) + " of " + totalSteps();
+    }
+
+    function dropPhotos() {
+      F.idPhoto = null;
+      F.frames = [];
+      if (F.photoUrl) {
+        URL.revokeObjectURL(F.photoUrl);
+        F.photoUrl = null;
+      }
+    }
+
+    async function grabFrame() {
+      var source = null;
+      var w = 0;
+      var hgt = 0;
+      if (F.practice && F.simCanvas) {
+        source = F.simCanvas;
+        w = source.width;
+        hgt = source.height;
+      } else if (F.video && F.video.readyState >= 2 && F.video.videoWidth > 0) {
+        source = F.video;
+        w = source.videoWidth;
+        hgt = source.videoHeight;
+      }
+      if (!source) return null;
+      try {
+        return await drawToJpeg(source, w, hgt, FRAME_SIDE, FRAME_MAX_BYTES, [0.85, 0.7, 0.55]);
+      } catch (e) {
+        return null;
+      }
+    }
 
     function say(text) {
       live.textContent = "";
@@ -303,6 +406,8 @@
       }
       F.urls.forEach(function (u) { URL.revokeObjectURL(u); });
       F.urls = [];
+      dropPhotos();
+      F.simCanvas = null;
       stopMedia();
       F.listeners.forEach(function (l) { l[0].removeEventListener(l[1], l[2]); });
       F.listeners = [];
@@ -364,8 +469,18 @@
       box.hidden = false;
     }
 
-    function stepConsent() {
+    async function stepConsent() {
+      try {
+        var caps = await C.api("GET", "/v1/verify/capabilities");
+        F.photoAvail = Boolean(caps && caps.face_match_available === true);
+      } catch (error) {
+        F.photoAvail = false;
+      }
+      if (F.closed) return;
       var box = h("input", { type: "checkbox", id: "idConsent" });
+      var photoBox = F.photoAvail ? h("input", { type: "checkbox", id: "idPhotoConsent" }) : null;
+      var stepLine = h("p", { class: "muted small", text: "Step 1 of 4" });
+      if (photoBox) photoBox.addEventListener("change", function () { stepLine.textContent = "Step 1 of " + (photoBox.checked ? 5 : 4); });
       var err = errorBox();
       var go = h("button", { type: "button", class: "btn primary", id: "idContinue", text: "Continue" });
       var no = h("button", { type: "button", class: "btn", text: "Not now" });
@@ -380,7 +495,7 @@
         go.disabled = true;
         go.setAttribute("aria-busy", "true");
         try {
-          F.session = await C.api("POST", "/v1/verify/session", { json: { application_id: applicationId, consent: true } });
+          F.session = await C.api("POST", "/v1/verify/session", { json: { application_id: applicationId, consent: true, photo_consent: Boolean(photoBox && photoBox.checked) } });
         } catch (error) {
           go.disabled = false;
           go.removeAttribute("aria-busy");
@@ -389,12 +504,17 @@
           return;
         }
         if (F.closed) return;
+        F.photoOn = Boolean(photoBox && photoBox.checked && F.session && F.session.photo && F.session.photo.enabled === true);
         stepDevices();
       });
       render("Before we start", [
-        h("p", { class: "muted small", text: "Step 1 of 4" }),
+        stepLine,
         CONSENT_LOCAL.map(function (t) { return h("p", { text: t }); }),
         h("label", { class: "check", for: "idConsent" }, box, h("span", { text: "I understand and I agree to take this check." })),
+        photoBox ? h("div", { class: "id-photo-consent" },
+          h("label", { class: "check", for: "idPhotoConsent" }, photoBox, h("span", { text: "I also agree to a photo comparison. This part is optional." })),
+          h("p", { class: "small muted", id: "idPhotoConsentText", text: PHOTO_CONSENT_TEXT })
+        ) : null,
         err,
         h("div", { class: "actions" }, no, go)
       ], "Before we start. Please read and tick the box.");
@@ -499,6 +619,7 @@
         F.sim = { turn: 0, blink: 0, smile: 0, open: 0 };
         var canvas = h("canvas", { width: "320", height: "240", role: "img", "aria-label": "A simple drawing that stands in for the camera in practice mode" });
         frame.append(canvas);
+        F.simCanvas = canvas;
         drawSim(canvas, function () { return F.sim; });
       } else if (F.hasCam && F.stream) {
         var video = h("video", { autoplay: true, muted: true, playsinline: true, "aria-label": "Your camera preview" });
@@ -513,24 +634,16 @@
       return frame;
     }
 
-    async function getDevices() {
+    async function getTrackStream(constraints) {
       var md = navigator.mediaDevices;
       if (!md || !md.getUserMedia) return { error: "nodevice" };
-      var tries = [
-        [{ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: true }, true, true],
-        [{ video: { facingMode: "user" } }, true, false],
-        [{ audio: true }, false, true]
-      ];
-      var denied = false;
-      for (var i = 0; i < tries.length; i++) {
-        try {
-          var stream = await md.getUserMedia(tries[i][0]);
-          return { stream: stream, cam: tries[i][1], mic: tries[i][2] };
-        } catch (e) {
-          if (e && (e.name === "NotAllowedError" || e.name === "SecurityError")) denied = true;
-        }
+      try {
+        return { stream: await md.getUserMedia(constraints) };
+      } catch (e) {
+        if (e && (e.name === "NotAllowedError" || e.name === "SecurityError")) return { error: "denied" };
+        if (e && (e.name === "NotReadableError" || e.name === "AbortError")) return { error: "busy" };
+        return { error: "nodevice" };
       }
-      return { error: denied ? "denied" : "nodevice" };
     }
 
     function stepDevices() {
@@ -539,10 +652,8 @@
       var allow = h("button", { type: "button", class: "btn primary", id: "idAllow", text: "Allow camera and microphone" });
       var later = h("button", { type: "button", class: "btn", id: "idLater", text: "Do this later" });
       var practiceBox = h("input", { type: "checkbox", id: "idPractice" });
-      var practiceRow = C.state.demo
-        ? h("label", { class: "check", for: "idPractice" }, practiceBox, h("span", { text: "Use the practice mode. It skips your camera and microphone." }))
-        : null;
-      if (practiceRow) practiceBox.checked = true;
+      var practiceRow = h("label", { class: "check small muted id-practice", for: "idPractice" }, practiceBox, h("span", { text: "Practice mode without a camera" }));
+      F.facePromise = initFace();
       later.addEventListener("click", finishDialog);
       var holder = h("div", { class: "id-preview" });
       var actions = h("div", { class: "actions" }, later, allow);
@@ -552,32 +663,55 @@
         err.hidden = true;
         allow.disabled = true;
         allow.setAttribute("aria-busy", "true");
-        F.practice = Boolean(practiceRow && practiceBox.checked);
+        F.practice = Boolean(practiceBox.checked);
+        var earlyFrame = null;
         if (!F.practice) {
-          note.textContent = "Your browser may ask for permission. Please choose Allow.";
+          note.textContent = "Opening your camera. Your browser may ask for permission. Please choose Allow.";
           var waitTimer = setTimeout(function () {
             if (F.closed) return;
             note.textContent = "Still waiting for your browser. Look for a small box near the top left of the page, or a camera icon at the right end of the address bar, and choose Allow. If you see nothing, open the Apple menu, then System Settings, then Privacy and Security, then Camera, and turn on your browser. Then close the browser fully and open it again.";
           }, 8000);
-          var got = await getDevices();
+          var vid = await getTrackStream({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } } });
           clearTimeout(waitTimer);
           if (F.closed) {
-            if (got.stream) got.stream.getTracks().forEach(function (t) { t.stop(); });
+            if (vid.stream) vid.stream.getTracks().forEach(function (t) { t.stop(); });
+            return;
+          }
+          var failure = vid.error || "";
+          if (vid.stream) {
+            F.stream = vid.stream;
+            F.hasCam = true;
+            C.clear(holder);
+            earlyFrame = previewFrame();
+            holder.append(earlyFrame);
+            note.textContent = "Opening your microphone.";
+          }
+          var aud = await getTrackStream({ audio: true });
+          if (F.closed) {
+            if (aud.stream) aud.stream.getTracks().forEach(function (t) { t.stop(); });
             return;
           }
           allow.disabled = false;
           allow.removeAttribute("aria-busy");
           note.textContent = "";
-          if (got.error) {
+          if (aud.stream) {
+            if (!F.stream) F.stream = new MediaStream();
+            aud.stream.getAudioTracks().forEach(function (t) { F.stream.addTrack(t); });
+            F.hasMic = true;
+          } else if (!failure) {
+            failure = aud.error;
+          }
+          if (!F.hasCam && !F.hasMic) {
             allow.textContent = "Try again";
-            showError(err, got.error === "denied"
+            C.clear(holder);
+            showError(err, failure === "denied"
               ? "We could not use your camera or microphone because permission was not given. Click the icon at the left of the address bar, set Camera and Microphone to Allow, then reload the page. On a Mac also check System Settings, then Privacy and Security, then Camera. You can also do the check later."
-              : "We could not find a camera or microphone that works here. A secure page is needed, and localhost counts as secure. You can do the check later on another device.");
+              : (failure === "busy"
+                ? "Your camera is being used by another app or is blocked by the computer. Close apps such as Zoom, FaceTime, Photo Booth or another browser tab that uses the camera, then press Try again."
+                : "We could not find a camera or microphone that works here. A secure page is needed, and localhost counts as secure. You can do the check later on another device, or tick the practice mode below."));
+            err.append(" ", h("a", { href: "camera-test.html", target: "_blank", rel: "noopener", text: "Open the camera test page" }));
             return;
           }
-          F.stream = got.stream;
-          F.hasCam = got.cam;
-          F.hasMic = got.mic;
           if (F.hasMic) {
             var Ctx = window.AudioContext || window.webkitAudioContext;
             try {
@@ -598,7 +732,7 @@
         }
         C.clear(holder);
         var meter = levelMeter();
-        holder.append(previewFrame(), h("p", { class: "small muted", id: "idMicLabel", text: F.hasMic ? "Say a few words to see the bar move." : "No microphone was found." }), F.hasMic ? meter : null);
+        holder.append(earlyFrame || previewFrame(), h("p", { class: "small muted", id: "idMicLabel", text: F.hasMic ? "Say a few words to see the bar move." : "No microphone was found." }), F.hasMic ? meter : null);
         if (F.hasMic) runMeter(meter);
         var go = h("button", { type: "button", class: "btn primary", id: "idToPrompts", text: "Continue", disabled: true });
         actions.replaceChildren(later, go);
@@ -607,7 +741,7 @@
         if (!F.hasMic) messages.push("We could not use your microphone, so you can do the face part only.");
         if (F.hasCam && !F.practice) {
           note.textContent = "Getting the face check ready. This can take a few seconds.";
-          initFace().then(function (ok) {
+          F.facePromise.then(function (ok) {
             if (F.closed) return;
             F.faceReady = ok;
             if (!ok) {
@@ -627,23 +761,158 @@
         }
         go.addEventListener("click", function () {
           if (!F.hasCam && !F.hasMic) return finishDialog();
-          if (F.hasCam && F.faceReady) stepFace();
-          else stepVoice();
+          if (F.photoOn && F.hasCam && F.faceReady) return stepPhoto("");
+          proceedFromDevices();
         });
         go.focus();
         say("Camera and microphone are ready.");
       });
 
       render("Camera and microphone", [
-        h("p", { class: "muted small", text: "Step 2 of 4" }),
+        h("p", { class: "muted small", text: stepNo(2) }),
         h("p", { text: "Please allow your camera and your microphone when your browser asks. You will see yourself in the box below so you know it works." }),
         consentLine,
-        practiceRow,
         holder,
         note,
         err,
-        actions
+        actions,
+        practiceRow
       ], "Camera and microphone. Press the button to allow them.");
+    }
+
+    function proceedFromDevices() {
+      if (F.hasCam && F.faceReady) stepFace();
+      else stepVoice();
+    }
+
+    function stepPhoto(retryMessage) {
+      var retry = Boolean(retryMessage);
+      var err = errorBox();
+      var input = h("input", { type: "file", id: "idPhotoFile", accept: "image/jpeg,image/png" });
+      var thumb = h("div", { class: "id-thumb", id: "idPhotoThumb", hidden: true });
+      var info = h("p", { class: "small", role: "status" });
+      var use = h("button", { type: "button", class: "btn primary", id: "idPhotoUse", text: retry ? "Send this photo" : "Continue", disabled: true });
+      var skip = h("button", { type: "button", class: "btn quiet small", id: "idSkipPhoto", text: retry ? "Go on to the voice part" : "Skip the photo part" });
+      if (retry) showError(err, retryMessage);
+      function clearThumb() {
+        C.clear(thumb);
+        thumb.hidden = true;
+        if (F.photoUrl) {
+          URL.revokeObjectURL(F.photoUrl);
+          F.photoUrl = null;
+        }
+      }
+      input.addEventListener("change", async function () {
+        err.hidden = true;
+        info.textContent = "";
+        use.disabled = true;
+        F.idPhoto = null;
+        clearThumb();
+        var file = input.files && input.files[0];
+        if (!file) return;
+        info.textContent = "Getting your photo ready.";
+        var made = await prepareIdPhoto(file);
+        input.value = "";
+        if (F.closed) return;
+        info.textContent = "";
+        if (made.error) {
+          showError(err, made.error);
+          return;
+        }
+        F.idPhoto = made.blob;
+        F.photoUrl = URL.createObjectURL(made.blob);
+        var img = h("img", { src: F.photoUrl, alt: "A small preview of the photo you chose" });
+        thumb.append(img);
+        thumb.hidden = false;
+        use.disabled = false;
+        info.textContent = "Photo ready.";
+        say("Photo ready.");
+      });
+      use.addEventListener("click", async function () {
+        if (!F.idPhoto) return;
+        if (!retry) {
+          proceedFromDevices();
+          return;
+        }
+        use.disabled = true;
+        use.setAttribute("aria-busy", "true");
+        var res = await sendPhotos();
+        if (F.closed) return;
+        if (res.retry) return stepPhoto(res.retry);
+        stepVoice();
+      });
+      skip.addEventListener("click", function () {
+        dropPhotos();
+        if (retry) stepVoice();
+        else proceedFromDevices();
+      });
+      render("Photo of your ID", [
+        retry ? null : h("p", { class: "muted small", text: "Step 3 of 5" }),
+        h("p", { text: "Please add a photo of the face side of your ID card or passport page. You can skip this part." }),
+        h("ul", { class: "id-notes" },
+          h("li", { text: "Use a clear photo of the face side of your ID card or passport page." }),
+          h("li", { text: "Use good light and avoid glare." }),
+          h("li", { text: "Make sure your face in the photo is not covered." })
+        ),
+        h("label", { class: "small", for: "idPhotoFile", text: "Choose a photo" }),
+        input,
+        thumb,
+        info,
+        err,
+        h("div", { class: "actions" }, use),
+        h("div", { class: "row" }, skip)
+      ], retry ? "Please choose another photo." : "Photo of your ID. Choose a photo or skip this part.");
+      if (retry) input.focus();
+    }
+
+    async function sendPhotos() {
+      if (!F.idPhoto || !F.frames.length || !F.session) {
+        dropPhotos();
+        return {};
+      }
+      var fd = new FormData();
+      fd.append("id_photo", F.idPhoto, F.idPhoto.type === "image/png" ? "id.png" : "id.jpg");
+      fd.append("live_1", F.frames[0], "live_1.jpg");
+      if (F.frames[1]) fd.append("live_2", F.frames[1], "live_2.jpg");
+      try {
+        await C.api("POST", "/v1/verify/" + encodeURIComponent(F.session.session_id) + "/photos", { form: fd });
+        F.photoSent = true;
+        dropPhotos();
+        return {};
+      } catch (error) {
+        if (error && error.status === 400 && error.message) {
+          F.idPhoto = null;
+          if (F.photoUrl) {
+            URL.revokeObjectURL(F.photoUrl);
+            F.photoUrl = null;
+          }
+          return { retry: error.message };
+        }
+        dropPhotos();
+        F.notice = "We could not send your photo, so that part was left out. The rest of the check can go on.";
+        return {};
+      }
+    }
+
+    async function afterFace() {
+      if (F.closed) return;
+      if (!F.photoOn || !F.idPhoto || !F.frames.length) {
+        dropPhotos();
+        return stepVoice();
+      }
+      render("Sending your photo", [h("p", { text: "Please wait a moment." })], "Sending your photo.");
+      var res = await sendPhotos();
+      if (F.closed) return;
+      if (res.retry) return stepPhoto(res.retry);
+      stepVoice();
+    }
+
+    async function noteFrame(first) {
+      if (!F.photoOn || !F.idPhoto) return;
+      var blob = await grabFrame();
+      if (!blob) return;
+      if (first && !F.frames.length) F.frames[0] = blob;
+      else F.frames[1] = blob;
     }
 
     function analysisForPractice(id, t) {
@@ -706,7 +975,7 @@
       var steps = (F.session && F.session.face && F.session.face.steps) || [];
       if (!steps.length) return stepVoice();
       var results = [];
-      var sizeNote = h("p", { class: "small muted", text: "Step 3 of 4" });
+      var sizeNote = h("p", { class: "small muted", text: stepNo(3) });
       var promptTitle = h("h3", { id: "idPrompt", tabindex: "-1", class: "id-prompt" });
       var hint = h("p", { class: "id-hint" });
       var count = h("p", { class: "small muted id-count", "aria-hidden": "true" });
@@ -789,6 +1058,7 @@
           if (result === "passed") {
             outcome = "passed";
             ms = Date.now() - attemptStart;
+            await noteFrame(!F.frames.length);
             info.textContent = "Thank you. That worked.";
             say("That worked.");
             await wait(700);
@@ -824,6 +1094,8 @@
       F.onFrame = null;
       F.detect = false;
       if (F.closed) return;
+      if (!F.frames.length) await noteFrame(true);
+      if (F.closed) return;
       if (F.stream) F.stream.getVideoTracks().forEach(function (t) { t.stop(); });
       if (F.mesh) {
         try { F.mesh.close(); } catch (e) { F.mesh = null; }
@@ -831,7 +1103,7 @@
       }
       if (F.skipFace || results.length < steps.length) {
         F.skipFace = true;
-        return stepVoice();
+        return afterFace();
       }
       info.textContent = "Sending your face part.";
       var payload = { steps: results, frames_with_face: F.framesWith, total_frames: F.framesTotal, duration_ms: Date.now() - F.faceStart, model: "mediapipe-facemesh" };
@@ -843,7 +1115,7 @@
         await C.api("POST", "/v1/verify/" + encodeURIComponent(F.session.session_id) + "/face", { json: payload });
         F.faceSent = true;
         if (F.closed) return;
-        stepVoice();
+        afterFace();
       } catch (error) {
         if (F.closed) return;
         var err = errorBox();
@@ -851,7 +1123,7 @@
         var retry = h("button", { type: "button", class: "btn primary", text: "Try sending again" });
         var skipBtn = h("button", { type: "button", class: "btn", text: "Go on to the voice part" });
         retry.addEventListener("click", function () { sendFace(payload); });
-        skipBtn.addEventListener("click", function () { stepVoice(); });
+        skipBtn.addEventListener("click", function () { afterFace(); });
         render("We could not send that", [err, h("div", { class: "actions" }, skipBtn, retry)], "We could not send the face part.");
       }
     }
@@ -859,7 +1131,7 @@
     function stepVoice() {
       if (F.closed) return;
       if (!F.hasMic || !F.session || !F.session.voice) {
-        if (F.faceSent) return stepDone();
+        if (F.faceSent || F.photoSent) return stepDone();
         return finishDialog();
       }
       var maxSeconds = Math.min(Number(F.session.voice.max_seconds) || 10, WAV_MAX_SECONDS);
@@ -1011,12 +1283,14 @@
         }
       });
       skip.addEventListener("click", function () {
-        if (F.faceSent) stepDone();
+        if (F.faceSent || F.photoSent) stepDone();
         else finishDialog();
       });
 
       render("Read one sentence", [
-        h("p", { class: "muted small", text: "Step 4 of 4" }),
+        h("p", { class: "muted small", text: stepNo(4) }),
+        F.photoSent ? h("p", { class: "small", id: "idPhotoThanks", role: "status", text: PHOTO_RECEIVED }) : null,
+        F.notice ? h("p", { class: "small", id: "idPhotoNotice", role: "status", text: F.notice }) : null,
         h("p", { class: "muted", text: "Press Record, then read this sentence aloud in your normal voice." }),
         h("blockquote", { class: "id-sentence", text: sentence }),
         F.hasMic ? meter : null,
@@ -1038,6 +1312,8 @@
       closeNow.addEventListener("click", finishDialog);
       render("Thank you", [
         h("p", { text: "Thank you. Your check was received. The hiring team will read it." }),
+        F.photoSent ? h("p", { id: "idPhotoDone", text: PHOTO_RECEIVED }) : null,
+        F.notice ? h("p", { class: "small", text: F.notice }) : null,
         h("div", { class: "actions" }, closeNow)
       ], "Thank you. Your check was received.");
       closeNow.focus();
@@ -1103,6 +1379,17 @@
     missing: "No voice part was sent"
   };
   var VOICE_TONE = { human_like: "closed", synthetic_suspected: "warn", replay_suspected: "warn" };
+  var PHOTO_STATE = {
+    match: { tag: "Looked alike", tone: "closed", text: "The live face looked like the ID photo." },
+    no_match: { tag: "Did not look alike", tone: "warn", text: "The live face did not look like the ID photo. This can happen with poor light, glasses or an old photo. Consider a short live video call." },
+    no_face_in_id: { tag: "Could not compare", tone: "closed", text: "No face could be found in the ID photo." },
+    no_face_live: { tag: "Could not compare", tone: "closed", text: "No face could be found in the pictures from the camera." },
+    several_faces: { tag: "Could not compare", tone: "closed", text: "More than one face was found in a picture." },
+    unreadable: { tag: "Could not compare", tone: "closed", text: "One of the pictures could not be read." },
+    not_available: { tag: "Not available", tone: "closed", text: "Photo comparison was not available." },
+    missing: { tag: "Not done", tone: "closed", text: "Not done. This is not held against the candidate." }
+  };
+  var PHOTO_HONEST = "Face matching can be wrong. It can miss the same person in poor light and can pass someone who looks similar. It works differently for different groups of people and we have not measured that here. Use it only as a hint, never as proof.";
   var STATUS_TEXT = { complete: "Complete", partial: "Partly done", none: "Not done" };
 
   function labelOf(key) {
@@ -1142,6 +1429,19 @@
     var face = data.face || {};
     var voice = data.voice || {};
     var kv = h("dl", { class: "kv", id: "idResult" });
+    if (data.photo && typeof data.photo === "object") {
+      var ph = data.photo;
+      var pinfo = PHOTO_STATE[ph.state] || PHOTO_STATE.not_available;
+      var pdetail = [];
+      if (typeof ph.similarity === "number" && typeof ph.threshold === "number") pdetail.push("Closeness " + (Math.round(ph.similarity * 100) / 100).toFixed(2) + " where " + (Math.round(ph.threshold * 100) / 100).toFixed(2) + " or more counts as alike.");
+      if (typeof ph.frames_checked === "number" && ph.frames_checked > 0) pdetail.push(plural(ph.frames_checked, "camera picture was", "camera pictures were") + " checked.");
+      kv.append(h("dt", { text: "Photo match" }), h("dd", { id: "idPhoto" },
+        C.tag(pinfo.tag, pinfo.tone, true),
+        h("p", { id: "idPhotoText", style: "margin:4px 0 0", text: pinfo.text }),
+        pdetail.length ? h("p", { class: "small muted", id: "idPhotoDetail", style: "margin:4px 0 0", text: pdetail.join(" ") }) : null,
+        h("p", { class: "small muted", id: "idPhotoHonest", style: "margin:4px 0 0", text: PHOTO_HONEST })
+      ));
+    }
     kv.append(h("dt", { text: "Status" }), h("dd", null, C.tag(STATUS_TEXT[data.status] || "Not done", "closed", true)));
     var codeText = voice.code_matched === true ? "The spoken code matched" : voice.code_matched === false ? "The spoken code did not match. Speech to text makes mistakes, so this is not proof." : "The spoken code was not checked";
     kv.append(h("dt", { text: "Spoken code" }), h("dd", { id: "idCode", text: codeText }));

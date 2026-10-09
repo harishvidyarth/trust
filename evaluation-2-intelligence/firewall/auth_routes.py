@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hmac
+import os
 from dataclasses import asdict
 from typing import Annotated, Any, Callable, Literal
 
@@ -35,6 +37,8 @@ class LoginBody(BaseModel):
 class RegisterBody(BaseModel):
     username: str = Field(max_length=128)
     password: str = Field(max_length=512)
+    role: Literal["candidate", "recruiter"] = "candidate"
+    access_code: str = Field(default="", max_length=128)
 
 
 class CreateUserBody(BaseModel):
@@ -148,12 +152,23 @@ def build_auth_router(
         if not valid_username(username):
             raise HTTPException(status_code=422, detail="username must be 3-64 characters: a-z, 0-9, . _ -")
         _check_password(body.password)
+        role = CANDIDATE
+        if body.role == "recruiter":
+            expected = os.getenv("FIREWALL_RECRUITER_SIGNUP_CODE", "")
+            if len(expected) < 8:
+                raise HTTPException(status_code=403, detail="Recruiter sign up is not turned on. Ask the admin for an account.")
+            if not hmac.compare_digest(body.access_code.encode(), expected.encode()):
+                service.signup_limiter.hit(key)
+                service.signup_limiter.hit(key)
+                audit.append("recruiter_signup_denied", username, ip=ip)
+                raise HTTPException(status_code=403, detail="That access code is not right.")
+            role = RECRUITER
         try:
-            user = make_user(username, body.password, CANDIDATE, service.clock())
+            user = make_user(username, body.password, role, service.clock())
             service.users.create(user)
         except UserExistsError as error:
             raise HTTPException(status_code=409, detail="username unavailable") from error
-        audit.append("user_registered", user.username, ip=ip)
+        audit.append("user_registered", user.username, ip=ip, detail={"role": role})
         return user.public()
 
     @router.get("/admin/users")

@@ -31,3 +31,14 @@ Set these before running the command. All are optional.
 - `FIREWALL_LEVER_WEBHOOK_SECRET` - the shared secret used to check Lever webhooks.
 
 The runner never prints passwords or secrets.
+
+## Face match models (optional)
+
+The optional photo match in the identity check needs two small model files and the OpenCV package. Nothing is downloaded by the app.
+
+- Put `yunet.onnx` and `sface.onnx` in `.state/face/` or set `FIREWALL_FACE_MODEL_DIR` to another folder that holds them.
+- `yunet.onnx` is the YuNet face finder from the OpenCV Zoo. Its licence is MIT.
+- `sface.onnx` is the SFace face recognition model from the OpenCV Zoo. Its licence is Apache 2.0.
+- Install the packages with `pip install -r requirements.txt`. This adds `opencv-python-headless` and `pillow`.
+- If a file or a package is missing the photo step turns itself off and the rest of the identity check works as before.
+- Restart the API after adding the files so that it picks them up.

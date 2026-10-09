@@ -366,6 +366,10 @@
     return made;
   }
   state.identity = { sessions: {}, results: {} };
+  function demoPhoto(sent) {
+    if (!sent) return { state: "missing", similarity: null, threshold: 0.363, model: "sface-2021dec", frames_checked: 0, client_images: true };
+    return { state: "match", similarity: 0.52, threshold: 0.363, model: "sface-2021dec", frames_checked: sent.frames, client_images: true };
+  }
   function seedIdentity(id, result) {
     state.identity.results[id] = result;
   }
@@ -374,8 +378,10 @@
     mineRecord("app-mine-1", "Backend engineer", 86400 * 5, "sent"),
     mineRecord("app-mine-2", "Backend engineer", 86400 * 4, "sent", "app-mine-1")
   ];
-  seedIdentity("app-demo-1049", { status: "complete", face: { state: "passed", steps_done: 3, steps_total: 3, client_measured: true }, voice: { state: "human_like", code_matched: true, sentence_match: 0.96, transcript_source: "server", indicators: { pitch_variation: 0.64, background_noise: 0.1, clipping: false, silence_ratio: 0.2 }, model: "heuristic-v1", is_real_model: false }, advisory: "none", summary: "The measurements look ordinary.", notes: [], completed_at: now - 3600 });
-  seedIdentity("app-demo-1047", { status: "complete", face: { state: "steps_incomplete", steps_done: 1, steps_total: 3, client_measured: true }, voice: { state: "replay_suspected", code_matched: false, sentence_match: 0.58, transcript_source: "server", indicators: { pitch_variation: 0.21, room_echo: 0.74, clipping: false, silence_ratio: 0.31 }, model: "heuristic-v1", is_real_model: false }, advisory: "ask_for_live_check", summary: "Some prompts were missed and the voice sounds flat.", notes: ["Two face prompts were not completed.", "The spoken sentence matched only in part."], completed_at: now - 7200 });
+  seedIdentity("app-demo-1049", { status: "complete", face: { state: "passed", steps_done: 3, steps_total: 3, client_measured: true }, voice: { state: "human_like", code_matched: true, sentence_match: 0.96, transcript_source: "server", indicators: { pitch_variation: 0.64, background_noise: 0.1, clipping: false, silence_ratio: 0.2 }, model: "heuristic-v1", is_real_model: false }, advisory: "none", summary: "The measurements look ordinary.", notes: [], completed_at: now - 3600, photo: { state: "match", similarity: 0.52, threshold: 0.363, model: "sface-2021dec", frames_checked: 2, client_images: true } });
+  seedIdentity("app-demo-1047", { status: "complete", face: { state: "steps_incomplete", steps_done: 1, steps_total: 3, client_measured: true }, voice: { state: "replay_suspected", code_matched: false, sentence_match: 0.58, transcript_source: "server", indicators: { pitch_variation: 0.21, room_echo: 0.74, clipping: false, silence_ratio: 0.31 }, model: "heuristic-v1", is_real_model: false }, advisory: "ask_for_live_check", summary: "Some prompts were missed and the voice sounds flat.", notes: ["Two face prompts were not completed.", "The spoken sentence matched only in part."], completed_at: now - 7200, photo: { state: "no_match", similarity: 0.21, threshold: 0.363, model: "sface-2021dec", frames_checked: 2, client_images: true } });
+  seedIdentity("app-demo-1048", { status: "complete", face: { state: "passed", steps_done: 3, steps_total: 3, client_measured: true }, voice: { state: "human_like", code_matched: true, sentence_match: 0.93, transcript_source: "server", indicators: { pitch_variation: 0.58, background_noise: 0.14, clipping: false, silence_ratio: 0.22 }, model: "heuristic-v1", is_real_model: false }, advisory: "none", summary: "The measurements look ordinary.", notes: [], completed_at: now - 10800, photo: { state: "no_face_live", similarity: null, threshold: 0.363, model: "sface-2021dec", frames_checked: 1, client_images: true } });
+  seedIdentity("app-demo-1052", { status: "partial", face: { state: "passed", steps_done: 3, steps_total: 3, client_measured: true }, voice: { state: "missing", code_matched: null, sentence_match: null, transcript_source: null, indicators: {}, model: "heuristic-v1", is_real_model: false }, advisory: "none", summary: "The measurements look ordinary.", notes: [], completed_at: now - 14400, photo: { state: "not_available", similarity: null, threshold: 0.363, model: "sface-2021dec", frames_checked: 0, client_images: true } });
   addForm("app-mine-3", { applicant_name: "Demo Candidate", applicant_email: "candidate@example.test", applicant_phone: "+91 98765 43210", role_title: "Data analyst", years_experience: 2, current_employer: "Lakeview Retail", education: "B.Sc. Statistics", skills: "SQL, Python, Excel", extra_skills: "Dashboards", github_url: "https://github.com/octocat", linkedin_url: "", portfolio_url: "", papers: "", certificate_ids: "", about_project: "I built a weekly sales dashboard for our stores. I wrote the queries and the charts myself and the managers now use it every Monday." }, "Data analyst", 86400 * 9, SCENARIOS.timeline, [
     item("request", "Please share the name of the store system you pulled the sales data from.", "A short answer is enough.", true, true, "It was the point of sale export from our regional office.", 3)
   ]);
@@ -926,6 +932,9 @@
       return { id: made.id, label: label, asked_by: state.session ? state.session.username : "recruiter", asked_at: Math.floor(Date.now() / 1000), answer: null, answered_at: null, status: "waiting", message: "The request was sent to the candidate." };
     }
 
+    if (path === "/v1/verify/capabilities" && method === "GET") {
+      return { face_match_available: true };
+    }
     if (path === "/v1/verify/session" && method === "POST") {
       requireRole(["candidate"]);
       var vApp = ownRecord(String(json.application_id || ""));
@@ -933,7 +942,7 @@
       if (json.consent !== true) fail(400, "Please agree before the check can start.");
       var vSid = "vs-" + Math.random().toString(16).slice(2, 12);
       var vExpires = Math.floor(Date.now() / 1000) + 900;
-      state.identity.sessions[vSid] = { application_id: vApp.application_id, expires_at: vExpires, face: null, voice: null };
+      state.identity.sessions[vSid] = { application_id: vApp.application_id, expires_at: vExpires, face: null, voice: null, photo: null, photo_enabled: json.photo_consent === true };
       return {
         session_id: vSid,
         expires_at: vExpires,
@@ -943,7 +952,8 @@
           { id: "smile", label: "Smile", hint: "Keep a calm face for a moment first, then smile." }
         ] },
         voice: { sentence: "The blue door opens at seven and the red lamp stays on all night.", max_seconds: 10 },
-        consent_text: "You agreed to a short check with your camera and microphone. The video and sound stay on your device. Only a few measurements are sent to the hiring team, and a person reads them."
+        consent_text: "You agreed to a short check with your camera and microphone. The video and sound stay on your device. Only a few measurements are sent to the hiring team, and a person reads them.",
+        photo: { enabled: json.photo_consent === true, consent_text: "You agreed to a photo comparison. An ID photo and two pictures from your camera are compared on the server. Nothing is kept after that. A person reads the result." }
       };
     }
     match = path.match(/^\/v1\/verify\/session\/([^/]+)$/);
@@ -959,6 +969,20 @@
       var vr = state.identity.results[decodeURIComponent(match[1])];
       if (!vr) fail(404, "No identity check has been done.");
       return vr;
+    }
+    match = path.match(/^\/v1\/verify\/([^/]+)\/photos$/);
+    if (match && method === "POST") {
+      requireRole(["candidate"]);
+      var pSess = state.identity.sessions[decodeURIComponent(match[1])];
+      if (!pSess) fail(404, "That check could not be found.");
+      if (!pSess.photo_enabled) fail(409, "The photo comparison was not agreed to.");
+      if (!form || !form.get("id_photo") || !form.get("live_1")) fail(400, "We could not read that photo. Please choose another one.");
+      var pSize = form.get("id_photo").size || 0;
+      if (pSize < 10) fail(400, "We could not read that photo. Please choose another one.");
+      pSess.photo = { frames: form.get("live_2") ? 2 : 1 };
+      var pRes = state.identity.results[pSess.application_id];
+      if (pRes) pRes.photo = demoPhoto(pSess.photo);
+      return { received: true, message: "Thank you. Your photo check was received." };
     }
     match = path.match(/^\/v1\/verify\/([^/]+)\/(face|voice)$/);
     if (match && method === "POST") {
@@ -988,7 +1012,8 @@
         advisory: needsCall ? "ask_for_live_check" : "none",
         summary: needsCall ? "The face prompts were not all completed." : "The measurements look ordinary.",
         notes: needsCall ? ["Some face prompts were not completed in the candidate's browser."] : [],
-        completed_at: Math.floor(Date.now() / 1000)
+        completed_at: Math.floor(Date.now() / 1000),
+        photo: demoPhoto(vSess.photo)
       };
       var foll = (state.followups[vAppId] || []).find(function (it) { return it.id === "identity-check"; });
       if (foll) foll.answered = true;

@@ -29,7 +29,7 @@ The language model never decides a route and never changes a weight. Every model
 | Final destinations | Pass goes to the ATS, Additional verification to a verification inbox, Manual review to a review inbox, with an optional Slack message. | `firewall/delivery.py` |
 | Registries | ORCID lookup is live. Patent lookup needs a free key. Formats that could not be verified no longer penalise anyone. | `firewall/enrichment/roles/` |
 | LinkedIn export | Reads two column Save to PDF exports and says how much it could read. | `firewall/intel/linkedin.py` |
-| Identity check | An optional face and voice check after the form. The server issues the prompts and a spoken one time code, limits the audio, stores no media and never changes a score or route. The candidate sees only that it was received. Recruiters see plain notes with the limits stated. | `firewall/identity/`, `web/console/identity.js` |
+| Identity check | An optional check after the form. Face prompts in the browser, a spoken one time code transcribed on the server with a local Whisper model, and an optional ID photo compared with camera frames using local OpenCV models. The server issues the prompts, limits every upload, stores no media and never changes a score or route. The candidate sees only that it was received. Recruiters see plain notes with the limits stated. | `firewall/identity/`, `web/console/identity.js` |
 
 ## Results
 
@@ -139,8 +139,8 @@ The launcher looks for Ollama on this machine. If it finds the model, it switche
 - Uploading with the model on takes 5 to 13 seconds.
 - Name search and corroboration have only been tested with fakes. They have not been run against the live services.
 - Passive name search needs a consent flag and is limited to scores 41 to 69.
-- The identity check is advice only. The face part is measured in the candidate's browser and can be forged. The voice part is a rule based estimate and called all six machine made macOS voices we tried human, so a clean voice result proves nothing. The spoken code is the useful signal. No real face has been tested yet, only a test camera. Details are in `firewall/identity/FAIRNESS.md`.
-- Video recording and ID photo matching are not built, on purpose.
+- The identity check is advice only. The face prompts are measured in the candidate's browser and can be forged. The voice estimate is rule based and called all six machine made macOS voices human, so only the spoken code matters, and that needs the local speech model. The ID photo match uses the published SFace threshold of 0.363. We tested it on one sample photo made darker, blurred and smaller (closeness 0.85 to 1.0) and on a different person (0.13). We have not measured two real photos of the same person, nor accuracy across skin tones, ages or genders. It can pass a look alike or a photo held to the camera. Details are in `firewall/identity/FAIRNESS.md`.
+- Video recording is not built, on purpose. The face and speech models are not in git. Each machine downloads them into `.state/` (see `scripts/README_run.md`), and without them those two parts report that they were not available.
 - A cold model load can pass the 5 second timeout and the first request then falls back to the rules.
 - Every figure above is synthetic and partly circular.
 - Round 3 was not rebuilt and has not been checked against these changes.

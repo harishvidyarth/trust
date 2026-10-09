@@ -233,6 +233,12 @@
     }
     banner.hidden = false;
     banner.append(h("span", { text: "Demo data" }), h("span", { class: "muted", text: C.state.demoReason || "Sample data only. No server is contacted." }));
+    if (C.state.needsCert) {
+      banner.append(
+        h("a", { class: "btn small", href: C.base() + "/healthz", target: "_blank", rel: "noopener", text: "Step 1. Allow the connection" }),
+        h("button", { type: "button", class: "btn small primary", text: "Step 2. Reload", onclick: function () { location.reload(); } })
+      );
+    }
     if (C.state.me) {
       var select = h("select", { id: "demoRole", "aria-label": "View as role" }, C.demo.users.map(function (role) {
         return h("option", { value: role, selected: role === C.state.me.username, text: role });
@@ -403,6 +409,7 @@
     C.clear(root);
     C.keys = null;
     var mode = "signin";
+    var signupRole = "candidate";
     var card = h("div", { class: "card" });
     var hero = h("div", { class: "login-hero" },
       h("p", { class: "login-mark", "aria-hidden": "true", text: "\u2229" }),
@@ -442,12 +449,21 @@
       }
       var user = h("input", { type: "text", id: "lgUser", value: C.state.lastUser || "", autocomplete: "username", required: true, spellcheck: "false", autocapitalize: "none" });
       var pass = h("input", { type: "password", id: "lgPass", autocomplete: mode === "signin" ? "current-password" : "new-password", required: true });
+      var roleBox = h("select", { id: "lgRole" },
+        h("option", { value: "candidate", text: "Candidate. I want to apply for a job." }),
+        h("option", { value: "recruiter", text: "Recruiter. I review applications." })
+      );
+      roleBox.value = signupRole;
+      roleBox.addEventListener("change", function () { signupRole = roleBox.value; C.state.lastUser = user.value; draw(); C.$("lgRole").focus(); });
+      var codeBox = h("input", { type: "password", id: "lgCode", autocomplete: "off", spellcheck: "false" });
       var form = h("form", { novalidate: true },
-        h("h1", { class: "login-title", text: mode === "signin" ? "Welcome back" : "Create a candidate account" }),
-        h("p", { class: "muted", text: mode === "signin" ? "Sign in with the username you were given." : "Candidate accounts let you send an application and see how it is going." }),
+        h("h1", { class: "login-title", text: mode === "signin" ? "Welcome back" : (signupRole === "recruiter" ? "Create a recruiter account" : "Create a candidate account") }),
+        h("p", { class: "muted", text: mode === "signin" ? "Sign in with the username you were given." : (signupRole === "recruiter" ? "Recruiter accounts read applications and decide what happens next. You need the access code from your admin." : "Candidate accounts let you send an application and see how it is going.") }),
         alertBox,
+        mode === "signup" ? h("label", { class: "field", for: "lgRole" }, "I am a", roleBox) : null,
         h("label", { class: "field", for: "lgUser" }, "Username", user),
         h("label", { class: "field", for: "lgPass" }, "Password", pass, mode === "signup" ? h("span", { class: "hint", text: "At least 8 characters." }) : null),
+        mode === "signup" && signupRole === "recruiter" ? h("label", { class: "field", for: "lgCode" }, "Recruiter access code", codeBox, h("span", { class: "hint", text: "Your admin gives you this code." })) : null,
         h("button", { type: "submit", class: "btn primary login-submit", text: mode === "signin" ? "Sign in" : "Create account" })
       );
       form.addEventListener("submit", async function (event) {
@@ -460,11 +476,13 @@
         }
         if (mode === "signup") {
           try {
-            await C.api("POST", "/v1/auth/register", { json: { username: user.value.trim(), password: pass.value } });
+            var payload = { username: user.value.trim(), password: pass.value, role: signupRole };
+            if (signupRole === "recruiter") payload.access_code = codeBox.value;
+            await C.api("POST", "/v1/auth/register", { json: payload });
             await C.login(user.value.trim(), pass.value);
           } catch (error) {
             alertBox.textContent = "";
-            alertBox.appendChild(h("p", { class: "alert error", text: C.friendly(error) }));
+            alertBox.appendChild(h("p", { class: "alert error", text: (error && error.status === 403 && error.message) ? error.message : C.friendly(error) }));
           }
           return;
         }

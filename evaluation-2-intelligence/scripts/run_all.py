@@ -23,6 +23,7 @@ HOST = "127.0.0.1"
 
 
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
+    timeout = 20
     api_port = 8000
     api_scheme = ""
 
@@ -167,6 +168,9 @@ def build_environment(web_port: int, lan: str | None = None) -> dict[str, str]:
         environment["_TRUST_LLM_NOTE"] = ("on, using " + detail) if available else ("off, " + detail)
     else:
         environment["_TRUST_LLM_NOTE"] = "on" if environment["FIREWALL_LLM"] == "1" else "off, switched off by FIREWALL_LLM"
+    model_folder = STATE_DIR / "asr" / "tiny.en"
+    if not environment.get("FIREWALL_ASR_MODEL_DIR") and (model_folder / "model.bin").is_file():
+        environment["FIREWALL_ASR_MODEL_DIR"] = str(model_folder)
     if not environment.get("FIREWALL_USERS_FILE"):
         environment["FIREWALL_USERS_FILE"] = private_file(STATE_DIR / "users.json", "[]")
     if not environment.get("FIREWALL_AUDIT_FILE"):
@@ -246,7 +250,7 @@ def main() -> int:
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.minimum_version = ssl.TLSVersion.TLSv1_2
         context.load_cert_chain(str(tls[1]), str(tls[0]))
-        server.socket = context.wrap_socket(server.socket, server_side=True)
+        server.socket = context.wrap_socket(server.socket, server_side=True, do_handshake_on_connect=False)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     stopping = threading.Event()
 
@@ -275,6 +279,8 @@ def main() -> int:
                 print(f"Console:  http://localhost:{arguments.web_port}/console/")
             print(f"Users saved in: {environment['FIREWALL_USERS_FILE']}")
             print("Language model: " + environment["_TRUST_LLM_NOTE"])
+            print("Face match: " + ("on, using the local OpenCV models" if (STATE_DIR / "face" / "sface.onnx").is_file() else "off, models not found in .state/face"))
+            print("Speech check: " + ("on, using the local Whisper model" if environment.get("FIREWALL_ASR_MODEL_DIR") else "off, so the spoken code is not checked. See scripts/README_run.md"))
             present = [name for name in KEY_NAMES if environment.get(name)]
             missing = [name for name in KEY_NAMES if not environment.get(name)]
             print("Keys found: " + (", ".join(present) if present else "none"))
