@@ -6,7 +6,7 @@ from typing import Any
 DIGIT_WORDS = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine")
 
 FACE_STEPS: dict[str, tuple[str, str]] = {
-    "blink": ("Blink twice", "Close and open your eyes two times."),
+    "fit_face": ("Fit your face in the circle", "Move so your face fills the circle and then hold still for a moment."),
     "turn_left": ("Turn your head left", "Slowly turn your head to your left and then back to the middle."),
     "turn_right": ("Turn your head right", "Slowly turn your head to your right and then back to the middle."),
     "smile": ("Smile", "Give a natural smile and hold it for a moment."),
@@ -35,7 +35,9 @@ CONSENT_TEXT = (
 
 
 def pick_steps(rng: random.Random) -> list[dict[str, str]]:
-    ids = rng.sample(sorted(FACE_STEPS), 3)
+    turn = rng.choice(["turn_left", "turn_right"])
+    rest = [step for step in sorted(FACE_STEPS) if step not in ("fit_face", turn)]
+    ids = ["fit_face", turn, rng.choice(rest)]
     return [{"id": step, "label": FACE_STEPS[step][0], "hint": FACE_STEPS[step][1]} for step in ids]
 
 

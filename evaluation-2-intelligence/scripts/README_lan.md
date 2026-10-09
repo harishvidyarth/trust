@@ -16,9 +16,12 @@ If macOS asks whether Python may accept incoming connections, choose Allow.
 ## On every other laptop
 
 1. Open the Console address, for example https://192.168.1.20:8081/console/
-2. The browser warns about the certificate. This is expected because the certificate is made on the server laptop. Choose Advanced, then Continue.
-3. Open the API address once with /healthz on the end, for example https://192.168.1.20:8000/healthz and accept the warning there too.
-4. Go back to the Console and sign in.
+2. The browser warns about the certificate. This is expected because the certificate is made on the server laptop. Choose Advanced, then Continue. You only do this once.
+3. Sign in.
+
+There is only one address. The console passes every request to the service on the server laptop, so nothing else needs to be opened or accepted. The service port is not reachable from the Wi-Fi at all.
+
+If the page ever shows Demo data, press Use the real service.
 
 ## Why it uses HTTPS
 

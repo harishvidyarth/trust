@@ -947,7 +947,7 @@
         session_id: vSid,
         expires_at: vExpires,
         face: { steps: [
-          { id: "blink", label: "Blink once", hint: "Look at the camera and blink slowly one time." },
+          { id: "fit_face", label: "Fit your face in the circle", hint: "Move so your face fills the circle and then hold still for a moment." },
           { id: "turn_left", label: "Turn your head to the left", hint: "Turn slowly, then hold still for a moment." },
           { id: "smile", label: "Smile", hint: "Keep a calm face for a moment first, then smile." }
         ] },

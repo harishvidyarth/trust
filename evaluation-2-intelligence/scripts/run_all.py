@@ -30,12 +30,65 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, format: str, *args: object) -> None:
         return None
 
+    def forward(self) -> None:
+        length = int(self.headers.get("Content-Length") or 0)
+        if length < 0 or length > 8 * 1024 * 1024:
+            self.send_error(413)
+            return
+        body = self.rfile.read(length) if length else None
+        skip = {"host", "connection", "transfer-encoding", "keep-alive", "upgrade", "x-forwarded-for", "x-forwarded-proto"}
+        headers = {name: value for name, value in self.headers.items() if name.lower() not in skip}
+        headers["X-Forwarded-For"] = self.client_address[0]
+        headers["X-Forwarded-Proto"] = "https"
+        connection = http.client.HTTPConnection(HOST, self.api_port, timeout=180)
+        try:
+            connection.request(self.command, self.path, body=body, headers=headers)
+            reply = connection.getresponse()
+            payload = reply.read()
+        except (OSError, http.client.HTTPException):
+            self.send_error(502)
+            return
+        finally:
+            connection.close()
+        self.send_response(reply.status)
+        for name, value in reply.getheaders():
+            if name.lower() not in ("connection", "transfer-encoding", "keep-alive", "content-length"):
+                self.send_header(name, value)
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(payload)
+
+    def proxied(self) -> bool:
+        return bool(self.api_scheme) and (self.path.startswith("/v1/") or self.path.split("?", 1)[0] == "/healthz")
+
+    def do_POST(self) -> None:
+        self.forward() if self.proxied() else self.send_error(405)
+
+    def do_PUT(self) -> None:
+        self.forward() if self.proxied() else self.send_error(405)
+
+    def do_PATCH(self) -> None:
+        self.forward() if self.proxied() else self.send_error(405)
+
+    def do_DELETE(self) -> None:
+        self.forward() if self.proxied() else self.send_error(405)
+
+    def do_OPTIONS(self) -> None:
+        self.forward() if self.proxied() else self.send_error(405)
+
+    def do_HEAD(self) -> None:
+        self.forward() if self.proxied() else super().do_HEAD()
+
     def do_GET(self) -> None:
+        if self.proxied():
+            self.forward()
+            return
         if self.api_scheme and self.path.split("?", 1)[0] == "/console/config.js":
-            host = (self.headers.get("Host") or "localhost").rsplit(":", 1)[0].strip("[]")
-            if not re.fullmatch(r"[A-Za-z0-9.\-]{1,253}", host):
+            host = (self.headers.get("Host") or "localhost").strip()
+            if not re.fullmatch(r"[A-Za-z0-9.\-]{1,253}(:[0-9]{1,5})?", host):
                 host = "localhost"
-            body = ('window.TRUST_API = "%s://%s:%d";\n' % (self.api_scheme, host, self.api_port)).encode()
+            body = ('window.TRUST_API = "%s://%s";\n' % (self.api_scheme, host)).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/javascript")
             self.send_header("Content-Length", str(len(body)))
@@ -187,10 +240,9 @@ def build_environment(web_port: int, lan: str | None = None) -> dict[str, str]:
 def start_api(port: int, environment: dict[str, str], tls: tuple[Path, Path] | None = None) -> subprocess.Popen:
     if not 1024 <= port <= 65535:
         raise SystemExit("api port must be between 1024 and 65535")
-    host = "0.0.0.0" if tls else HOST
-    command = [sys.executable, "-m", "uvicorn", "firewall.api:app", "--host", host, "--port", "%d" % port]
+    command = [sys.executable, "-m", "uvicorn", "firewall.api:app", "--host", HOST, "--port", "%d" % port]
     if tls:
-        command += ["--ssl-keyfile", str(tls[0]), "--ssl-certfile", str(tls[1])]
+        command += ["--proxy-headers", "--forwarded-allow-ips", HOST]
     return subprocess.Popen(command, cwd=ROOT, env=environment)
 
 
@@ -264,15 +316,14 @@ def main() -> int:
         threading.Thread(target=warm_model, args=(environment, environment.get("FIREWALL_LLM_MODEL", "qwen2.5:7b-instruct")), daemon=True).start()
     code = 0
     try:
-        if not wait_for_api(api, arguments.api_port, secure=bool(tls)):
+        if not wait_for_api(api, arguments.api_port):
             print("The API did not start. Check the messages above.")
             code = 1
         else:
             if tls:
-                print(f"API:      https://{lan}:{arguments.api_port}")
                 print(f"Console:  https://{lan}:{arguments.web_port}/console/")
-                print("Other laptops on the same Wi-Fi open the Console address above.")
-                print(f"First time only, each laptop must also open https://{lan}:{arguments.api_port}/healthz and accept the certificate warning.")
+                print("Other laptops on the same Wi-Fi open the Console address above and accept the certificate warning once.")
+                print("The API stays on this laptop only. The console passes requests to it.")
                 print("Cameras only work over this secure address. Sign in is required.")
             else:
                 print(f"API:      http://{HOST}:{arguments.api_port}")

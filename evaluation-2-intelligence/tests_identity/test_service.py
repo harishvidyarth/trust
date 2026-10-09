@@ -563,3 +563,17 @@ def test_package_has_no_comments_docstrings_or_process_calls():
         assert '"""' not in text, path
         assert not re.search(r"^\s*#", text, re.M), path
         assert "subprocess" not in text and "os.system" not in text, path
+
+
+def test_face_prompts_start_with_the_circle_then_a_turn_then_one_other():
+    import random
+
+    from firewall.identity.challenge import FACE_STEPS, pick_steps
+
+    assert "blink" not in FACE_STEPS
+    for seed in range(60):
+        ids = [step["id"] for step in pick_steps(random.Random(seed))]
+        assert ids[0] == "fit_face"
+        assert ids[1] in ("turn_left", "turn_right")
+        assert len(set(ids)) == 3
+        assert ids[2] in FACE_STEPS and ids[2] != "fit_face"

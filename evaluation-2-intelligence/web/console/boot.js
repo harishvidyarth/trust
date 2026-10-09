@@ -10,7 +10,23 @@
 
   async function start() {
     C.syncThemeButton();
-    if (params.get("demo") === "1") C.enterDemo("");
+    if (params.get("demo") === "1") {
+      var reachable = true;
+      try {
+        await C.api("GET", "/v1/auth/me");
+      } catch (probe) {
+        reachable = !probe.network;
+      }
+      if (reachable) {
+        var clean = new URL(location.href);
+        clean.searchParams.delete("demo");
+        clean.searchParams.delete("as");
+        history.replaceState(null, "", clean.toString());
+        params = new URLSearchParams(clean.search);
+      } else {
+        C.enterDemo("");
+      }
+    }
     var role = params.get("as");
     if (C.state.demo && role) {
       if (await C.login(role, C.demo.password)) return;

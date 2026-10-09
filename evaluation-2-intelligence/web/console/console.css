@@ -601,3 +601,6 @@ dialog.idflow { box-sizing: border-box; margin: auto; }
 dialog.idflow .btn.quiet.small { margin-left: calc(-1 * var(--space-3)); }
 dialog.idflow .row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-2); }
 .id-practice { margin-top: var(--space-3); }
+
+.id-circle { position: absolute; left: 50%; top: 50%; height: 70%; aspect-ratio: 1; transform: translate(-50%, -50%); border: 3px dashed var(--accent); border-radius: 50%; box-shadow: 0 0 0 999px rgba(247, 244, 237, 0.55); pointer-events: none; transition: border-color 0.2s; }
+.id-circle.fit { border-style: solid; border-width: 4px; }

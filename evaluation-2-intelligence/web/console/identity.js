@@ -9,10 +9,16 @@
   var SMILE_INCREASE = 1.3;
   var SMILE_CALIBRATION_MS = 1000;
   var MOUTH_OPEN_THRESHOLD = 0.32;
-  var EYE_CLOSED_EAR = 0.2;
-  var EYE_OPEN_EAR = 0.25;
-  var BLINK_MIN_CLOSED_MS = 70;
-  var BLINK_MAX_CLOSED_MS = 600;
+  var FIT_MIN_HEIGHT = 0.5;
+  var FIT_MAX_HEIGHT = 0.74;
+  var FIT_MAX_OFFSET = 0.1;
+  var FIT_HOLD_FRAMES = 6;
+  var BLINK_CALIBRATION_MS = 800;
+  var BLINK_CLOSE_RATIO = 0.75;
+  var BLINK_OPEN_RATIO = 0.88;
+  var BLINK_MAX_CLOSED_MS = 700;
+  var BLINK_GAP_MS = 120;
+  var BLINKS_NEEDED = 2;
   var HOLD_FRAMES = 3;
   var PROMPT_MS = 7000;
   var MAX_TRIES = 3;
@@ -30,13 +36,14 @@
     return Math.sqrt(dx * dx + dy * dy);
   }
 
-  function eyeAspectRatio(landmarks, points) {
-    var p = points.map(function (i) { return landmarks[i]; });
+  function eyeAspectRatio(landmarks, points, aspect) {
+    var scale = aspect > 0 ? aspect : 1;
+    var p = points.map(function (i) { return { x: landmarks[i].x * scale, y: landmarks[i].y }; });
     var vertical = dist(p[1], p[5]) + dist(p[2], p[4]);
     return vertical / (2 * Math.max(dist(p[0], p[3]), 0.000001));
   }
 
-  function analyzeFace(landmarks) {
+  function analyzeFace(landmarks, aspect) {
     if (!landmarks || landmarks.length < 292) return null;
     var nose = landmarks[1];
     var leftEye = landmarks[33];
@@ -44,45 +51,63 @@
     var eyeDistance = Math.abs(rightEye.x - leftEye.x);
     if (eyeDistance < 0.0001) return null;
     var noseOffset = (nose.x - (leftEye.x + rightEye.x) / 2) / eyeDistance;
+    var scale = aspect > 0 ? aspect : 1;
+    var faceHeight = Math.abs(landmarks[152].y - landmarks[10].y);
+    var faceCentreX = ((landmarks[234].x + landmarks[454].x) / 2 - 0.5) * scale;
+    var faceCentreY = (landmarks[10].y + landmarks[152].y) / 2 - 0.5;
     var mouthWidth = Math.abs(landmarks[291].x - landmarks[61].x);
     var mouthHeight = Math.abs(landmarks[14].y - landmarks[13].y);
     return {
       noseOffset: noseOffset,
+      faceHeight: faceHeight,
+      faceOffset: Math.sqrt(faceCentreX * faceCentreX + faceCentreY * faceCentreY),
       smileRatio: mouthWidth / Math.max(mouthHeight, 0.001),
       mouthOpen: mouthHeight / Math.max(mouthWidth, 0.001),
-      ear: (eyeAspectRatio(landmarks, LEFT_EYE) + eyeAspectRatio(landmarks, RIGHT_EYE)) / 2
+      ear: (eyeAspectRatio(landmarks, LEFT_EYE, aspect) + eyeAspectRatio(landmarks, RIGHT_EYE, aspect)) / 2
     };
   }
 
-  function createBlinkDetector() {
-    var ready = false;
-    var open = true;
+  function createBlinkDetector(needed) {
+    var goal = needed || BLINKS_NEEDED;
+    var samples = [];
+    var startedAt = null;
+    var baseline = null;
+    var closed = false;
     var closedAt = 0;
-    var validated = false;
-    return function feed(ear, now) {
-      if (!ready) {
-        ready = true;
-        open = ear >= EYE_OPEN_EAR;
-        return false;
-      }
-      if (ear <= EYE_CLOSED_EAR) {
-        if (open) {
-          open = false;
-          closedAt = now;
-          validated = false;
-        } else if (!validated && now - closedAt >= BLINK_MIN_CLOSED_MS) {
-          validated = true;
+    var lastBlinkAt = -1000;
+    var count = 0;
+    function feed(ear, now) {
+      if (startedAt === null) startedAt = now;
+      if (baseline === null) {
+        samples.push(ear);
+        if (now - startedAt >= BLINK_CALIBRATION_MS && samples.length >= 5) {
+          var sorted = samples.slice().sort(function (x, y) { return x - y; });
+          baseline = sorted[Math.floor(sorted.length * 0.8)];
         }
         return false;
       }
-      if (ear >= EYE_OPEN_EAR && !open) {
-        open = true;
-        var good = validated && now - closedAt <= BLINK_MAX_CLOSED_MS;
-        validated = false;
-        return good;
+      if (!closed) {
+        if (ear < baseline * BLINK_CLOSE_RATIO) {
+          closed = true;
+          closedAt = now;
+        } else if (ear > baseline) {
+          baseline += 0.05 * (ear - baseline);
+        }
+      } else if (ear >= baseline * BLINK_OPEN_RATIO) {
+        closed = false;
+        if (now - closedAt <= BLINK_MAX_CLOSED_MS && now - lastBlinkAt > BLINK_GAP_MS) {
+          count += 1;
+          lastBlinkAt = now;
+        }
+      } else if (now - closedAt > BLINK_MAX_CLOSED_MS) {
+        closed = false;
       }
-      return false;
-    };
+      return count >= goal;
+    }
+    feed.progress = function () { return count; };
+    feed.goal = goal;
+    feed.goalCount = goal;
+    return feed;
   }
 
   function createSmoother(alpha) {
@@ -96,6 +121,10 @@
   function createEvaluator(id) {
     var run = 0;
     var blink = createBlinkDetector();
+    var guide = "";
+    var fitted = false;
+    var fitRun = 0;
+    blink.goal = BLINKS_NEEDED;
     var smoothNose = createSmoother(0.5);
     var smoothSmile = createSmoother(0.5);
     var smoothMouth = createSmoother(0.5);
@@ -107,14 +136,27 @@
       run = ok ? run + 1 : 0;
       return run >= HOLD_FRAMES;
     }
-    return function feed(m, now) {
+    var feed = function (m, now) {
       if (!m) {
         run = 0;
+        guide = id === "fit_face" ? "We cannot see your face yet." : "";
+        fitted = false;
+        fitRun = 0;
         return false;
       }
       var nose = smoothNose(m.noseOffset);
       var smile = smoothSmile(m.smileRatio);
       var mouth = smoothMouth(m.mouthOpen);
+      if (id === "fit_face") {
+        var fits = m.faceHeight >= FIT_MIN_HEIGHT && m.faceHeight <= FIT_MAX_HEIGHT && m.faceOffset <= FIT_MAX_OFFSET;
+        if (m.faceHeight < FIT_MIN_HEIGHT) guide = "Move a little closer.";
+        else if (m.faceHeight > FIT_MAX_HEIGHT) guide = "Move a little back.";
+        else if (m.faceOffset > FIT_MAX_OFFSET) guide = "Move your face to the middle of the circle.";
+        else guide = "That fits. Hold still.";
+        fitted = fits;
+        fitRun = fits ? fitRun + 1 : 0;
+        return fitRun >= FIT_HOLD_FRAMES;
+      }
       if (id === "blink") return blink(m.ear, now);
       if (id === "turn_left") return hold(nose > TURN_THRESHOLD);
       if (id === "turn_right") return hold(nose < -TURN_THRESHOLD);
@@ -131,6 +173,11 @@
       }
       return false;
     };
+    feed.progress = function () { return id === "blink" ? blink.progress() : 0; };
+    feed.goal = id === "blink" ? blink.goal : 1;
+    feed.guide = function () { return guide; };
+    feed.fitted = function () { return fitted; };
+    return feed;
   }
 
   function writeText(view, offset, text) {
@@ -916,11 +963,15 @@
     }
 
     function analysisForPractice(id, t) {
-      var base = { noseOffset: 0, smileRatio: 6, mouthOpen: 0.1, ear: 0.3 };
+      var base = { noseOffset: 0, smileRatio: 6, mouthOpen: 0.1, ear: 0.3, faceHeight: 0.4, faceOffset: 0.3 };
       F.sim = { turn: 0, blink: 0, smile: 0, open: 0 };
       if (t < 1600) return base;
+      if (id === "fit_face") {
+        F.sim.turn = 0;
+        return Object.assign(base, { faceHeight: 0.62, faceOffset: 0.03 });
+      }
       if (id === "blink") {
-        if (t < 1900) {
+        if ((t >= 1600 && t < 1900) || (t >= 2400 && t < 2700)) {
           F.sim.blink = 1;
           return Object.assign(base, { ear: 0.12 });
         }
@@ -984,6 +1035,8 @@
       var retryBox = h("div", { class: "row id-retry", hidden: true });
       var skip = h("button", { type: "button", class: "btn quiet small", id: "idSkipFace", text: "Skip the face part" });
       var frame = previewFrame();
+      var circle = h("div", { class: "id-circle", "aria-hidden": "true" });
+      frame.append(circle);
       skip.addEventListener("click", function () {
         F.skipFace = true;
         answer("skip");
@@ -994,12 +1047,15 @@
       F.framesTotal = 0;
       F.framesWith = 0;
       var evaluator = null;
+      var shownProgress = 0;
+      var shownGuide = "";
       var attemptStart = 0;
       var seen = 0;
       var passedFlag = false;
       F.onFrame = function (landmarks) {
         F.framesTotal += 1;
-        var m = landmarks ? (landmarks.practice ? landmarks.practice : analyzeFace(landmarks)) : null;
+        var aspect = F.video && F.video.videoWidth > 0 && F.video.videoHeight > 0 ? F.video.videoWidth / F.video.videoHeight : 4 / 3;
+        var m = landmarks ? (landmarks.practice ? landmarks.practice : analyzeFace(landmarks, aspect)) : null;
         if (m) {
           F.framesWith += 1;
           seen += 1;
@@ -1007,6 +1063,15 @@
         if (evaluator && !passedFlag && evaluator(m, Date.now())) {
           passedFlag = true;
           answer("passed");
+        } else if (evaluator && evaluator.guide && evaluator.guide() !== shownGuide) {
+          shownGuide = evaluator.guide();
+          info.textContent = shownGuide;
+          circle.classList.toggle("fit", evaluator.fitted());
+          if (evaluator.fitted()) say(shownGuide);
+        } else if (evaluator && evaluator.goal > 1 && evaluator.progress() > 0 && evaluator.progress() !== shownProgress) {
+          shownProgress = evaluator.progress();
+          info.textContent = shownProgress >= evaluator.goal ? "" : "That was " + (shownProgress === 1 ? "one" : String(shownProgress)) + ". Do it once more.";
+          say(info.textContent);
         }
       };
       if (F.practice) {
@@ -1036,6 +1101,9 @@
           C.clear(retryBox);
           info.textContent = "";
           evaluator = createEvaluator(step.id);
+          shownProgress = 0;
+          shownGuide = "";
+          circle.classList.remove("fit");
           if (F.setCurrent) F.setCurrent(step.id);
           passedFlag = false;
           seen = 0;

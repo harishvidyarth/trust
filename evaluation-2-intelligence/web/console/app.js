@@ -232,7 +232,7 @@
       return;
     }
     banner.hidden = false;
-    banner.append(h("span", { text: "Demo data" }), h("span", { class: "muted", text: C.state.demoReason || "Sample data only. No server is contacted." }));
+    banner.append(h("span", { text: "Demo data" }), h("span", { class: "muted", text: C.state.demoReason || "You are looking at sample data. Nothing you do here reaches the real service." }));
     if (C.state.needsCert) {
       banner.append(
         h("a", { class: "btn small", href: C.base() + "/healthz", target: "_blank", rel: "noopener", text: "Step 1. Allow the connection" }),
@@ -249,7 +249,7 @@
       banner.append(h("label", null, "View as", select));
     }
     if (C.state.demoReason) banner.append(h("button", { type: "button", class: "btn small", text: "Retry", onclick: function () { location.reload(); } }));
-    banner.append(h("button", { type: "button", class: "btn small", text: "Exit demo", onclick: C.exitDemo }));
+    banner.append(h("button", { type: "button", class: "btn small primary", id: "useReal", text: "Use the real service", onclick: C.exitDemo }));
   };
 
   C.exitDemo = function () {
